@@ -1,0 +1,91 @@
+/* ============================================
+   grid.css — 双页横滑视口 + 网格布局
+   ============================================ */
+
+/* ----- 滑动视口（可视窗口）----- */
+.pages-viewport {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+/* ----- 滑动轨道（两页并排）----- */
+.pages-track {
+    display: flex;
+    width: 200%;           /* 两页 = 200% */
+    height: 100%;
+    transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: transform;
+}
+
+/* ----- 单页 ----- */
+.page {
+    width: 50%;            /* 每页占轨道的一半 = 视口100% */
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px 18px 10px;
+    scrollbar-width: none;
+}
+
+.page::-webkit-scrollbar {
+    display: none;
+}
+
+
+/* ============================================
+   grid.css — 双页横滑视口 + 网格布局
+   ============================================ */
+
+/* ----- 滑动视口 ----- */
+.pages-viewport {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+/* ----- 滑动轨道 ----- */
+.pages-track {
+    display: flex;
+    width: 200%;
+    height: 100%;
+    transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: transform;
+}
+
+/* ----- 单页 ----- */
+.page {
+    width: 50%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px 18px 10px;
+    scrollbar-width: none;
+}
+
+.page::-webkit-scrollbar {
+    display: none;
+}
+
+/* ----- 网格容器（4列，行高auto）----- */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: auto;
+    gap: 14px 12px;
+    align-content: start;
+}
+
+/* ----- 跨列跨行规则 ----- */
+.widget-card {
+    grid-column: span 4;
+}
+
+.widget-countdown {
+    grid-column: span 2;
+    grid-row: span 2;      /* 跨2行，和右边2个app对齐 */
+}
+
+.widget-chat {
+    grid-column: span 4;
+}

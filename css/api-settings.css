@@ -1,0 +1,446 @@
+/* ══════════════════════════════════════
+   API 设置 App — 毛玻璃独立面板
+   ══════════════════════════════════════ */
+
+/* ---- 全屏覆盖层 ---- */
+.api-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90000;
+    background: linear-gradient(145deg,
+            rgba(200, 160, 180, 0.25) 0%,
+            rgba(160, 180, 220, 0.20) 50%,
+            rgba(180, 200, 210, 0.22) 100%);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.api-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ---- 面板主体 ---- */
+.api-panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+/* ---- 顶栏 ---- */
+.api-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px 10px;
+    flex-shrink: 0;
+}
+
+.api-header-back {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.api-header-back:active {
+    transform: scale(0.9);
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.api-header-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(100, 70, 90, 0.9);
+    letter-spacing: 0.5px;
+}
+
+.api-header-placeholder {
+    width: 36px;
+}
+
+/* ---- 滚动区域 ---- */
+.api-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 6px 16px 30px;
+}
+
+.api-body::-webkit-scrollbar {
+    display: none;
+}
+
+/* ---- 毛玻璃板块 ---- */
+.api-section {
+    background: rgba(255, 255, 255, 0.38);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow:
+        0 2px 16px rgba(180, 140, 160, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.api-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(160, 100, 130, 0.7);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.api-section-label svg {
+    width: 14px;
+    height: 14px;
+    stroke: rgba(160, 100, 130, 0.6);
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* ---- 表单字段 ---- */
+.api-field {
+    margin-bottom: 10px;
+}
+
+.api-field:last-child {
+    margin-bottom: 0;
+}
+
+.api-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(120, 80, 100, 0.75);
+    margin-bottom: 5px;
+    letter-spacing: 0.3px;
+}
+
+.api-field input[type="text"],
+.api-field input[type="url"],
+.api-field input[type="password"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid rgba(200, 170, 185, 0.35);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-size: 13px;
+    color: rgba(80, 50, 65, 0.9);
+    outline: none;
+    transition: border-color 0.25s, box-shadow 0.25s;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.api-field input:focus {
+    border-color: rgba(200, 130, 160, 0.55);
+    box-shadow: 0 0 0 3px rgba(220, 120, 160, 0.1);
+}
+
+.api-field input::placeholder {
+    color: rgba(160, 130, 145, 0.5);
+}
+
+/* ---- 模型选择下拉 ---- */
+.api-field select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid rgba(200, 170, 185, 0.35);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-size: 13px;
+    color: rgba(80, 50, 65, 0.9);
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a0708a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    box-sizing: border-box;
+    font-family: inherit;
+    transition: border-color 0.25s;
+}
+
+.api-field select:focus {
+    border-color: rgba(200, 130, 160, 0.55);
+}
+
+/* ---- 按钮行 ---- */
+.api-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.api-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 9px 14px;
+    border: 1.5px solid rgba(200, 170, 185, 0.4);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: rgba(160, 90, 120, 0.85);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-family: inherit;
+}
+
+.api-btn:active {
+    transform: scale(0.96);
+    background: rgba(255, 255, 255, 0.65);
+}
+
+.api-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.api-btn-primary {
+    background: rgba(220, 120, 160, 0.18);
+    border-color: rgba(220, 120, 160, 0.35);
+    color: rgba(180, 70, 110, 0.9);
+}
+
+.api-btn-primary:active {
+    background: rgba(220, 120, 160, 0.3);
+}
+
+.api-btn-danger {
+    color: rgba(200, 80, 80, 0.8);
+    border-color: rgba(200, 80, 80, 0.25);
+}
+
+.api-btn-danger:active {
+    background: rgba(200, 80, 80, 0.1);
+}
+
+/* ---- 模型拉取状态 ---- */
+.api-status {
+    font-size: 11.5px;
+    color: rgba(140, 100, 120, 0.7);
+    margin-top: 6px;
+    min-height: 16px;
+    transition: color 0.2s;
+}
+
+.api-status.success {
+    color: rgba(80, 160, 100, 0.85);
+}
+
+.api-status.error {
+    color: rgba(200, 80, 80, 0.85);
+}
+
+.api-status.loading {
+    color: rgba(160, 130, 180, 0.85);
+}
+
+/* ---- 预设列表 ---- */
+.api-preset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.api-preset-empty {
+    text-align: center;
+    padding: 20px 0;
+    font-size: 12.5px;
+    color: rgba(160, 130, 145, 0.6);
+    letter-spacing: 0.3px;
+}
+
+.api-preset-item {
+    display: flex;
+    align-items: center;
+    padding: 11px 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.35);
+    border: 1.5px solid rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    cursor: pointer;
+    transition: all 0.2s;
+    gap: 10px;
+}
+
+.api-preset-item:active {
+    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.api-preset-item.active {
+    border-color: rgba(220, 120, 160, 0.5);
+    background: rgba(220, 120, 160, 0.1);
+    box-shadow: 0 0 0 2px rgba(220, 120, 160, 0.08);
+}
+
+.api-preset-radio {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid rgba(180, 150, 165, 0.45);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.api-preset-item.active .api-preset-radio {
+    border-color: rgba(200, 90, 130, 0.7);
+    background: rgba(220, 120, 160, 0.2);
+}
+
+.api-preset-item.active .api-preset-radio::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(200, 90, 130, 0.8);
+}
+
+.api-preset-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.api-preset-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(90, 60, 75, 0.9);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.api-preset-model {
+    font-size: 11px;
+    color: rgba(140, 110, 125, 0.65);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.api-preset-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.api-preset-action {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    border: none;
+    background: rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    padding: 0;
+}
+
+.api-preset-action:active {
+    transform: scale(0.88);
+}
+
+.api-preset-action svg {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+.api-preset-action.edit-btn svg {
+    stroke: rgba(140, 110, 160, 0.75);
+}
+
+.api-preset-action.del-btn svg {
+    stroke: rgba(200, 90, 90, 0.65);
+}
+
+.api-preset-action.edit-btn:active {
+    background: rgba(140, 110, 160, 0.12);
+}
+
+.api-preset-action.del-btn:active {
+    background: rgba(200, 90, 90, 0.1);
+}
+
+/* ---- 数据导入导出板块 ---- */
+.api-data-row {
+    display: flex;
+    gap: 8px;
+}
+
+.api-data-row .api-btn {
+    flex: 1;
+}
+
+/* ---- loading spinner ---- */
+@keyframes apiSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.api-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(160, 130, 160, 0.3);
+    border-top-color: rgba(180, 90, 130, 0.7);
+    border-radius: 50%;
+    animation: apiSpin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+

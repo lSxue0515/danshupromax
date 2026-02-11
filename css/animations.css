@@ -1,0 +1,57 @@
+/* ============================================
+   animations.css — 浅粉主题动效
+   ============================================ */
+
+/* ----- 小组件入场动画 ----- */
+@keyframes widget-pop {
+    0%   { opacity: 0; transform: scale(0.85) translateY(20px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.widget,
+.app-cell {
+    animation: widget-pop 0.5s ease backwards;
+}
+
+/* 交错延迟 */
+.grid-container > :nth-child(1)  { animation-delay: 0.00s; }
+.grid-container > :nth-child(2)  { animation-delay: 0.04s; }
+.grid-container > :nth-child(3)  { animation-delay: 0.08s; }
+.grid-container > :nth-child(4)  { animation-delay: 0.12s; }
+.grid-container > :nth-child(5)  { animation-delay: 0.16s; }
+.grid-container > :nth-child(6)  { animation-delay: 0.20s; }
+.grid-container > :nth-child(7)  { animation-delay: 0.24s; }
+.grid-container > :nth-child(8)  { animation-delay: 0.28s; }
+
+/* ----- 倒数日数字柔光脉冲 ----- */
+@keyframes pulse-pink {
+    0%, 100% { text-shadow: 0 0 8px rgba(219, 112, 147, 0.15); }
+    50%      { text-shadow: 0 0 25px rgba(219, 112, 147, 0.35); }
+}
+
+.cd-days {
+    animation: pulse-pink 3s ease-in-out infinite;
+}
+
+/* ----- 按下反馈 ----- */
+.app-cell:active .app-icon {
+    transform: scale(0.88);
+    box-shadow:
+        0 2px 8px rgba(219, 112, 147, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* ----- 页面滑动时的弹性效果 ----- */
+.pages-track.dragging {
+    transition: none !important;
+}
+
+/* ----- 通用淡入 ----- */
+.fade-in {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}

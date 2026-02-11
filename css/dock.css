@@ -1,0 +1,102 @@
+/* ============================================
+   dock.css — 独立悬浮毛玻璃Dock / 指示器 / Home横条
+   ============================================ */
+
+/* ----- 页面指示器小圆点 ----- */
+.page-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 0 4px;
+    flex-shrink: 0;
+}
+
+.dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(219, 112, 147, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.dot.active {
+    background: rgba(219, 112, 147, 0.6);
+    width: 20px;
+    border-radius: 4px;
+    border-color: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 1px 6px rgba(219, 112, 147, 0.3);
+}
+
+/* ----- Dock 容器：独立悬浮毛玻璃胶囊 ----- */
+.dock-container {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    padding: 10px 24px;
+    margin: 0 24px 6px;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow:
+        0 8px 32px rgba(200, 140, 160, 0.12),
+        0 2px 8px rgba(255, 182, 193, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    flex-shrink: 0;
+}
+
+/* ----- Dock 图标（与普通图标同尺寸）----- */
+.dock-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow:
+        0 4px 15px rgba(219, 112, 147, 0.08),
+        0 1px 2px rgba(255, 182, 193, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* ★ 关键修复：Dock图标SVG强制白色描边、无填充 */
+.dock-icon svg {
+    width: 26px;
+    height: 26px;
+    fill: none !important;
+    stroke: #ffffff;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 1px 4px rgba(150, 60, 90, 0.35));
+}
+
+/* ★ SVG内部所有path/circle/rect/line/polyline也强制 */
+.dock-icon svg path,
+.dock-icon svg circle,
+.dock-icon svg rect,
+.dock-icon svg line,
+.dock-icon svg polyline {
+    fill: none !important;
+    stroke: #ffffff;
+    stroke-width: 2.5;
+}
+
+/* Dock 里不显示文字 */
+.dock-container .app-name {
+    display: none;
+}
+
+/* ----- 底部 Home 横条 ----- */
+.home-indicator {
+    width: 134px;
+    height: 5px;
+    background: rgba(219, 112, 147, 0.2);
+    border-radius: 3px;
+    margin: 6px auto 10px;
+    flex-shrink: 0;
+}
