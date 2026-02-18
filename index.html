@@ -3,56 +3,92 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📱 My Phone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>蛋薯机 DanShu Pro</title>
+
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/grid.css">
-    <link rel="stylesheet" href="css/widgets.css">
     <link rel="stylesheet" href="css/apps.css">
+    <link rel="stylesheet" href="css/widgets.css">
     <link rel="stylesheet" href="css/dock.css">
     <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/cd-settings.css">
-    <link rel="stylesheet" href="css/api-settings.css">
-    <link rel="stylesheet" href="css/chat-app.css">
+    <link rel="stylesheet" href="css/api.css">
+    <link rel="stylesheet" href="css/appearance.css">
+    <link rel="stylesheet" href="css/chat.css">
 </head>
 
 <body>
 
-    <!-- ========== 手机外壳 ========== -->
-    <div class="phone-frame">
+    <div class="phone-frame" id="phoneFrame">
 
-        <!-- ===== 状态栏 ===== -->
+        <!-- 壁纸背景 -->
+        <div class="wallpaper" id="wallpaper"></div>
+
+        <!-- ====== 状态栏 ====== -->
         <div class="status-bar">
-            <span class="status-time" id="statusTime">12:00</span>
-            <span class="status-icons">
-                <svg viewBox="0 0 24 24" width="14" height="14">
+            <div class="status-left">
+                <span class="status-time" id="statusTime">12:00</span>
+            </div>
+            <div class="status-center">
+                <span class="status-model">DANSHU PRO</span>
+            </div>
+            <div class="status-right">
+                <svg class="status-icon" viewBox="0 0 24 24" width="14" height="14">
                     <path
-                        d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.24 4.24 0 0 0-6 0zm-4-4l2 2a7.07 7.07 0 0 1 10 0l2-2C15.14 9.14 8.87 9.14 5 13z" />
+                        d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" />
                 </svg>
-                <svg viewBox="0 0 24 24" width="14" height="14">
-                    <rect x="2" y="6" width="18" height="12" rx="2" />
-                    <line x1="22" y1="10" x2="22" y2="14" />
+                <svg class="status-icon" viewBox="0 0 24 24" width="14" height="14">
+                    <rect x="1" y="6" width="18" height="12" rx="2" ry="2" />
+                    <line x1="23" y1="13" x2="23" y2="11" />
                 </svg>
-            </span>
+            </div>
         </div>
 
-        <!-- ===== 双页滑动容器 ===== -->
-        <div class="pages-viewport">
+        <!-- ====== 页面视口 ====== -->
+        <div class="pages-viewport" id="pagesViewport">
             <div class="pages-track" id="pagesTrack">
 
-                <!-- 第一页 -->
+                <!-- ====== 第1页：主屏幕 ====== -->
                 <div class="page page-1">
                     <div class="grid-container">
-                        <div class="widget widget-card" onclick="openCardSettings()">
-                            <div class="card-content">
+
+                        <div class="widget widget-card" id="widgetCard">
+                            <div class="card-color-btn" onclick="event.stopPropagation(); toggleColorPicker();">
+                                <svg viewBox="0 0 24 24" width="16" height="16">
+                                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" />
+                                    <circle cx="7.5" cy="10" r="1.5" fill="#ffa4b6" />
+                                    <circle cx="12" cy="7" r="1.5" fill="#a78bfa" />
+                                    <circle cx="16.5" cy="10" r="1.5" fill="#67e8f9" />
+                                    <circle cx="14.5" cy="15" r="1.5" fill="#fcd34d" />
+                                    <circle cx="9.5" cy="15" r="1.5" fill="#86efac" />
+                                </svg>
+                            </div>
+                            <div class="card-color-picker" id="colorPicker">
+                                <div class="color-dot" style="background:#ffdde7" onclick="setCardTextColor('#ffdde7')">
+                                </div>
+                                <div class="color-dot" style="background:#ffffff" onclick="setCardTextColor('#ffffff')">
+                                </div>
+                                <div class="color-dot" style="background:#a78bfa" onclick="setCardTextColor('#a78bfa')">
+                                </div>
+                                <div class="color-dot" style="background:#67e8f9" onclick="setCardTextColor('#67e8f9')">
+                                </div>
+                                <div class="color-dot" style="background:#fcd34d" onclick="setCardTextColor('#fcd34d')">
+                                </div>
+                                <div class="color-dot" style="background:#86efac" onclick="setCardTextColor('#86efac')">
+                                </div>
+                                <div class="color-dot" style="background:#ffa4b6" onclick="setCardTextColor('#ffa4b6')">
+                                </div>
+                                <div class="color-dot" style="background:#f9a8d4" onclick="setCardTextColor('#f9a8d4')">
+                                </div>
+                                <input type="color" id="customColorInput" class="color-custom-input" value="#ffdde7"
+                                    onchange="setCardTextColor(this.value)" title="自定义颜色">
+                            </div>
+                            <div class="card-content" onclick="openCardSettings()">
                                 <div class="card-left">
-                                    <div class="card-title" id="cardTitle" contenteditable="true"
-                                        onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">⑉⁺.
-                                        ⋆甘い夢の救い˚ ˖ ★</div>
+                                    <div class="card-title" id="cardTitle" contenteditable="true">⑉⁺. ⋆甘い夢の救い˚ ˖ ★</div>
                                     <div class="card-text-box">
-                                        <div class="card-text" id="cardText" contenteditable="true"
-                                            onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
-                                            一緒に幸せの門に向かいましょう</div>
+                                        <div class="card-text" id="cardText" contenteditable="true">一緒に幸せの門に向かいましょう
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="card-right">
@@ -64,1289 +100,1011 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="widget widget-countdown" id="countdownWidget" onclick="openCdSettings()">
-                            <div class="cd-icon">♡</div>
-                            <div class="countdown-info">
+
+                        <div class="widget widget-countdown" id="countdownWidget" onclick="openCountdownApp()">
+                            <div class="countdown-top">
+                                <div class="cd-label">已在一起</div>
+                                <div class="cd-days-row">
+                                    <div class="cd-days-num" id="displayDays">15</div>
+                                    <div class="cd-days-unit">天</div>
+                                </div>
+                            </div>
+                            <div class="countdown-bottom">
                                 <div class="cd-title" id="displayTitle">恋爱纪念日</div>
                                 <div class="cd-date" id="displayDate">2026-02-03</div>
                             </div>
-                            <div class="cd-days" id="displayDays">7<span>天</span></div>
-                            <div class="cd-sub">在一起的每一天都是礼物 ✦</div>
+                            <div class="cd-deco">♡</div>
                         </div>
-                        <div class="app-cell" onclick="openApiApp()">
-                            <div class="app-icon glass-icon"><svg viewBox="0 0 24 24">
-                                    <path d="M4 17l6-6-6-6M12 19h8M12 5h8M12 12h8" />
-                                </svg></div>
-                            <div class="app-name">API</div>
-                        </div>
-                        <div class="app-cell" onclick="openAppearanceApp()">
-                            <div class="app-icon glass-icon"><svg viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="3" />
-                                    <path
-                                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                                </svg></div>
-                            <div class="app-name">外观</div>
-                        </div>
-                        <div class="app-cell">
-                            <div class="app-icon glass-icon"><svg viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <path d="M7 12h10" />
-                                </svg></div>
-                            <div class="app-name">美团</div>
-                        </div>
-                        <div class="app-cell" onclick="openTiebaApp()">
-                            <div class="app-icon glass-icon"><svg viewBox="0 0 24 24">
-                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                                    <line x1="9" y1="7" x2="15" y2="7" />
-                                    <line x1="9" y1="11" x2="15" y2="11" />
-                                </svg></div>
-                            <div class="app-name">贴吧</div>
-                        </div>
-                        <div class="widget widget-chat">
-                            <div class="chat-row chat-left">
-                                <div class="chat-avatar" onclick="triggerFile('avatarLeftImg')"><img
-                                        src="https://s3.bmp.ovh/2026/02/04/mXjTSFp4.jpg" id="avatarLeftImg" alt="">
-                                    <div class="avatar-hint">换</div>
+
+                        <div class="apps-grid-2x2">
+                            <div class="app-cell" data-icon-id="icon_api" onclick="openApiApp()">
+                                <div class="app-icon glass-icon" id="icon_api">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M4 17l6-6-6-6M12 19h8M12 5h8M12 12h8" />
+                                    </svg>
                                 </div>
-                                <div class="chat-bubble" id="bubbleTextLeft" contenteditable="true"
-                                    onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()"
-                                    ontouchmove="event.stopPropagation()">今天也好喜欢你 ♡</div>
+                                <div class="app-name">API</div>
                             </div>
-                            <div class="chat-row chat-right">
-                                <div class="chat-bubble" id="bubbleTextRight" contenteditable="true"
-                                    onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()"
-                                    ontouchmove="event.stopPropagation()">每天都是，笨蛋 ˙ᵕ˙</div>
-                                <div class="chat-avatar" onclick="triggerFile('avatarRightImg')"><img
-                                        src="https://s3.bmp.ovh/2026/02/04/mXjTSFp4.jpg" id="avatarRightImg" alt="">
-                                    <div class="avatar-hint">换</div>
+                            <div class="app-cell" data-icon-id="icon_appear" onclick="openAppearanceApp()">
+                                <div class="app-icon glass-icon" id="icon_appear">
+                                    <svg viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="3" />
+                                        <path
+                                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                                    </svg>
                                 </div>
+                                <div class="app-name">外观</div>
+                            </div>
+                            <div class="app-cell" data-icon-id="icon_tieba" onclick="openTiebaApp()">
+                                <div class="app-icon glass-icon" id="icon_tieba">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                        <line x1="9" y1="7" x2="15" y2="7" />
+                                        <line x1="9" y1="11" x2="15" y2="11" />
+                                    </svg>
+                                </div>
+                                <div class="app-name">贴吧</div>
+                            </div>
+                            <div class="app-cell" data-icon-id="icon_meituan">
+                                <div class="app-icon glass-icon" id="icon_meituan">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                                        <line x1="3" y1="6" x2="21" y2="6" />
+                                        <path d="M16 10a4 4 0 0 1-8 0" />
+                                    </svg>
+                                </div>
+                                <div class="app-name">美团</div>
                             </div>
                         </div>
+
+                        <div class="widget widget-chat-bubble">
+                            <div class="bubble-row bubble-left">
+                                <div class="bubble-avatar"
+                                    onclick="event.stopPropagation(); triggerFile('avatarLeft');">
+                                    <img src="" id="avatarLeft" alt="">
+                                </div>
+                                <div class="bubble-glass">
+                                    <span class="bubble-text" id="bubbleTextTop" contenteditable="true">今天也要开心鸭 ꒰ᐢ.
+                                        .ᐢ꒱</span>
+                                </div>
+                            </div>
+                            <div class="bubble-row bubble-right">
+                                <div class="bubble-glass">
+                                    <span class="bubble-text" id="bubbleTextBottom" contenteditable="true">嗯嗯！一直在呢
+                                        ♡</span>
+                                </div>
+                                <div class="bubble-avatar"
+                                    onclick="event.stopPropagation(); triggerFile('avatarRight');">
+                                    <img src="" id="avatarRight" alt="">
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
-                <!-- 第2页 -->
+                <!-- ====== 第2页 ====== -->
                 <div class="page page-2">
-                    <div class="grid-container">
-                        <div class="app-cell">
-                            <div class="app-icon glass-icon" id="appIconCalendar"><svg viewBox="0 0 24 24">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" />
-                                    <line x1="16" y1="2" x2="16" y2="6" />
-                                    <line x1="8" y1="2" x2="8" y2="6" />
-                                    <line x1="3" y1="10" x2="21" y2="10" />
-                                </svg></div>
-                            <div class="app-name">日历</div>
+                    <div class="grid-apps-page">
+                        <div class="app-cell" data-icon-id="icon_mail">
+                            <div class="app-icon glass-icon" id="icon_mail">
+                                <svg viewBox="0 0 24 24">
+                                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                                    <polyline points="22 4 12 13 2 4" />
+                                </svg>
+                            </div>
+                            <div class="app-name">邮件</div>
                         </div>
-                        <div class="app-cell">
-                            <div class="app-icon glass-icon" id="appIconWeather"><svg viewBox="0 0 24 24">
-                                    <path d="M12 2v2" />
-                                    <path d="M12 20v2" />
-                                    <path d="M4.93 4.93l1.41 1.41" />
-                                    <path d="M17.66 17.66l1.41 1.41" />
-                                    <path d="M2 12h2" />
-                                    <path d="M20 12h2" />
-                                    <path d="M6.34 17.66l-1.41 1.41" />
-                                    <path d="M19.07 4.93l-1.41 1.41" />
+                        <div class="app-cell" data-icon-id="icon_weather">
+                            <div class="app-icon glass-icon" id="icon_weather">
+                                <svg viewBox="0 0 24 24">
+                                    <path
+                                        d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
                                     <circle cx="12" cy="12" r="4" />
-                                </svg></div>
+                                </svg>
+                            </div>
                             <div class="app-name">天气</div>
                         </div>
-                        <div class="app-cell">
-                            <div class="app-icon glass-icon" id="appIconMusic"><svg viewBox="0 0 24 24">
+                        <div class="app-cell" data-icon-id="icon_music">
+                            <div class="app-icon glass-icon" id="icon_music">
+                                <svg viewBox="0 0 24 24">
                                     <path d="M9 18V5l12-2v13" />
                                     <circle cx="6" cy="18" r="3" />
                                     <circle cx="18" cy="16" r="3" />
-                                </svg></div>
+                                </svg>
+                            </div>
                             <div class="app-name">音乐</div>
                         </div>
-                        <div class="app-cell">
-                            <div class="app-icon glass-icon" id="appIconAlbum"><svg viewBox="0 0 24 24">
+                        <div class="app-cell" data-icon-id="icon_album">
+                            <div class="app-icon glass-icon" id="icon_album">
+                                <svg viewBox="0 0 24 24">
                                     <rect x="3" y="3" width="18" height="18" rx="2" />
                                     <circle cx="8.5" cy="8.5" r="1.5" />
                                     <polyline points="21 15 16 10 5 21" />
-                                </svg></div>
+                                </svg>
+                            </div>
                             <div class="app-name">相册</div>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
 
+        <!-- 页面指示器 -->
         <div class="page-dots">
             <div class="dot active" data-page="0"></div>
             <div class="dot" data-page="1"></div>
         </div>
 
-        <!-- Dock栏 -->
+        <!-- Dock -->
         <div class="dock-container">
-            <div class="app-cell" onclick="openChatApp()">
-                <div class="app-icon dock-icon" id="appIconChat"><svg viewBox="0 0 24 24">
-                        <path
-                            d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                    </svg></div>
+            <div class="app-cell" data-icon-id="icon_dock_msg" onclick="renderChatPage()">
+                <div class="app-icon dock-icon" id="icon_dock_msg">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                </div>
+                <div class="app-name">消息</div>
             </div>
-            <div class="app-cell">
-                <div class="app-icon dock-icon" id="appIconNovel"><svg viewBox="0 0 24 24">
+            <div class="app-cell" data-icon-id="icon_dock_note">
+                <div class="app-icon dock-icon" id="icon_dock_note">
+                    <svg viewBox="0 0 24 24">
                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
                         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                    </svg></div>
+                    </svg>
+                </div>
+                <div class="app-name">手帐</div>
             </div>
-            <div class="app-cell" onclick="openWorldBookApp()">
-                <div class="app-icon dock-icon" id="appIconWorld"><svg viewBox="0 0 24 24">
+            <div class="app-cell" data-icon-id="icon_dock_browser">
+                <div class="app-icon dock-icon" id="icon_dock_browser">
+                    <svg viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="10" />
                         <line x1="2" y1="12" x2="22" y2="12" />
                         <path
                             d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                    </svg></div>
+                    </svg>
+                </div>
+                <div class="app-name">浏览器</div>
             </div>
         </div>
-        <div class="home-indicator"></div>
-    </div>
 
-    <!-- ══════ 恋爱纪念日设置面板 ══════ -->
-    <div class="cd-settings-overlay" id="cdSettingsOverlay">
-        <div class="cd-settings-panel">
-            <div class="cd-settings-header">
-                <div class="cd-settings-back" onclick="closeCdSettings()"><svg viewBox="0 0 24 24" width="20"
-                        height="20">
-                        <path d="M19 12H5M12 19l-7-7 7-7" fill="none" stroke="#b45a78" stroke-width="2.2"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                    </svg></div>
-                <div class="cd-settings-title-bar">纪念日设置</div>
-                <div class="cd-settings-save" onclick="saveCdSettings()">保存</div>
-            </div>
-            <div class="cd-settings-body">
-                <div class="cd-preview-card" id="cdPreviewCard">
-                    <div class="cd-preview-icon">♡</div>
-                    <div class="cd-preview-title" id="cdPreviewTitle">恋爱纪念日</div>
-                    <div class="cd-preview-date" id="cdPreviewDate">2026-02-03</div>
-                    <div class="cd-preview-days" id="cdPreviewDays">7<span>天</span></div>
-                    <div class="cd-preview-sub" id="cdPreviewSub">在一起的每一天都是礼物 ✦</div>
-                </div>
-                <div class="cd-section">
-                    <div class="cd-section-label">基本信息</div>
-                    <div class="cd-field"><label>标题</label><input type="text" id="cdInputTitle" value="恋爱纪念日"
-                            placeholder="例：恋爱纪念日"></div>
-                    <div class="cd-field"><label>起始日期</label><input type="date" id="cdInputDate" value="2026-02-03">
+        <!-- 底部横条 -->
+        <div class="home-indicator">
+            <div class="indicator-bar"></div>
+        </div>
+
+        <!-- Toast -->
+        <div class="toast" id="toast"></div>
+
+        <!-- 纪念日面板 -->
+        <div class="cd-app-overlay" id="cdAppOverlay">
+            <div class="cd-app-panel" id="cdAppPanel">
+                <div class="cd-app-header">
+                    <div class="cd-app-back" onclick="closeCountdownApp()">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path d="M15 18l-6-6 6-6" />
+                        </svg>
                     </div>
-                    <div class="cd-field"><label>底部文案</label><input type="text" id="cdInputSub" value="在一起的每一天都是礼物 ✦"
-                            placeholder="底部小字"></div>
-                </div>
-                <div class="cd-section">
-                    <div class="cd-section-label">字体颜色</div>
-                    <div class="cd-color-row"><input type="color" id="cdFontColorPicker" value="#dc78a0"><input
-                            type="text" id="cdFontColorHex" value="#dc78a0" placeholder="#ff69b4" maxlength="7"></div>
-                    <div class="cd-palette" id="cdFontPalette"><span style="background:#dc78a0"
-                            data-c="#dc78a0"></span><span style="background:#e8a0b8" data-c="#e8a0b8"></span><span
-                            style="background:#f48fb1" data-c="#f48fb1"></span><span style="background:#ce93d8"
-                            data-c="#ce93d8"></span><span style="background:#90caf9" data-c="#90caf9"></span><span
-                            style="background:#80cbc4" data-c="#80cbc4"></span><span style="background:#a5d6a7"
-                            data-c="#a5d6a7"></span><span style="background:#fff59d" data-c="#fff59d"></span><span
-                            style="background:#ffab91" data-c="#ffab91"></span><span style="background:#ffffff"
-                            data-c="#ffffff"></span><span style="background:#424242" data-c="#424242"></span><span
-                            style="background:#000000" data-c="#000000"></span></div>
-                </div>
-                <div class="cd-section">
-                    <div class="cd-section-label">自定义字体</div>
-                    <div class="cd-field"><label>字体URL</label><input type="text" id="cdFontUrl"
-                            placeholder="https://example.com/font.woff2"></div>
-                    <div class="cd-field"><label>字体名称</label><input type="text" id="cdFontName" placeholder="例：MyFont">
-                    </div>
-                    <div class="cd-font-preview" id="cdFontPreview"><span>字体预览 ABCabc 123 恋爱纪念日</span></div>
-                    <div class="cd-btn-row"><button class="cd-btn-small" onclick="loadCdFont()">加载字体</button></div>
-                </div>
-                <div class="cd-section">
-                    <div class="cd-section-label">小组件背景</div>
-                    <div class="cd-subsection-label">背景颜色</div>
-                    <div class="cd-color-row"><input type="color" id="cdBgColorPicker" value="#ffffff"><input
-                            type="text" id="cdBgColorHex" value="#ffffff" placeholder="#ffffff" maxlength="7"></div>
-                    <div class="cd-palette" id="cdBgPalette"><span style="background:rgba(255,255,255,0.45)"
-                            data-c="rgba(255,255,255,0.45)"></span><span style="background:rgba(255,228,235,0.5)"
-                            data-c="rgba(255,228,235,0.5)"></span><span style="background:rgba(225,190,231,0.4)"
-                            data-c="rgba(225,190,231,0.4)"></span><span style="background:rgba(187,222,251,0.4)"
-                            data-c="rgba(187,222,251,0.4)"></span><span style="background:rgba(200,230,201,0.4)"
-                            data-c="rgba(200,230,201,0.4)"></span><span style="background:rgba(255,249,196,0.4)"
-                            data-c="rgba(255,249,196,0.4)"></span><span style="background:rgba(255,204,188,0.4)"
-                            data-c="rgba(255,204,188,0.4)"></span><span style="background:rgba(0,0,0,0.3)"
-                            data-c="rgba(0,0,0,0.3)"></span></div>
-                    <div class="cd-field" style="margin-top:6px;"><label>透明度</label><input type="range" id="cdBgOpacity"
-                            min="0" max="100" value="45"><span class="cd-range-val" id="cdBgOpacityVal">45%</span></div>
-                    <div class="cd-subsection-label" style="margin-top:14px;">背景图片</div>
-                    <div class="cd-btn-row"><button class="cd-btn-small"
-                            onclick="document.getElementById('cdBgImageFile').click()">选择图片</button><button
-                            class="cd-btn-small cd-btn-danger" onclick="removeCdBgImage()">移除图片</button><input
-                            type="file" id="cdBgImageFile" accept="image/*" style="display:none"
-                            onchange="onCdBgImage(event)"></div>
-                    <div class="cd-bg-preview-wrap" id="cdBgPreviewWrap" style="display:none;">
-                        <div class="cd-bg-preview-box"><img id="cdBgPreviewImg" src="" alt="背景预览"></div>
-                        <div class="cd-field"><label>水平位置</label><input type="range" id="cdBgPosX" min="0" max="100"
-                                value="50"><span class="cd-range-val" id="cdBgPosXVal">50%</span></div>
-                        <div class="cd-field"><label>垂直位置</label><input type="range" id="cdBgPosY" min="0" max="100"
-                                value="50"><span class="cd-range-val" id="cdBgPosYVal">50%</span></div>
-                        <div class="cd-field"><label>缩放</label><input type="range" id="cdBgScale" min="100" max="300"
-                                value="120"><span class="cd-range-val" id="cdBgScaleVal">120%</span></div>
+                    <div class="cd-app-title">纪念日设置</div>
+                    <div class="cd-app-save" onclick="saveCountdownSettings()">
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span>保存</span>
                     </div>
                 </div>
-                <div class="cd-section cd-section-danger"><button class="cd-btn-clear"
-                        onclick="clearAllCdSettings()"><svg viewBox="0 0 24 24" width="16" height="16">
-                            <path
-                                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                        </svg>清除所有纪念日设置</button></div>
-                <div style="height:40px;"></div>
+                <div class="cd-app-body">
+                    <div class="cd-app-section">
+                        <div class="cd-app-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            实时预览
+                        </div>
+                        <div class="cd-preview-card" id="cdPreviewCard">
+                            <div class="cd-preview-top">
+                                <div class="cd-preview-label">已在一起</div>
+                                <div class="cd-preview-days-row">
+                                    <span class="cd-preview-days" id="cdPreviewDays">15</span>
+                                    <span class="cd-preview-unit">天</span>
+                                </div>
+                            </div>
+                            <div class="cd-preview-bottom">
+                                <div class="cd-preview-title" id="cdPreviewTitle">恋爱纪念日</div>
+                                <div class="cd-preview-date" id="cdPreviewDate">2026-02-03</div>
+                            </div>
+                            <div class="cd-preview-deco">♡</div>
+                        </div>
+                    </div>
+                    <div class="cd-app-section">
+                        <div class="cd-app-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                <line x1="16" y1="2" x2="16" y2="6" />
+                                <line x1="8" y1="2" x2="8" y2="6" />
+                                <line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                            基本信息
+                        </div>
+                        <div class="cd-app-field">
+                            <label>纪念日标题</label>
+                            <input type="text" id="cdInputTitle" class="cd-input" value="恋爱纪念日" placeholder="输入标题…">
+                        </div>
+                        <div class="cd-app-field">
+                            <label>纪念日日期</label>
+                            <input type="date" id="cdInputDate" class="cd-input" value="2026-02-03">
+                        </div>
+                    </div>
+                    <div class="cd-app-section">
+                        <div class="cd-app-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <path
+                                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                            字体颜色
+                        </div>
+                        <div class="cd-color-row">
+                            <div class="cd-color-dot" style="background:#503c46" data-color="#503c46"
+                                onclick="pickCdFontColor(this)"></div>
+                            <div class="cd-color-dot" style="background:#ffffff" data-color="#ffffff"
+                                onclick="pickCdFontColor(this)"></div>
+                            <div class="cd-color-dot" style="background:#ffa4b6" data-color="#ffa4b6"
+                                onclick="pickCdFontColor(this)"></div>
+                            <div class="cd-color-dot" style="background:#a78bfa" data-color="#a78bfa"
+                                onclick="pickCdFontColor(this)"></div>
+                            <div class="cd-color-dot" style="background:#67e8f9" data-color="#67e8f9"
+                                onclick="pickCdFontColor(this)"></div>
+                            <div class="cd-color-dot" style="background:#fcd34d" data-color="#fcd34d"
+                                onclick="pickCdFontColor(this)"></div>
+                            <div class="cd-color-dot" style="background:#86efac" data-color="#86efac"
+                                onclick="pickCdFontColor(this)"></div>
+                            <div class="cd-color-dot" style="background:#f9a8d4" data-color="#f9a8d4"
+                                onclick="pickCdFontColor(this)"></div>
+                        </div>
+                        <div class="cd-color-input-row">
+                            <input type="color" id="cdFontColorPicker" class="cd-color-native" value="#503c46"
+                                onchange="setCdFontColorFromPicker(this.value)">
+                            <input type="text" id="cdFontColorHex" class="cd-input cd-input-short" value="#503c46"
+                                placeholder="#hex色号" oninput="setCdFontColorFromHex(this.value)">
+                        </div>
+                    </div>
+                    <div class="cd-app-section">
+                        <div class="cd-app-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <polyline points="4 7 4 4 20 4 20 7" />
+                                <line x1="9" y1="20" x2="15" y2="20" />
+                                <line x1="12" y1="4" x2="12" y2="20" />
+                            </svg>
+                            自定义字体
+                        </div>
+                        <div class="cd-app-field">
+                            <label>字体URL（.woff2 / .ttf / .otf）</label>
+                            <input type="text" id="cdFontUrl" class="cd-input" placeholder="粘贴字体文件链接…"
+                                oninput="previewCdFont(this.value)">
+                        </div>
+                        <div class="cd-font-hint">粘贴后预览卡片会实时切换字体</div>
+                    </div>
+                    <div class="cd-app-section">
+                        <div class="cd-app-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            小组件背景
+                        </div>
+                        <div class="cd-bg-mode-row">
+                            <div class="cd-bg-mode-btn active" id="cdBgModeColor" onclick="switchCdBgMode('color')">纯色背景
+                            </div>
+                            <div class="cd-bg-mode-btn" id="cdBgModeImage" onclick="switchCdBgMode('image')">图片背景</div>
+                        </div>
+                        <div class="cd-bg-color-panel" id="cdBgColorPanel">
+                            <div class="cd-color-row">
+                                <div class="cd-color-dot cd-bg-dot" style="background:rgba(255,255,255,0.65)"
+                                    data-color="rgba(255,255,255,0.65)" onclick="pickCdBgColor(this)"></div>
+                                <div class="cd-color-dot cd-bg-dot" style="background:rgba(255,220,230,0.7)"
+                                    data-color="rgba(255,220,230,0.7)" onclick="pickCdBgColor(this)"></div>
+                                <div class="cd-color-dot cd-bg-dot" style="background:rgba(167,139,250,0.45)"
+                                    data-color="rgba(167,139,250,0.45)" onclick="pickCdBgColor(this)"></div>
+                                <div class="cd-color-dot cd-bg-dot" style="background:rgba(103,232,249,0.4)"
+                                    data-color="rgba(103,232,249,0.4)" onclick="pickCdBgColor(this)"></div>
+                                <div class="cd-color-dot cd-bg-dot" style="background:rgba(252,211,77,0.45)"
+                                    data-color="rgba(252,211,77,0.45)" onclick="pickCdBgColor(this)"></div>
+                                <div class="cd-color-dot cd-bg-dot" style="background:rgba(134,239,172,0.4)"
+                                    data-color="rgba(134,239,172,0.4)" onclick="pickCdBgColor(this)"></div>
+                                <div class="cd-color-dot cd-bg-dot" style="background:rgba(0,0,0,0.35)"
+                                    data-color="rgba(0,0,0,0.35)" onclick="pickCdBgColor(this)"></div>
+                                <div class="cd-color-dot cd-bg-dot" style="background:rgba(248,164,184,0.5)"
+                                    data-color="rgba(248,164,184,0.5)" onclick="pickCdBgColor(this)"></div>
+                            </div>
+                            <div class="cd-color-input-row">
+                                <input type="color" id="cdBgColorPicker" class="cd-color-native" value="#ffffff"
+                                    onchange="setCdBgColorFromPicker(this.value)">
+                                <input type="text" id="cdBgColorHex" class="cd-input cd-input-short"
+                                    value="rgba(255,255,255,0.65)" placeholder="色号或rgba()"
+                                    oninput="setCdBgColorFromHex(this.value)">
+                            </div>
+                        </div>
+                        <div class="cd-bg-image-panel" id="cdBgImagePanel" style="display:none;">
+                            <div class="cd-app-field">
+                                <label>图片URL</label>
+                                <input type="text" id="cdBgImageUrl" class="cd-input" placeholder="粘贴图片链接…"
+                                    oninput="previewCdBgImage()">
+                            </div>
+                            <div class="cd-bg-upload-btn" onclick="triggerCdBgUpload()">
+                                <svg viewBox="0 0 24 24" width="16" height="16">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                或点击上传本地图片
+                            </div>
+                            <input type="file" id="cdBgFileInput" accept="image/*" style="display:none"
+                                onchange="handleCdBgFile(event)">
+                            <div class="cd-bg-preview-wrap" id="cdBgPreviewWrap" style="display:none;">
+                                <div class="cd-bg-preview-label">背景图预览 & 位置调整</div>
+                                <div class="cd-bg-preview-box" id="cdBgPreviewBox">
+                                    <img src="" id="cdBgPreviewImg" alt="" draggable="false">
+                                </div>
+                                <div class="cd-bg-pos-controls">
+                                    <div class="cd-pos-row">
+                                        <label>水平位置</label>
+                                        <input type="range" id="cdBgPosX" min="0" max="100" value="50" class="cd-range"
+                                            oninput="updateCdBgPosition()">
+                                        <span id="cdBgPosXVal">50%</span>
+                                    </div>
+                                    <div class="cd-pos-row">
+                                        <label>垂直位置</label>
+                                        <input type="range" id="cdBgPosY" min="0" max="100" value="50" class="cd-range"
+                                            oninput="updateCdBgPosition()">
+                                        <span id="cdBgPosYVal">50%</span>
+                                    </div>
+                                    <div class="cd-pos-row">
+                                        <label>缩放比例</label>
+                                        <input type="range" id="cdBgScale" min="100" max="300" value="100"
+                                            class="cd-range" oninput="updateCdBgPosition()">
+                                        <span id="cdBgScaleVal">100%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cd-app-section cd-section-danger">
+                        <div class="cd-clear-btn" onclick="clearAllCdSettings()">
+                            <svg viewBox="0 0 24 24" width="16" height="16">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path
+                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                            清除所有纪念日设置
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- ══════ API 设置面板 ══════ -->
-    <div class="api-overlay" id="apiOverlay">
-        <div class="api-panel">
-            <div class="api-header">
-                <div class="api-header-back" onclick="closeApiApp()"><svg viewBox="0 0 24 24" width="18" height="18">
-                        <path d="M19 12H5M12 19l-7-7 7-7" fill="none" stroke="rgba(100,70,90,0.8)" stroke-width="2.2"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                    </svg></div>
-                <div class="api-header-title">API 设置</div>
-                <div class="api-header-placeholder"></div>
-            </div>
-            <div class="api-body" id="apiBody">
-                <div class="api-section">
-                    <div class="api-section-label"><svg viewBox="0 0 24 24">
-                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                        </svg>接口配置</div>
-                    <div class="api-field"><label>API 名称</label><input type="text" id="apiName"
-                            placeholder="例：GPT-4o / Claude / 自建接口"></div>
-                    <div class="api-field"><label>API URL</label><input type="url" id="apiUrl"
-                            placeholder="https://api.openai.com"></div>
-                    <div class="api-field"><label>API Key</label><input type="password" id="apiKey"
-                            placeholder="sk-xxxxxxxxxxxxxxxx"></div>
+        <!-- API 面板 -->
+        <div class="api-app-overlay" id="apiAppOverlay">
+            <div class="api-app-panel">
+                <div class="api-app-header">
+                    <div class="api-app-back" onclick="closeApiApp()">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path d="M15 18l-6-6 6-6" />
+                        </svg>
+                    </div>
+                    <div class="api-app-title">API 设置</div>
+                    <div class="api-header-spacer"></div>
                 </div>
-                <div class="api-section">
-                    <div class="api-section-label"><svg viewBox="0 0 24 24">
-                            <circle cx="12" cy="12" r="3" />
-                            <path
-                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                        </svg>模型管理</div>
-                    <div class="api-btn-row"><button class="api-btn api-btn-primary" onclick="apiFetchModels()"><svg
-                                viewBox="0 0 24 24">
-                                <polyline points="23 4 23 10 17 10" />
-                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                            </svg>拉取模型</button></div>
-                    <div class="api-status" id="apiStatus"></div>
-                    <div class="api-field" style="margin-top:8px;"><label>选择模型</label><select id="apiModelSelect">
-                            <option value="">-- 请先拉取模型 --</option>
-                        </select></div>
-                    <div class="api-btn-row"><button class="api-btn api-btn-primary" id="apiSaveBtn"
-                            onclick="apiSavePreset()"><svg viewBox="0 0 24 24">
+                <div class="api-app-body">
+                    <div class="api-section">
+                        <div class="api-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                            </svg>
+                            配置信息
+                        </div>
+                        <div class="api-field"><label>API 名称</label><input type="text" id="apiName" class="api-input"
+                                placeholder="例：我的GPT接口"></div>
+                        <div class="api-field"><label>API URL</label><input type="text" id="apiUrl" class="api-input"
+                                placeholder="https://api.example.com/v1"></div>
+                        <div class="api-field"><label>API Key</label><input type="password" id="apiKey"
+                                class="api-input" placeholder="sk-..."></div>
+                    </div>
+                    <div class="api-section">
+                        <div class="api-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <path
+                                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                                <line x1="12" y1="22.08" x2="12" y2="12" />
+                            </svg>
+                            模型设置
+                        </div>
+                        <div class="api-btn-row">
+                            <div class="api-btn api-btn-primary" id="apiFetchBtn" onclick="fetchApiModels()">
+                                <svg viewBox="0 0 24 24" width="14" height="14">
+                                    <polyline points="1 4 1 10 7 10" />
+                                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                                </svg>
+                                拉取模型
+                            </div>
+                        </div>
+                        <div class="api-model-status" id="apiModelStatus">填写 URL 和 Key 后点击拉取</div>
+                        <div class="api-field"><label>选择模型</label><select id="apiModelSelect" class="api-select">
+                                <option value="">-- 请先拉取模型 --</option>
+                            </select></div>
+                    </div>
+                    <div class="api-section">
+                        <div class="api-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
                                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
                                 <polyline points="17 21 17 13 7 13 7 21" />
                                 <polyline points="7 3 7 8 15 8" />
-                            </svg><span class="api-save-text">保存为预设</span></button><button class="api-btn"
-                            onclick="apiSaveAsNew()"><svg viewBox="0 0 24 24">
-                                <line x1="12" y1="5" x2="12" y2="19" />
-                                <line x1="5" y1="12" x2="19" y2="12" />
-                            </svg>另存新预设</button></div>
-                </div>
-                <div class="api-section">
-                    <div class="api-section-label"><svg viewBox="0 0 24 24">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="7 10 12 15 17 10" />
-                            <line x1="12" y1="15" x2="12" y2="3" />
-                        </svg>数据管理</div>
-                    <div class="api-data-row"><button class="api-btn" onclick="apiImportData()"><svg
-                                viewBox="0 0 24 24">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                <polyline points="17 8 12 3 7 8" />
-                                <line x1="12" y1="3" x2="12" y2="15" />
-                            </svg>导入数据</button><button class="api-btn" onclick="apiExportData()"><svg
-                                viewBox="0 0 24 24">
+                            </svg>
+                            保存预设
+                        </div>
+                        <div class="api-btn api-btn-save" onclick="saveApiPreset()">
+                            <svg viewBox="0 0 24 24" width="15" height="15">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            保存为预设
+                        </div>
+                    </div>
+                    <div class="api-section">
+                        <div class="api-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                                 <polyline points="7 10 12 15 17 10" />
                                 <line x1="12" y1="15" x2="12" y2="3" />
-                            </svg>备份数据</button></div>
-                    <div class="api-btn-row" style="margin-top:6px;"><button class="api-btn"
-                            onclick="apiNewPreset()"><svg viewBox="0 0 24 24">
-                                <rect x="3" y="3" width="18" height="18" rx="2" />
-                                <line x1="12" y1="8" x2="12" y2="16" />
-                                <line x1="8" y1="12" x2="16" y2="12" />
-                            </svg>新建预设</button></div>
-                </div>
-                <div class="api-section">
-                    <div class="api-section-label"><svg viewBox="0 0 24 24">
-                            <line x1="8" y1="6" x2="21" y2="6" />
-                            <line x1="8" y1="12" x2="21" y2="12" />
-                            <line x1="8" y1="18" x2="21" y2="18" />
-                            <line x1="3" y1="6" x2="3.01" y2="6" />
-                            <line x1="3" y1="12" x2="3.01" y2="12" />
-                            <line x1="3" y1="18" x2="3.01" y2="18" />
-                        </svg>预设列表</div>
-                    <div class="api-preset-list" id="apiPresetList">
-                        <div class="api-preset-empty">暂无已保存的预设</div>
+                            </svg>
+                            数据管理
+                        </div>
+                        <div class="api-data-row">
+                            <div class="api-data-btn" onclick="importApiData()">
+                                <svg viewBox="0 0 24 24" width="14" height="14">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                导入数据
+                            </div>
+                            <div class="api-data-btn" onclick="exportApiData()">
+                                <svg viewBox="0 0 24 24" width="14" height="14">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                                备份数据
+                            </div>
+                        </div>
+                        <input type="file" id="apiImportFile" class="api-import-file" accept=".json"
+                            onchange="handleApiImport(event)">
+                    </div>
+                    <div class="api-section">
+                        <div class="api-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <line x1="8" y1="6" x2="21" y2="6" />
+                                <line x1="8" y1="12" x2="21" y2="12" />
+                                <line x1="8" y1="18" x2="21" y2="18" />
+                                <line x1="3" y1="6" x2="3.01" y2="6" />
+                                <line x1="3" y1="12" x2="3.01" y2="12" />
+                                <line x1="3" y1="18" x2="3.01" y2="18" />
+                            </svg>
+                            已保存的预设
+                        </div>
+                        <div class="api-preset-list" id="apiPresetList">
+                            <div class="api-preset-empty">暂无预设，保存后将显示在这里</div>
+                        </div>
                     </div>
                 </div>
-                <div style="height:40px;"></div>
             </div>
         </div>
-    </div>
 
-        <!-- ══════════════════════════════════════
-         聊一聊 App — 主面板（全屏内置应用）
-         ══════════════════════════════════════ -->
-    <div class="cht-overlay" id="chtOverlay">
-        <div class="cht-top-bar">
-            <div class="cht-top-back" onclick="closeChatApp()"><svg viewBox="0 0 24 24" width="18" height="18">
-                    <path d="M19 12H5M12 19l-7-7 7-7" fill="none" stroke="rgba(100,70,90,0.8)" stroke-width="2.2"
-                        stroke-linecap="round" stroke-linejoin="round" />
-                </svg></div>
-            <div class="cht-top-title" id="chtTopTitle">消息</div>
-            <div class="cht-top-action" id="chtTopAction" onclick="chtShowAddMenu(event)">
-                <svg viewBox="0 0 24 24" width="18" height="18">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-            </div>
-        </div>
-        <div class="cht-add-menu" id="chtAddMenu">
-            <div class="cht-add-menu-item" onclick="chtOpenCreateRole()">
-                <svg viewBox="0 0 24 24">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="8.5" cy="7" r="4" />
-                    <line x1="20" y1="8" x2="20" y2="14" />
-                    <line x1="23" y1="11" x2="17" y2="11" />
-                </svg>
-                <span>创建角色</span>
-            </div>
-        </div>
-        <div class="cht-content" id="chtContent">
-            <!-- Tab: 消息 -->
-            <div class="cht-tab-page cht-tab-active" id="chtTabMsg">
-                <div class="cht-search-box"><svg viewBox="0 0 24 24" width="14" height="14">
-                        <circle cx="11" cy="11" r="8" />
-                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                    </svg><input type="text" placeholder="搜索" id="chtSearchInput"></div>
-                <div class="cht-msg-list" id="chtMsgList">
-                    <div class="cht-msg-empty">暂无消息，点击右上角 + 创建角色</div>
-                </div>
-            </div>
-            <!-- Tab: 联系人 -->
-            <div class="cht-tab-page" id="chtTabContact">
-                <div class="cht-search-box"><svg viewBox="0 0 24 24" width="14" height="14">
-                        <circle cx="11" cy="11" r="8" />
-                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                    </svg><input type="text" placeholder="搜索联系人"></div>
-                <div class="cht-contact-container" id="chtContactContainer">
-                    <div class="cht-msg-empty">暂无联系人，创建角色后自动出现</div>
-                </div>
-            </div>
-            <!-- Tab: 动态 -->
-            <div class="cht-tab-page" id="chtTabMoment">
-                <div class="cht-moment-list">
-                    <div class="cht-msg-empty">暂无动态</div>
-                </div>
-            </div>
-            <!-- ★ Tab: 我 ★ -->
-            <div class="cht-tab-page" id="chtTabMe">
-                <div class="cht-me-profile-card" onclick="chtOpenPersonaEditor()">
-                    <div class="cht-me-card-avatar">
-                        <img src="" id="chtMeAvatarImg" alt="" style="display:none;">
-                        <div class="cht-me-card-avatar-ph" id="chtMeAvatarPh">👤</div>
-                    </div>
-                    <div class="cht-me-card-name" id="chtMeName">我的昵称</div>
-                    <div class="cht-me-card-sign" id="chtMeSign">点击进入个人主页...</div>
-                    <div class="cht-me-card-arrow">
-                        <svg viewBox="0 0 24 24" width="14" height="14">
-                            <polyline points="9 18 15 12 9 6" />
+        <!-- ====== 外观设置面板 ====== -->
+        <div class="appear-app-overlay" id="appearAppOverlay">
+            <div class="appear-app-panel">
+                <div class="appear-app-header">
+                    <div class="appear-app-back" onclick="closeAppearanceApp()">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path d="M15 18l-6-6 6-6" />
                         </svg>
                     </div>
+                    <div class="appear-app-title">外观设置</div>
+                    <div class="appear-app-save" onclick="saveAppearanceSettings()">
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span>保存</span>
+                    </div>
                 </div>
-                <div class="cht-me-section">
-                    <div class="cht-me-cell" onclick="chtShowToast('钱包功能开发中')">
-                        <div class="cht-me-cell-icon"><svg viewBox="0 0 24 24">
-                                <rect x="1" y="4" width="22" height="16" rx="2" />
-                                <line x1="1" y1="10" x2="23" y2="10" />
-                            </svg></div>
-                        <div class="cht-me-cell-text">钱包</div>
-                        <svg viewBox="0 0 24 24" width="14" height="14" class="cht-me-cell-arrow">
-                            <polyline points="9 18 15 12 9 6" />
-                        </svg>
+                <div class="appear-app-body">
+                    <div class="appear-section">
+                        <div class="appear-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            主屏幕壁纸
+                        </div>
+                        <div class="appear-wallpaper-preview">
+                            <img src="" id="appearWpPreviewImg" alt="" style="display:none;">
+                        </div>
+                        <div class="appear-field">
+                            <label>壁纸图片URL（推荐使用URL，无大小限制）</label>
+                            <input type="text" id="appearWpUrl" class="appear-input" placeholder="粘贴图片链接..."
+                                oninput="refreshWallpaperPreview()">
+                        </div>
+                        <div class="appear-wallpaper-btns">
+                            <div class="appear-wp-btn" onclick="triggerAppearWpUpload()">
+                                <svg viewBox="0 0 24 24" width="14" height="14">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                上传本地图片
+                            </div>
+                        </div>
+                        <input type="file" id="appearWpFile" class="appear-wp-file" accept="image/*"
+                            onchange="handleAppearWpFile(event)">
+                        <div class="appear-font-hint">本地上传会自动压缩，建议尽量使用图片URL以获得最佳画质</div>
                     </div>
-                    <div class="cht-me-cell" onclick="chtShowToast('收藏功能开发中')">
-                        <div class="cht-me-cell-icon"><svg viewBox="0 0 24 24">
-                                <polygon
-                                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                            </svg></div>
-                        <div class="cht-me-cell-text">收藏</div>
-                        <svg viewBox="0 0 24 24" width="14" height="14" class="cht-me-cell-arrow">
-                            <polyline points="9 18 15 12 9 6" />
-                        </svg>
+                    <div class="appear-section">
+                        <div class="appear-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                                <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                                <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                                <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                            </svg>
+                            应用图标风格
+                        </div>
+                        <div class="appear-icon-styles">
+                            <div class="appear-icon-option active" data-style="glass"
+                                onclick="selectIconStyle('glass')">
+                                <div class="appear-icon-demo style-glass">
+                                    <svg viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="3" />
+                                        <path
+                                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33" />
+                                    </svg>
+                                </div>
+                                <div class="appear-icon-label">毛玻璃</div>
+                            </div>
+                            <div class="appear-icon-option" data-style="gradient" onclick="selectIconStyle('gradient')">
+                                <div class="appear-icon-demo style-gradient">
+                                    <svg viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="3" />
+                                        <path
+                                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33" />
+                                    </svg>
+                                </div>
+                                <div class="appear-icon-label">渐变</div>
+                            </div>
+                            <div class="appear-icon-option" data-style="solid" onclick="selectIconStyle('solid')">
+                                <div class="appear-icon-demo style-solid">
+                                    <svg viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="3" />
+                                        <path
+                                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33" />
+                                    </svg>
+                                </div>
+                                <div class="appear-icon-label">纯色</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="cht-me-cell" onclick="chtShowToast('聊天美化开发中')">
-                        <div class="cht-me-cell-icon"><svg viewBox="0 0 24 24">
-                                <circle cx="13.5" cy="6.5" r=".5" />
-                                <circle cx="17.5" cy="10.5" r=".5" />
-                                <circle cx="8.5" cy="7.5" r=".5" />
-                                <circle cx="6.5" cy="12.5" r=".5" />
+                    <div class="appear-section">
+                        <div class="appear-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            自定义图标图片
+                        </div>
+                        <div class="appear-font-hint" style="margin-bottom:10px">点击下方图标可单独换成你喜欢的图片，留空恢复默认SVG图标</div>
+                        <div class="appear-icon-grid" id="appearIconGrid"></div>
+                    </div>
+                    <div class="appear-section">
+                        <div class="appear-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <polyline points="4 7 4 4 20 4 20 7" />
+                                <line x1="9" y1="20" x2="15" y2="20" />
+                                <line x1="12" y1="4" x2="12" y2="20" />
+                            </svg>
+                            全局字体
+                        </div>
+                        <div class="appear-field">
+                            <label>字体URL（.woff2 / .ttf / .otf）</label>
+                            <input type="text" id="appearFontUrl" class="appear-input" placeholder="粘贴字体文件链接...">
+                        </div>
+                        <div class="appear-font-hint">保存后全局生效，留空则使用系统默认字体</div>
+                    </div>
+                    <div class="appear-section">
+                        <div class="appear-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            </svg>
+                            气泡小组件字体颜色
+                        </div>
+                        <div class="appear-color-row">
+                            <div class="appear-color-dot" style="background:rgba(80,60,70,0.9)"
+                                data-color="rgba(80,60,70,0.9)" onclick="pickAppearBubbleColor(this)"></div>
+                            <div class="appear-color-dot" style="background:#ffffff" data-color="#ffffff"
+                                onclick="pickAppearBubbleColor(this)"></div>
+                            <div class="appear-color-dot" style="background:#ffdde7" data-color="#ffdde7"
+                                onclick="pickAppearBubbleColor(this)"></div>
+                            <div class="appear-color-dot" style="background:#ffa4b6" data-color="#ffa4b6"
+                                onclick="pickAppearBubbleColor(this)"></div>
+                            <div class="appear-color-dot" style="background:#a78bfa" data-color="#a78bfa"
+                                onclick="pickAppearBubbleColor(this)"></div>
+                            <div class="appear-color-dot" style="background:#67e8f9" data-color="#67e8f9"
+                                onclick="pickAppearBubbleColor(this)"></div>
+                            <div class="appear-color-dot" style="background:#fcd34d" data-color="#fcd34d"
+                                onclick="pickAppearBubbleColor(this)"></div>
+                            <div class="appear-color-dot" style="background:#86efac" data-color="#86efac"
+                                onclick="pickAppearBubbleColor(this)"></div>
+                        </div>
+                        <div class="appear-color-input-row">
+                            <input type="color" id="appearBubbleColorPicker" class="appear-color-native" value="#503c46"
+                                onchange="setAppearBubbleFromPicker(this.value)">
+                            <input type="text" id="appearBubbleColorHex" class="appear-input appear-input-short"
+                                value="rgba(80,60,70,0.9)" placeholder="#hex或rgba()"
+                                oninput="setAppearBubbleFromHex(this.value)">
+                        </div>
+                    </div>
+                    <div class="appear-section">
+                        <div class="appear-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <rect x="2" y="3" width="20" height="4" rx="1" />
+                                <line x1="6" y1="5" x2="6" y2="5.01" />
+                                <line x1="10" y1="5" x2="10" y2="5.01" />
+                            </svg>
+                            顶部状态栏
+                        </div>
+                        <div class="appear-toggle-row">
+                            <div>
+                                <div class="appear-toggle-label">显示状态栏</div>
+                                <div class="appear-toggle-desc">关闭后隐藏时间、电量、网络等信息</div>
+                            </div>
+                            <label class="appear-toggle">
+                                <input type="checkbox" id="appearStatusbarToggle" checked>
+                                <div class="appear-toggle-track"></div>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="appear-section appear-section-danger">
+                        <div class="appear-clear-btn" onclick="clearAllAppearSettings()">
+                            <svg viewBox="0 0 24 24" width="16" height="16">
+                                <polyline points="3 6 5 6 21 6" />
                                 <path
-                                    d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
-                            </svg></div>
-                        <div class="cht-me-cell-text">聊天美化</div>
-                        <svg viewBox="0 0 24 24" width="14" height="14" class="cht-me-cell-arrow">
-                            <polyline points="9 18 15 12 9 6" />
+                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                            清除所有外观设置
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 聊一聊 App ====== -->
+        <div class="chat-app-overlay" id="chatAppOverlay">
+            <div class="chat-header">
+                <div class="chat-close-btn" onclick="closeChatApp()">
+                    <svg viewBox="0 0 24 24">
+                        <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                </div>
+                <div class="chat-header-title" id="chatHeaderTitle">消息</div>
+                <div class="chat-header-actions">
+                    <div class="chat-header-btn" onclick="toggleChatMenu()">
+                        <svg viewBox="0 0 24 24">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
                     </div>
-                    <div class="cht-me-cell" onclick="chtShowToast('表情包管理开发中')">
-                        <div class="cht-me-cell-icon"><svg viewBox="0 0 24 24">
+                </div>
+                <div class="chat-plus-menu" id="chatPlusMenu">
+                    <div class="chat-plus-menu-item" onclick="openCreateRole(); toggleChatMenu();">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="8.5" cy="7" r="4" />
+                            <line x1="20" y1="8" x2="20" y2="14" />
+                            <line x1="23" y1="11" x2="17" y2="11" />
+                        </svg>
+                        <span>创建角色</span>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-body" id="chatBody"></div>
+            <div class="chat-conversation" id="chatConversation"></div>
+
+            <!-- 个人主页 -->
+            <div class="chat-profile-page" id="chatProfilePage">
+                <div class="chat-profile-header">
+                    <div class="chat-profile-back" onclick="closeProfilePage()">
+                        <svg viewBox="0 0 24 24">
+                            <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                    </div>
+                    <div class="chat-profile-title">个人主页</div>
+                </div>
+                <div class="chat-profile-body" id="chatProfileBody"></div>
+            </div>
+
+            <!-- 人设编辑器 -->
+            <div class="chat-persona-editor" id="chatPersonaEditor">
+                <div class="chat-pe-header">
+                    <div class="chat-pe-back" onclick="closePersonaEditor()">
+                        <svg viewBox="0 0 24 24">
+                            <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                    </div>
+                    <div class="chat-pe-title">新建角色</div>
+                    <div class="chat-pe-save" onclick="savePersona()">
+                        <svg viewBox="0 0 24 24">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span>保存</span>
+                    </div>
+                </div>
+                <div class="chat-pe-body">
+                    <div class="chat-pe-avatar-wrap" onclick="triggerPeAvatarUpload()">
+                        <div class="chat-pe-avatar" id="peAvatarPreview">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            <div class="chat-pe-avatar-hint">上传头像</div>
+                        </div>
+                    </div>
+                    <input type="file" id="peAvatarFile" accept="image/*" style="display:none"
+                        onchange="handlePeAvatarFile(event)">
+                    <div class="chat-pe-section">
+                        <div class="chat-pe-section-title">基本信息</div>
+                        <div class="chat-pe-field"><label>名字</label><input type="text" id="peName" class="chat-pe-input"
+                                placeholder="角色的名字"></div>
+                        <div class="chat-pe-field"><label>昵称</label><input type="text" id="peNickname"
+                                class="chat-pe-input" placeholder="显示的昵称（选填）"></div>
+                        <div class="chat-pe-field"><label>签名</label><input type="text" id="peSignature"
+                                class="chat-pe-input" placeholder="一句话签名"></div>
+                    </div>
+                    <div class="chat-pe-section">
+                        <div class="chat-pe-section-title">性别</div>
+                        <div class="chat-pe-gender-row">
+                            <div class="chat-pe-gender-btn active" data-gender="male" onclick="selectPeGender('male')">
+                                <svg viewBox="0 0 24 24" width="16" height="16">
+                                    <circle cx="10" cy="14" r="5" />
+                                    <line x1="19" y1="5" x2="13.6" y2="10.4" />
+                                    <line x1="19" y1="5" x2="15" y2="5" />
+                                    <line x1="19" y1="5" x2="19" y2="9" />
+                                </svg>
+                                <span>男</span>
+                            </div>
+                            <div class="chat-pe-gender-btn" data-gender="female" onclick="selectPeGender('female')">
+                                <svg viewBox="0 0 24 24" width="16" height="16">
+                                    <circle cx="12" cy="10" r="5" />
+                                    <line x1="12" y1="15" x2="12" y2="22" />
+                                    <line x1="9" y1="19" x2="15" y2="19" />
+                                </svg>
+                                <span>女</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-pe-section">
+                        <div class="chat-pe-section-title">详细信息</div>
+                        <div class="chat-pe-field"><textarea id="peDetail" class="chat-pe-textarea" rows="4"
+                                placeholder="年龄、身份、性格、外貌等详细描述..."></textarea></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 创建AI角色面板 -->
+            <div class="chat-create-role" id="chatCreateRole">
+                <div class="chat-create-header">
+                    <div class="chat-create-back" onclick="closeCreateRole()">
+                        <svg viewBox="0 0 24 24">
+                            <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                    </div>
+                    <div class="chat-create-title">创建角色</div>
+                    <div class="chat-create-save" onclick="saveRole()">
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span>保存</span>
+                    </div>
+                </div>
+                <div class="chat-create-body">
+                    <div class="chat-cr-section"
+                        style="background:transparent;border:none;backdrop-filter:none;box-shadow:none;padding:0;">
+                        <div class="chat-cr-avatar-wrap" onclick="triggerRoleAvatarUpload()">
+                            <div class="chat-cr-avatar" id="crAvatarPreview">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
+                                </svg>
+                                <div class="chat-cr-avatar-hint">上传头像</div>
+                            </div>
+                        </div>
+                        <input type="file" id="crAvatarFile" accept="image/*" style="display:none"
+                            onchange="handleRoleAvatarFile(event)">
+                    </div>
+                    <div class="chat-cr-section">
+                        <div class="chat-cr-section-title"><svg viewBox="0 0 24 24" width="14" height="14">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>基本信息</div>
+                        <div class="chat-cr-field"><label>角色名字</label><input type="text" id="crName"
+                                class="chat-cr-input" placeholder="角色的正式名字"></div>
+                        <div class="chat-cr-field"><label>昵称</label><input type="text" id="crNickname"
+                                class="chat-cr-input" placeholder="聊天时显示的昵称（选填）"></div>
+                        <div class="chat-cr-field"><label>性别</label>
+                            <div class="chat-cr-gender-row">
+                                <div class="chat-cr-gender-btn active" data-gender="male"
+                                    onclick="selectRoleGender('male')"><svg viewBox="0 0 24 24" width="16" height="16">
+                                        <circle cx="10" cy="14" r="5" />
+                                        <line x1="19" y1="5" x2="13.6" y2="10.4" />
+                                        <line x1="19" y1="5" x2="15" y2="5" />
+                                        <line x1="19" y1="5" x2="19" y2="9" />
+                                    </svg><span>男</span></div>
+                                <div class="chat-cr-gender-btn" data-gender="female"
+                                    onclick="selectRoleGender('female')"><svg viewBox="0 0 24 24" width="16"
+                                        height="16">
+                                        <circle cx="12" cy="10" r="5" />
+                                        <line x1="12" y1="15" x2="12" y2="22" />
+                                        <line x1="9" y1="19" x2="15" y2="19" />
+                                    </svg><span>女</span></div>
+                            </div>
+                        </div>
+                        <div class="chat-cr-field"><label>详细信息</label><textarea id="crDetail" class="chat-cr-textarea"
+                                rows="3" placeholder="年龄、身份、性格、外貌等详细描述..."></textarea></div>
+                    </div>
+                    <div class="chat-cr-section">
+                        <div class="chat-cr-section-title"><svg viewBox="0 0 24 24" width="14" height="14">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>选择分组</div>
+                        <div class="chat-cr-field">
+                            <select id="crGroup" class="chat-cr-select">
+                                <option value="默认">默认</option>
+                                <option value="置顶">置顶</option>
+                                <option value="好友">好友</option>
+                                <option value="家人">家人</option>
+                                <option value="工作">工作</option>
+                            </select>
+                            <div class="chat-cr-custom-group"><input type="text" id="crCustomGroup"
+                                    class="chat-cr-input" placeholder="或输入自定义分组名">
+                                <div class="chat-cr-small-btn" onclick="addCustomGroup()">添加</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-cr-section">
+                        <div class="chat-cr-section-title"><svg viewBox="0 0 24 24" width="14" height="14">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="16" y1="13" x2="8" y2="13" />
+                                <line x1="16" y1="17" x2="8" y2="17" />
+                            </svg>挂载设定</div>
+                        <div class="chat-cr-mount-btn" onclick="openMountSelector('persona')"><svg viewBox="0 0 24 24">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            <div class="chat-cr-mount-text">挂载人设</div>
+                            <div class="chat-cr-mount-value" id="crMount_persona_val">未选择</div><svg
+                                class="chat-cr-mount-arrow" viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                        </div>
+                        <div class="chat-cr-mount-btn" onclick="openMountSelector('worldbook')"><svg
+                                viewBox="0 0 24 24">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                            </svg>
+                            <div class="chat-cr-mount-text">挂载世界书</div>
+                            <div class="chat-cr-mount-value" id="crMount_worldbook_val">未选择</div><svg
+                                class="chat-cr-mount-arrow" viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                        </div>
+                        <div class="chat-cr-mount-btn" onclick="openMountSelector('sticker')"><svg viewBox="0 0 24 24">
                                 <circle cx="12" cy="12" r="10" />
                                 <path d="M8 14s1.5 2 4 2 4-2 4-2" />
                                 <line x1="9" y1="9" x2="9.01" y2="9" />
                                 <line x1="15" y1="9" x2="15.01" y2="9" />
-                            </svg></div>
-                        <div class="cht-me-cell-text">表情包管理</div>
-                        <svg viewBox="0 0 24 24" width="14" height="14" class="cht-me-cell-arrow">
-                            <polyline points="9 18 15 12 9 6" />
-                        </svg>
+                            </svg>
+                            <div class="chat-cr-mount-text">挂载表情包</div>
+                            <div class="chat-cr-mount-value" id="crMount_sticker_val">未选择</div><svg
+                                class="chat-cr-mount-arrow" viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="chat-cr-section">
+                        <div class="chat-cr-section-title"><svg viewBox="0 0 24 24" width="14" height="14">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                            </svg>消息行为</div>
+                        <div class="chat-cr-toggle-row">
+                            <div>
+                                <div class="chat-cr-toggle-label">消息弹窗通知</div>
+                                <div class="chat-cr-toggle-desc">收到消息时弹出提示</div>
+                            </div><label class="chat-cr-toggle"><input type="checkbox" id="crNotify" checked>
+                                <div class="chat-cr-toggle-track"></div>
+                            </label>
+                        </div>
+                        <div class="chat-cr-toggle-row">
+                            <div>
+                                <div class="chat-cr-toggle-label">允许后台主动发消息</div>
+                                <div class="chat-cr-toggle-desc">角色可在后台随机发送消息</div>
+                            </div><label class="chat-cr-toggle"><input type="checkbox" id="crBgMsg">
+                                <div class="chat-cr-toggle-track"></div>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="chat-cr-section">
+                        <div class="chat-cr-section-title"><svg viewBox="0 0 24 24" width="14" height="14">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>对话记忆</div>
+                        <div class="chat-cr-field"><label>记忆轮数（上下文保留对话数，上限100）</label>
+                            <div class="chat-cr-memory-row"><input type="range" id="crMemory" min="1" max="100"
+                                    value="20" class="chat-cr-range" oninput="updateMemoryDisplay()"><span
+                                    class="chat-cr-memory-val" id="crMemoryVal">20轮</span></div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div><!-- /cht-content -->
-        <div class="cht-tab-bar">
-            <div class="cht-tab-item cht-tab-item-active" data-tab="msg" onclick="chtSwitchTab('msg')"><svg
-                    viewBox="0 0 24 24">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg><span>消息</span></div>
-            <div class="cht-tab-item" data-tab="contact" onclick="chtSwitchTab('contact')"><svg viewBox="0 0 24 24">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                </svg><span>联系人</span></div>
-            <div class="cht-tab-item" data-tab="moment" onclick="chtSwitchTab('moment')"><svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="2" y1="12" x2="22" y2="12" />
-                    <path
-                        d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                </svg><span>动态</span></div>
-            <div class="cht-tab-item" data-tab="me" onclick="chtSwitchTab('me')"><svg viewBox="0 0 24 24">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                </svg><span>我</span></div>
-        </div>
-    </div><!-- ★ chtOverlay 到此关闭 ★ -->
 
-    <!-- ══════════════════════════════════════
-         创建角色面板（独立全屏弹层）
-         ══════════════════════════════════════ -->
-    <div class="cht-overlay cht-sub-overlay" id="chtCreateOverlay">
-        <div class="cht-top-bar">
-            <div class="cht-top-back" onclick="chtCloseCreateRole()"><svg viewBox="0 0 24 24" width="18" height="18">
-                    <path d="M19 12H5M12 19l-7-7 7-7" fill="none" stroke="rgba(100,70,90,0.8)" stroke-width="2.2"
-                        stroke-linecap="round" stroke-linejoin="round" />
-                </svg></div>
-            <div class="cht-top-title">创建角色</div>
-            <div class="cht-top-action" onclick="chtSaveRole()"
-                style="font-size:13px;font-weight:600;color:rgba(200,80,120,0.85);width:auto;padding:0 6px;background:none;border:none;">
-                保存</div>
-        </div>
-        <div class="cht-content cht-create-body" id="chtCreateBody">
-            <div class="cht-cr-section cht-cr-avatar-section">
-                <div class="cht-cr-avatar" onclick="document.getElementById('chtCrAvatarFile').click()"><img src=""
-                        id="chtCrAvatarImg" alt="" style="display:none;">
-                    <div class="cht-cr-avatar-placeholder" id="chtCrAvatarPlaceholder"><svg viewBox="0 0 24 24"
-                            width="28" height="28">
-                            <path
-                                d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                            <circle cx="12" cy="13" r="4" />
-                        </svg><span>点击上传头像</span></div><input type="file" id="chtCrAvatarFile" accept="image/*"
-                        style="display:none">
-                </div>
-            </div>
-            <div class="cht-cr-section">
-                <div class="cht-cr-section-label"><svg viewBox="0 0 24 24">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                    </svg>基本信息</div>
-                <div class="cht-cr-field"><label>名字</label><input type="text" id="chtCrName" placeholder="角色的名字">
-                </div>
-                <div class="cht-cr-field"><label>昵称</label><input type="text" id="chtCrNickname"
-                        placeholder="对你的称呼 / 别名"></div>
-                <div class="cht-cr-field"><label>性别</label>
-                    <div class="cht-cr-gender">
-                        <div class="cht-cr-gender-btn active" data-gender="female" onclick="chtSelectGender(this)"><svg
-                                viewBox="0 0 24 24">
-                                <circle cx="12" cy="8" r="5" />
-                                <line x1="12" y1="13" x2="12" y2="21" />
-                                <line x1="9" y1="18" x2="15" y2="18" />
-                            </svg><span>女</span></div>
-                        <div class="cht-cr-gender-btn" data-gender="male" onclick="chtSelectGender(this)"><svg
-                                viewBox="0 0 24 24">
-                                <circle cx="10" cy="14" r="5" />
-                                <line x1="19" y1="5" x2="13.6" y2="10.4" />
-                                <line x1="19" y1="5" x2="15" y2="5" />
-                                <line x1="19" y1="5" x2="19" y2="9" />
-                            </svg><span>男</span></div>
-                    </div>
-                </div>
-                <div class="cht-cr-field"><label>详细信息</label><textarea id="chtCrDetail"
-                        placeholder="角色的背景介绍、性格特点等详细信息..." rows="3"></textarea></div>
-            </div>
-            <div class="cht-cr-section">
-                <div class="cht-cr-section-label"><svg viewBox="0 0 24 24">
+            <!-- 底部Tab栏 -->
+            <div class="chat-tab-bar">
+                <div class="chat-tab-item active" data-tab="messages" onclick="switchChatTab('messages')"><svg
+                        viewBox="0 0 24 24">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg><span>消息</span></div>
+                <div class="chat-tab-item" data-tab="contacts" onclick="switchChatTab('contacts')"><svg
+                        viewBox="0 0 24 24">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    </svg>选择分组</div>
-                <div class="cht-cr-field"><label>分组名称</label>
-                    <div class="cht-cr-group-row"><select id="chtCrGroup">
-                            <option value="特别关心">特别关心</option>
-                            <option value="好友" selected>好友</option>
-                        </select><input type="text" id="chtCrNewGroup" placeholder="或输入新分组"><button
-                            class="cht-cr-group-add-btn" onclick="chtAddGroup()"><svg viewBox="0 0 24 24" width="14"
-                                height="14">
-                                <line x1="12" y1="5" x2="12" y2="19" />
-                                <line x1="5" y1="12" x2="19" y2="12" />
-                            </svg></button></div>
-                </div>
-            </div>
-            <div class="cht-cr-section">
-                <div class="cht-cr-section-label"><svg viewBox="0 0 24 24">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <line x1="16" y1="13" x2="8" y2="13" />
-                        <line x1="16" y1="17" x2="8" y2="17" />
-                        <polyline points="10 9 9 9 8 9" />
-                    </svg>挂载资源</div>
-                <div class="cht-cr-field"><label>挂载人设</label><select id="chtCrPromptSelect">
-                        <option value="">-- 未选择人设 --</option>
-                    </select></div>
-                <div class="cht-cr-field"><label>挂载世界书</label><select id="chtCrWorldBookSelect">
-                        <option value="">-- 未选择世界书 --</option>
-                    </select></div>
-                <div class="cht-cr-field"><label>挂载表情包</label><select id="chtCrEmojiSelect">
-                        <option value="">-- 未选择表情包 --</option>
-                    </select></div>
-            </div>
-            <div class="cht-cr-section">
-                <div class="cht-cr-section-label"><svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="3" />
-                        <path
-                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                    </svg>行为设置</div>
-                <div class="cht-cr-toggle-field"><span>消息弹窗通知</span><label class="cht-cr-switch"><input
-                            type="checkbox" id="chtCrNotify" checked><span class="cht-cr-slider"></span></label></div>
-                <div class="cht-cr-toggle-field"><span>允许后台主动发消息</span><label class="cht-cr-switch"><input
-                            type="checkbox" id="chtCrAutoMsg"><span class="cht-cr-slider"></span></label></div>
-                <div class="cht-cr-field"><label>对话记忆轮数</label>
-                    <div class="cht-cr-memory-row"><input type="range" id="chtCrMemory" min="1" max="100"
-                            value="20"><span class="cht-cr-memory-val" id="chtCrMemoryVal">20</span></div>
-                </div>
-            </div>
-            <div style="height:60px;"></div>
-        </div>
-    </div><!-- /chtCreateOverlay -->
-
-    <!-- ══════════════════════════════════════
-         人设编辑面板（独立全屏弹层）
-         ══════════════════════════════════════ -->
-    <div class="cht-overlay cht-sub-overlay" id="chtPersonaOverlay">
-        <div class="cht-top-bar">
-            <div class="cht-top-back" onclick="chtClosePersonaEditor()"><svg viewBox="0 0 24 24" width="18"
-                    height="18">
-                    <path d="M19 12H5M12 19l-7-7 7-7" fill="none" stroke="rgba(100,70,90,0.8)" stroke-width="2.2"
-                        stroke-linecap="round" stroke-linejoin="round" />
-                </svg></div>
-            <div class="cht-top-title">个人主页</div>
-            <div class="cht-top-action" onclick="chtPersonaNew()"
-                style="width:auto;padding:0 4px;background:none;border:none;">
-                <svg viewBox="0 0 24 24" width="18" height="18">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-            </div>
-        </div>
-        <div class="cht-content cht-persona-body" id="chtPersonaBody">
-            <div class="cht-cr-section cht-cr-avatar-section">
-                <div class="cht-cr-avatar" onclick="document.getElementById('chtPsAvatarFile').click()"><img src=""
-                        id="chtPsAvatarImg" alt="" style="display:none;">
-                    <div class="cht-cr-avatar-placeholder" id="chtPsAvatarPlaceholder"><svg viewBox="0 0 24 24"
-                            width="28" height="28">
-                            <path
-                                d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                            <circle cx="12" cy="13" r="4" />
-                        </svg><span>点击上传头像</span></div><input type="file" id="chtPsAvatarFile" accept="image/*"
-                        style="display:none">
-                </div>
-            </div>
-            <div class="cht-cr-section">
-                <div class="cht-cr-section-label"><svg viewBox="0 0 24 24">
+                    </svg><span>联系人</span></div>
+                <div class="chat-tab-item" data-tab="moments" onclick="switchChatTab('moments')"><svg
+                        viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg><span>动态</span></div>
+                <div class="chat-tab-item" data-tab="me" onclick="switchChatTab('me')"><svg viewBox="0 0 24 24">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                         <circle cx="12" cy="7" r="4" />
-                    </svg>基本信息</div>
-                <div class="cht-cr-field"><label>名字</label><input type="text" id="chtPsName" placeholder="你的角色名字">
-                </div>
-                <div class="cht-cr-field"><label>昵称</label><input type="text" id="chtPsNickname"
-                        placeholder="别人怎么称呼你"></div>
-                <div class="cht-cr-field"><label>签名</label><input type="text" id="chtPsSign"
-                        placeholder="一句话介绍自己..."></div>
-                <div class="cht-cr-field"><label>性别</label>
-                    <div class="cht-cr-gender">
-                        <div class="cht-ps-gender-btn active" data-gender="female"
-                            onclick="chtPsSelectGender(this)"><svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="8" r="5" />
-                                <line x1="12" y1="13" x2="12" y2="21" />
-                                <line x1="9" y1="18" x2="15" y2="18" />
-                            </svg><span>女</span></div>
-                        <div class="cht-ps-gender-btn" data-gender="male" onclick="chtPsSelectGender(this)"><svg
-                                viewBox="0 0 24 24">
-                                <circle cx="10" cy="14" r="5" />
-                                <line x1="19" y1="5" x2="13.6" y2="10.4" />
-                                <line x1="19" y1="5" x2="15" y2="5" />
-                                <line x1="19" y1="5" x2="19" y2="9" />
-                            </svg><span>男</span></div>
-                    </div>
-                </div>
-                <div class="cht-cr-field"><label>详细信息</label><textarea id="chtPsDetail"
-                        placeholder="详细的人设描述、性格特点、背景故事..." rows="4"></textarea></div>
+                    </svg><span>我</span></div>
             </div>
-            <div class="cht-cr-section cht-ps-save-section"><button class="cht-ps-save-btn" id="chtPsSaveBtn"
-                    onclick="chtPersonaSave()"><svg viewBox="0 0 24 24" width="16" height="16">
-                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                        <polyline points="17 21 17 13 7 13 7 21" />
-                        <polyline points="7 3 7 8 15 8" />
-                    </svg><span id="chtPsSaveBtnText">保存人设</span></button></div>
-            <div class="cht-cr-section cht-ps-list-section">
-                <div class="cht-cr-section-label"><svg viewBox="0 0 24 24">
-                        <line x1="8" y1="6" x2="21" y2="6" />
-                        <line x1="8" y1="12" x2="21" y2="12" />
-                        <line x1="8" y1="18" x2="21" y2="18" />
-                        <line x1="3" y1="6" x2="3.01" y2="6" />
-                        <line x1="3" y1="12" x2="3.01" y2="12" />
-                        <line x1="3" y1="18" x2="3.01" y2="18" />
-                    </svg>人设预设列表</div>
-                <div class="cht-ps-list" id="chtPsList">
-                    <div class="cht-msg-empty">暂无人设，请先保存</div>
-                </div>
-            </div>
-            <div style="height:60px;"></div>
         </div>
-    </div><!-- /chtPersonaOverlay -->
+        <!-- 自定义图标用的隐藏file input -->
+        <input type="file" id="iconCustomFile" accept="image/*" style="display:none"
+            onchange="handleIconCustomFile(event)">
 
-    <!-- ========== JS 模块 ========== -->
+    </div>
+
+    <!-- 隐藏文件输入 -->
+    <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
+
+    <!-- JS 文件 -->
     <script src="js/utils.js"></script>
+    <script src="js/pages.js"></script>
     <script src="js/card.js"></script>
-    <script src="js/swipe.js"></script>
     <script src="js/countdown.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/appearance.js"></script>
+    <script src="js/chat.js"></script>
     <script src="js/app.js"></script>
-    <script src="js/cd-settings.js"></script>
-    <script src="js/api-settings.js"></script>
 
-    <script>
-        (function () {
-            'use strict';
-
-            /* ═══ 工具函数 ═══ */
-            function el(id) { return document.getElementById(id); }
-
-            function showToast(msg) {
-                var t = document.createElement('div');
-                t.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:16px;background:rgba(255,255,255,0.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.7);box-shadow:0 4px 18px rgba(200,140,160,0.12);font-size:13px;font-weight:600;color:rgba(100,70,90,0.85);z-index:999999;opacity:0;transition:opacity 0.3s;letter-spacing:0.3px;';
-                t.textContent = msg;
-                document.body.appendChild(t);
-                requestAnimationFrame(function () { t.style.opacity = '1'; });
-                setTimeout(function () { t.style.opacity = '0'; setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300); }, 1800);
-            }
-
-            function escHtml(s) {
-                if (s === null || s === undefined || s === '') return '';
-                return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-            }
-
-            function val(id) { var e = el(id); return e ? (e.value || '').trim() : ''; }
-            function setVal(id, v) { var e = el(id); if (e) e.value = v || ''; }
-            function genId() { return 'id_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4); }
-
-            /* ═══ 图片压缩 ═══ */
-            function compressImage(file, maxPx, quality, callback) {
-                var reader = new FileReader();
-                reader.onload = function (ev) {
-                    var img = new Image();
-                    img.onload = function () {
-                        var canvas = document.createElement('canvas');
-                        var w = img.width, h = img.height;
-                        if (w > maxPx || h > maxPx) {
-                            if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
-                            else { w = Math.round(w * maxPx / h); h = maxPx; }
-                        }
-                        canvas.width = w; canvas.height = h;
-                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                        callback(canvas.toDataURL('image/jpeg', quality));
-                    };
-                    img.src = ev.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-
-            /* ══════════════════════════════════════
-               API App
-               ══════════════════════════════════════ */
-            var STORAGE_KEY = 'api_presets', ACTIVE_KEY = 'api_active_id', editingId = null;
-
-            function loadPresets() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch (e) { return []; } }
-            function savePresets(list) { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
-            function getActivePresetId() { return localStorage.getItem(ACTIVE_KEY) || ''; }
-            function setActivePresetId(id) { localStorage.setItem(ACTIVE_KEY, id || ''); }
-
-            function updateSaveBtnText() {
-                var btn = el('apiSaveBtn'); if (!btn) return;
-                var txt = btn.querySelector('.api-save-text');
-                if (txt) txt.textContent = editingId ? '更新预设' : '保存为预设';
-            }
-
-            function clearApiForm() {
-                setVal('apiName', ''); setVal('apiUrl', ''); setVal('apiKey', '');
-                var sel = el('apiModelSelect');
-                if (sel) { sel.innerHTML = '<option value="">-- 请先拉取模型 --</option>'; sel.removeAttribute('data-models'); }
-                var st = el('apiStatus'); if (st) { st.textContent = ''; st.className = 'api-status'; }
-                editingId = null; updateSaveBtnText();
-            }
-
-            function fillApiForm(p) {
-                setVal('apiName', p.name); setVal('apiUrl', p.url); setVal('apiKey', p.key);
-                var sel = el('apiModelSelect');
-                if (sel) {
-                    sel.innerHTML = '';
-                    if (p.models && p.models.length) {
-                        p.models.forEach(function (m) { var o = document.createElement('option'); o.value = m; o.textContent = m; if (m === p.model) o.selected = true; sel.appendChild(o); });
-                        sel.setAttribute('data-models', JSON.stringify(p.models));
-                    } else if (p.model) {
-                        var o = document.createElement('option'); o.value = p.model; o.textContent = p.model; o.selected = true; sel.appendChild(o);
-                    } else {
-                        sel.innerHTML = '<option value="">-- 请先拉取模型 --</option>';
-                    }
-                }
-                editingId = p.id; updateSaveBtnText();
-            }
-
-            function renderPresetList() {
-                var c = el('apiPresetList'); if (!c) return;
-                var ps = loadPresets(), aid = getActivePresetId();
-                if (!ps.length) { c.innerHTML = '<div class="api-preset-empty">暂无已保存的预设</div>'; return; }
-                var h = '';
-                ps.forEach(function (p) {
-                    var a = p.id === aid;
-                    h += '<div class="api-preset-item' + (a ? ' active' : '') + '" data-id="' + p.id + '">'
-                        + '<div class="api-preset-radio"></div>'
-                        + '<div class="api-preset-info" data-action="switch"><div class="api-preset-name">' + escHtml(p.name || '未命名') + '</div><div class="api-preset-model">' + escHtml(p.model || '未选择模型') + '</div></div>'
-                        + '<div class="api-preset-actions">'
-                        + '<button class="api-preset-action edit-btn" data-action="edit"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
-                        + '<button class="api-preset-action del-btn" data-action="delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>'
-                        + '</div></div>';
-                });
-                c.innerHTML = h;
-            }
-
-            window.openApiApp = function () {
-                var ov = el('apiOverlay'); if (!ov) return;
-                clearApiForm(); renderPresetList();
-                var aid = getActivePresetId();
-                if (aid) { var ps = loadPresets(); for (var i = 0; i < ps.length; i++) { if (ps[i].id === aid) { fillApiForm(ps[i]); break; } } }
-                setTimeout(function () { ov.classList.add('active'); }, 20);
-            };
-            window.closeApiApp = function () { var ov = el('apiOverlay'); if (ov) ov.classList.remove('active'); };
-
-            window.apiFetchModels = function () {
-                var url = val('apiUrl'), key = val('apiKey'), st = el('apiStatus'), sel = el('apiModelSelect');
-                if (!url) { if (st) { st.textContent = '请先填写 API URL'; st.className = 'api-status error'; } return; }
-                var mu = url.replace(/\/+$/, '');
-                if (!/\/models$/i.test(mu)) { if (!/\/v1$/i.test(mu)) mu += '/v1'; mu += '/models'; }
-                if (st) { st.innerHTML = '<span class="api-spinner"></span>正在拉取...'; st.className = 'api-status loading'; }
-                var hd = { 'Content-Type': 'application/json' }; if (key) hd['Authorization'] = 'Bearer ' + key;
-                fetch(mu, { method: 'GET', headers: hd }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-                    .then(function (j) {
-                        var ms = [];
-                        if (j.data && Array.isArray(j.data)) j.data.forEach(function (m) { if (m.id) ms.push(m.id); });
-                        if (!ms.length) { if (st) { st.textContent = '未找到模型'; st.className = 'api-status error'; } return; }
-                        ms.sort();
-                        if (sel) { sel.innerHTML = ''; ms.forEach(function (m) { var o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o); }); sel.setAttribute('data-models', JSON.stringify(ms)); }
-                        if (st) { st.textContent = '已拉取 ' + ms.length + ' 个模型'; st.className = 'api-status success'; }
-                    }).catch(function (err) { if (st) { st.textContent = '拉取失败: ' + err.message; st.className = 'api-status error'; } });
-            };
-
-            window.apiSavePreset = function () {
-                var n = val('apiName'), u = val('apiUrl'), k = val('apiKey');
-                var sel = el('apiModelSelect'), m = sel ? sel.value : '';
-                if (!n) { showToast('请填写名称'); return; } if (!u) { showToast('请填写URL'); return; }
-                var ms = [];
-                if (sel) { try { var r = sel.getAttribute('data-models'); if (r) ms = JSON.parse(r); } catch (e) { } if (!ms.length) for (var i = 0; i < sel.options.length; i++) if (sel.options[i].value) ms.push(sel.options[i].value); }
-                var ps = loadPresets();
-                if (editingId) {
-                    for (var j = 0; j < ps.length; j++) if (ps[j].id === editingId) { ps[j].name = n; ps[j].url = u; ps[j].key = k; ps[j].model = m; ps[j].models = ms; break; }
-                    showToast('已更新');
-                } else {
-                    var np = { id: genId(), name: n, url: u, key: k, model: m, models: ms };
-                    ps.push(np); editingId = np.id; setActivePresetId(np.id);
-                    showToast('已保存');
-                }
-                savePresets(ps); renderPresetList(); updateSaveBtnText();
-            };
-
-            window.apiSaveAsNew = function () { editingId = null; updateSaveBtnText(); window.apiSavePreset(); };
-
-            window.apiExportData = function () {
-                var d = JSON.stringify({ presets: loadPresets(), activeId: getActivePresetId() }, null, 2);
-                var b = new Blob([d], { type: 'application/json' }); var a = document.createElement('a');
-                a.href = URL.createObjectURL(b); a.download = 'api-backup.json'; a.click(); showToast('已下载');
-            };
-
-            window.apiImportData = function () {
-                var inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json';
-                inp.onchange = function (e) {
-                    var f = e.target.files && e.target.files[0]; if (!f) return;
-                    var rd = new FileReader();
-                    rd.onload = function (ev) { try { var j = JSON.parse(ev.target.result); if (j.presets) { savePresets(j.presets); if (j.activeId) setActivePresetId(j.activeId); renderPresetList(); showToast('导入成功'); } else showToast('格式错误'); } catch (err) { showToast('导入失败'); } };
-                    rd.readAsText(f);
-                }; inp.click();
-            };
-
-            window.apiNewPreset = function () { clearApiForm(); showToast('已清空'); };
-
-            var apiListEl = el('apiPresetList');
-            if (apiListEl) apiListEl.addEventListener('click', function (e) {
-                var ae = e.target.closest('[data-action]'); if (!ae) return;
-                var act = ae.getAttribute('data-action'), it = e.target.closest('.api-preset-item'); if (!it) return;
-                var id = it.getAttribute('data-id'), ps = loadPresets(), p = null;
-                for (var i = 0; i < ps.length; i++) if (ps[i].id === id) { p = ps[i]; break; }
-                if (!p) return;
-                if (act === 'switch') { setActivePresetId(id); fillApiForm(p); renderPresetList(); showToast('已切换: ' + p.name); }
-                else if (act === 'edit') { fillApiForm(p); setActivePresetId(id); renderPresetList(); }
-                else if (act === 'delete') {
-                    if (!confirm('删除「' + p.name + '」？')) return;
-                    ps = ps.filter(function (x) { return x.id !== id; }); savePresets(ps);
-                    if (getActivePresetId() === id) { setActivePresetId(ps.length ? ps[0].id : ''); if (ps.length) fillApiForm(ps[0]); else clearApiForm(); }
-                    renderPresetList(); showToast('已删除');
-                }
-            });
-
-
-            /* ══════════════════════════════════════
-               聊一聊 App — 数据层
-               ══════════════════════════════════════ */
-            var ROLES_KEY = 'cht_roles';
-            var GROUPS_KEY = 'cht_groups';
-            var PERSONAS_KEY = 'cht_personas';
-            var ACTIVE_PERSONA_KEY = 'cht_active_persona';
-
-            function loadRoles() { try { return JSON.parse(localStorage.getItem(ROLES_KEY)) || []; } catch (e) { return []; } }
-            function saveRoles(r) { localStorage.setItem(ROLES_KEY, JSON.stringify(r)); }
-            function loadGroups() { try { return JSON.parse(localStorage.getItem(GROUPS_KEY)) || ['特别关心', '好友']; } catch (e) { return ['特别关心', '好友']; } }
-            function saveGroups(g) { localStorage.setItem(GROUPS_KEY, JSON.stringify(g)); }
-            function loadPersonas() { try { return JSON.parse(localStorage.getItem(PERSONAS_KEY)) || []; } catch (e) { return []; } }
-            function savePersonas(list) {
-                try { localStorage.setItem(PERSONAS_KEY, JSON.stringify(list)); }
-                catch (e) { showToast('保存失败：存储空间不足'); console.error(e); }
-            }
-            function getActivePersonaId() { return localStorage.getItem(ACTIVE_PERSONA_KEY) || ''; }
-            function setActivePersonaId(id) { localStorage.setItem(ACTIVE_PERSONA_KEY, id || ''); }
-
-
-            /* ═══ 同步「我」tab 个人主页显示 ═══ */
-            function syncProfileDisplay() {
-                var aid = getActivePersonaId();
-                var nameEl = el('chtMeName'), signEl = el('chtMeSign');
-                var avatarEl = el('chtMeAvatarImg'), phEl = el('chtMeAvatarPh');
-
-                if (!aid) {
-                    if (nameEl) nameEl.textContent = '我的昵称';
-                    if (signEl) signEl.textContent = '点击进入个人主页...';
-                    if (avatarEl) avatarEl.style.display = 'none';
-                    if (phEl) phEl.style.display = 'flex';
-                    return;
-                }
-                var ps = loadPersonas(), active = null;
-                for (var i = 0; i < ps.length; i++) { if (ps[i].id === aid) { active = ps[i]; break; } }
-                if (!active) {
-                    if (nameEl) nameEl.textContent = '我的昵称';
-                    if (signEl) signEl.textContent = '点击进入个人主页...';
-                    if (avatarEl) avatarEl.style.display = 'none';
-                    if (phEl) phEl.style.display = 'flex';
-                    return;
-                }
-                if (nameEl) nameEl.textContent = active.name || '我的昵称';
-                if (signEl) signEl.textContent = active.sign || '这个人很懒，什么都没写~';
-                if (active.avatar && avatarEl) {
-                    avatarEl.src = active.avatar;
-                    avatarEl.style.display = 'block';
-                    if (phEl) phEl.style.display = 'none';
-                } else {
-                    if (avatarEl) avatarEl.style.display = 'none';
-                    if (phEl) phEl.style.display = 'flex';
-                }
-            }
-
-
-            /* ═══ 消息列表 ═══ */
-            function renderMsgList() {
-                var c = el('chtMsgList'); if (!c) return;
-                var roles = loadRoles();
-                if (!roles.length) { c.innerHTML = '<div class="cht-msg-empty">暂无消息，点击右上角 + 创建角色</div>'; return; }
-                var h = '';
-                roles.forEach(function (r) {
-                    var gi = r.gender === 'male'
-                        ? '<svg viewBox="0 0 24 24"><circle cx="10" cy="14" r="5"/><line x1="19" y1="5" x2="13.6" y2="10.4"/><line x1="19" y1="5" x2="15" y2="5"/><line x1="19" y1="5" x2="19" y2="9"/></svg>'
-                        : '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><line x1="12" y1="13" x2="12" y2="21"/><line x1="9" y1="18" x2="15" y2="18"/></svg>';
-                    var av = r.avatar ? '<img src="' + escHtml(r.avatar) + '" alt="">' : gi;
-                    h += '<div class="cht-msg-item" onclick="chtOpenConversation(\'' + r.id + '\')">'
-                        + '<div class="cht-msg-avatar">' + av + '</div>'
-                        + '<div class="cht-msg-info"><div class="cht-msg-name">' + escHtml(r.name) + '</div>'
-                        + '<div class="cht-msg-preview">' + escHtml(r.detail ? r.detail.substring(0, 30) : '点击开始聊天') + '</div></div>'
-                        + '<div class="cht-msg-meta"><div class="cht-msg-time">刚刚</div></div></div>';
-                });
-                c.innerHTML = h;
-            }
-
-
-            /* ═══ 联系人列表 ═══ */
-            function renderContactList() {
-                var c = el('chtContactContainer'); if (!c) return;
-                var roles = loadRoles(), groups = loadGroups();
-                if (!roles.length) { c.innerHTML = '<div class="cht-msg-empty">暂无联系人，创建角色后自动出现</div>'; return; }
-                var grouped = {};
-                groups.forEach(function (g) { grouped[g] = []; });
-                roles.forEach(function (r) { var g = r.group || '好友'; if (!grouped[g]) grouped[g] = []; grouped[g].push(r); });
-                var h = '';
-                Object.keys(grouped).forEach(function (g) {
-                    var items = grouped[g]; if (!items.length) return;
-                    h += '<div class="cht-contact-group"><div class="cht-group-header" onclick="chtToggleGroup(this)">'
-                        + '<svg viewBox="0 0 24 24" width="12" height="12" class="cht-group-arrow"><polyline points="6 9 12 15 18 9"/></svg>'
-                        + '<span>' + escHtml(g) + '</span><span class="cht-group-count">' + items.length + '</span></div>'
-                        + '<div class="cht-group-body">';
-                    items.forEach(function (r) {
-                        var gi = r.gender === 'male'
-                            ? '<svg viewBox="0 0 24 24"><circle cx="10" cy="14" r="5"/><line x1="19" y1="5" x2="13.6" y2="10.4"/><line x1="19" y1="5" x2="15" y2="5"/><line x1="19" y1="5" x2="19" y2="9"/></svg>'
-                            : '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><line x1="12" y1="13" x2="12" y2="21"/><line x1="9" y1="18" x2="15" y2="18"/></svg>';
-                        var av = r.avatar ? '<img src="' + escHtml(r.avatar) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="">' : gi;
-                        h += '<div class="cht-contact-item"><div class="cht-contact-avatar">' + av + '</div>'
-                            + '<div class="cht-contact-name">' + escHtml(r.name) + '</div>'
-                            + '<div class="cht-contact-status">' + (r.gender === 'male' ? '男' : '女') + '</div></div>';
-                    });
-                    h += '</div></div>';
-                });
-                c.innerHTML = h;
-            }
-
-            function syncGroupSelect() {
-                var sel = el('chtCrGroup'); if (!sel) return;
-                var groups = loadGroups(), cur = sel.value;
-                sel.innerHTML = '';
-                groups.forEach(function (g) { var o = document.createElement('option'); o.value = g; o.textContent = g; if (g === cur) o.selected = true; sel.appendChild(o); });
-            }
-
-            function syncMountSelects() {
-                var pSel = el('chtCrPromptSelect');
-                if (pSel) {
-                    var personas = loadPersonas();
-                    pSel.innerHTML = '<option value="">-- 未选择人设 --</option>';
-                    personas.forEach(function (p) { var o = document.createElement('option'); o.value = p.id; o.textContent = p.name; pSel.appendChild(o); });
-                }
-                var wSel = el('chtCrWorldBookSelect');
-                if (wSel) wSel.innerHTML = '<option value="">-- 未选择世界书 --</option>';
-                var eSel = el('chtCrEmojiSelect');
-                if (eSel) eSel.innerHTML = '<option value="">-- 未选择表情包 --</option>';
-            }
-
-
-            /* ═══ 打开/关闭聊天 App ═══ */
-            window.openChatApp = function () {
-                var ov = el('chtOverlay'); if (!ov) return;
-                syncProfileDisplay(); renderMsgList(); renderContactList(); chtSwitchTab('msg');
-                setTimeout(function () { ov.classList.add('active'); }, 20);
-            };
-            window.closeChatApp = function () { var ov = el('chtOverlay'); if (ov) ov.classList.remove('active'); };
-
-            window.chtSwitchTab = function (tab) {
-                var titles = { msg: '消息', contact: '联系人', moment: '动态', me: '我' };
-                var tt = el('chtTopTitle'); if (tt) tt.textContent = titles[tab] || '消息';
-                var act = el('chtTopAction'); if (act) act.style.display = (tab === 'msg') ? '' : 'none';
-                document.querySelectorAll('#chtOverlay .cht-tab-page').forEach(function (pg) { pg.classList.remove('cht-tab-active'); });
-                var ids = { msg: 'chtTabMsg', contact: 'chtTabContact', moment: 'chtTabMoment', me: 'chtTabMe' };
-                var target = el(ids[tab]); if (target) target.classList.add('cht-tab-active');
-                document.querySelectorAll('#chtOverlay .cht-tab-item').forEach(function (it) { it.classList.remove('cht-tab-item-active'); });
-                var at = document.querySelector('#chtOverlay .cht-tab-item[data-tab="' + tab + '"]'); if (at) at.classList.add('cht-tab-item-active');
-                if (tab === 'me') syncProfileDisplay();
-            };
-
-            window.chtToggleGroup = function (header) {
-                var body = header.nextElementSibling;
-                var arrow = header.querySelector('.cht-group-arrow');
-                if (body.style.display === 'none') { body.style.display = ''; if (arrow) arrow.style.transform = 'rotate(0deg)'; }
-                else { body.style.display = 'none'; if (arrow) arrow.style.transform = 'rotate(-90deg)'; }
-            };
-
-            window.chtShowToast = showToast;
-            window.chtOpenConversation = function (id) { showToast('对话功能开发中'); };
-
-            window.chtShowAddMenu = function (e) {
-                e.stopPropagation();
-                var menu = el('chtAddMenu'); if (!menu) return;
-                menu.classList.toggle('show');
-                setTimeout(function () { document.addEventListener('click', function closeMenu() { menu.classList.remove('show'); document.removeEventListener('click', closeMenu); }); }, 10);
-            };
-
-
-            /* ══════════════════════════════════════
-               创建角色
-               ══════════════════════════════════════ */
-            var crAvatarData = '';
-
-            window.chtOpenCreateRole = function () {
-                var m = el('chtAddMenu'); if (m) m.classList.remove('show');
-                crAvatarData = '';
-                var img = el('chtCrAvatarImg'); if (img) { img.src = ''; img.style.display = 'none'; }
-                var ph = el('chtCrAvatarPlaceholder'); if (ph) ph.style.display = '';
-                setVal('chtCrName', ''); setVal('chtCrNickname', ''); setVal('chtCrDetail', '');
-                var mem = el('chtCrMemory'); if (mem) mem.value = 20;
-                var memVal = el('chtCrMemoryVal'); if (memVal) memVal.textContent = '20';
-                var notify = el('chtCrNotify'); if (notify) notify.checked = true;
-                var autoMsg = el('chtCrAutoMsg'); if (autoMsg) autoMsg.checked = false;
-                document.querySelectorAll('#chtCreateOverlay .cht-cr-gender-btn').forEach(function (b) { b.classList.remove('active'); });
-                var fb = document.querySelector('#chtCreateOverlay .cht-cr-gender-btn[data-gender="female"]'); if (fb) fb.classList.add('active');
-                syncGroupSelect(); setVal('chtCrNewGroup', ''); syncMountSelects();
-                var ov = el('chtCreateOverlay'); setTimeout(function () { ov.classList.add('active'); }, 20);
-            };
-
-            window.chtCloseCreateRole = function () { var ov = el('chtCreateOverlay'); if (ov) ov.classList.remove('active'); };
-
-            var crFileInput = el('chtCrAvatarFile');
-            if (crFileInput) crFileInput.addEventListener('change', function (e) {
-                var f = e.target.files && e.target.files[0]; if (!f) return;
-                compressImage(f, 200, 0.7, function (dataUrl) {
-                    crAvatarData = dataUrl;
-                    var img = el('chtCrAvatarImg'); if (img) { img.src = dataUrl; img.style.display = 'block'; }
-                    var ph = el('chtCrAvatarPlaceholder'); if (ph) ph.style.display = 'none';
-                });
-                this.value = '';
-            });
-
-            window.chtSelectGender = function (btn) {
-                var container = btn.closest('.cht-cr-gender');
-                if (container) container.querySelectorAll('.cht-cr-gender-btn').forEach(function (b) { b.classList.remove('active'); });
-                btn.classList.add('active');
-            };
-
-            window.chtAddGroup = function () {
-                var inp = el('chtCrNewGroup'); if (!inp) return;
-                var name = inp.value.trim();
-                if (!name) { showToast('请输入分组名'); return; }
-                var groups = loadGroups();
-                if (groups.indexOf(name) >= 0) { showToast('分组已存在'); return; }
-                groups.push(name); saveGroups(groups); syncGroupSelect();
-                el('chtCrGroup').value = name; inp.value = '';
-                showToast('已添加分组: ' + name);
-            };
-
-            var memSlider = el('chtCrMemory');
-            if (memSlider) memSlider.addEventListener('input', function () { var v = el('chtCrMemoryVal'); if (v) v.textContent = memSlider.value; });
-
-            window.chtSaveRole = function () {
-                var name = val('chtCrName');
-                if (!name) { showToast('请填写角色名字'); return; }
-                var genderBtn = document.querySelector('#chtCreateOverlay .cht-cr-gender-btn.active');
-                var gender = genderBtn ? genderBtn.getAttribute('data-gender') : 'female';
-                var group = val('chtCrGroup') || '好友';
-                var role = {
-                    id: genId(), name: name, nickname: val('chtCrNickname'), gender: gender,
-                    detail: val('chtCrDetail'), group: group,
-                    personaId: el('chtCrPromptSelect') ? el('chtCrPromptSelect').value : '',
-                    worldBookId: el('chtCrWorldBookSelect') ? el('chtCrWorldBookSelect').value : '',
-                    emojiPackId: el('chtCrEmojiSelect') ? el('chtCrEmojiSelect').value : '',
-                    notify: el('chtCrNotify') ? el('chtCrNotify').checked : true,
-                    autoMsg: el('chtCrAutoMsg') ? el('chtCrAutoMsg').checked : false,
-                    memory: parseInt(val('chtCrMemory')) || 20,
-                    avatar: crAvatarData, createdAt: Date.now()
-                };
-                var roles = loadRoles(); roles.unshift(role); saveRoles(roles);
-                renderMsgList(); renderContactList(); chtCloseCreateRole();
-                showToast('角色「' + name + '」已创建');
-            };
-
-
-            /* ══════════════════════════════════════
-               人设编辑器（个人主页）
-               ══════════════════════════════════════ */
-            var psAvatarData = '';
-            var psEditingId = null;
-
-            function renderPersonaList() {
-                var c = el('chtPsList'); if (!c) return;
-                var ps = loadPersonas(), aid = getActivePersonaId();
-                if (!ps.length) { c.innerHTML = '<div class="cht-msg-empty">暂无人设，请先保存</div>'; return; }
-                var h = '';
-                for (var i = 0; i < ps.length; i++) {
-                    var p = ps[i];
-                    var isActive = (p.id === aid);
-                    var genderText = p.gender === 'male' ? '男' : '女';
-                    var avatarHtml = '';
-                    if (p.avatar && p.avatar.length > 0) {
-                        avatarHtml = '<img src="' + escHtml(p.avatar) + '" alt="">';
-                    } else {
-                        avatarHtml = p.gender === 'male'
-                            ? '<svg viewBox="0 0 24 24"><circle cx="10" cy="14" r="5"/><line x1="19" y1="5" x2="13.6" y2="10.4"/><line x1="19" y1="5" x2="15" y2="5"/><line x1="19" y1="5" x2="19" y2="9"/></svg>'
-                            : '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><line x1="12" y1="13" x2="12" y2="21"/><line x1="9" y1="18" x2="15" y2="18"/></svg>';
-                    }
-                    var signPreview = '';
-                    if (p.sign && typeof p.sign === 'string' && p.sign.length > 0) {
-                        signPreview = ' · ' + escHtml(p.sign.length > 20 ? p.sign.substring(0, 20) + '…' : p.sign);
-                    }
-                    h += '<div class="cht-ps-item' + (isActive ? ' cht-ps-item-active' : '') + '" data-id="' + p.id + '">'
-                        + '<div class="cht-ps-item-radio" onclick="chtPersonaActivate(\'' + p.id + '\')"></div>'
-                        + '<div class="cht-ps-item-avatar">' + avatarHtml + '</div>'
-                        + '<div class="cht-ps-item-info" onclick="chtPersonaActivate(\'' + p.id + '\')">'
-                        + '<div class="cht-ps-item-name">' + escHtml(p.name || '未命名') + '</div>'
-                        + '<div class="cht-ps-item-meta">' + genderText + signPreview + '</div>'
-                        + '</div>'
-                        + '<div class="cht-ps-item-actions">'
-                        + '<button class="cht-ps-item-btn" onclick="chtPersonaEdit(\'' + p.id + '\')"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
-                        + '<button class="cht-ps-item-btn cht-ps-item-del" onclick="chtPersonaDelete(\'' + p.id + '\')"><svg viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>'
-                        + '</div></div>';
-                }
-                c.innerHTML = h;
-            }
-
-            function clearPersonaForm() {
-                psAvatarData = ''; psEditingId = null;
-                var img = el('chtPsAvatarImg'); if (img) { img.src = ''; img.style.display = 'none'; }
-                var ph = el('chtPsAvatarPlaceholder'); if (ph) ph.style.display = '';
-                setVal('chtPsName', ''); setVal('chtPsNickname', ''); setVal('chtPsSign', ''); setVal('chtPsDetail', '');
-                document.querySelectorAll('.cht-ps-gender-btn').forEach(function (b) { b.classList.remove('active'); });
-                var fb = document.querySelector('.cht-ps-gender-btn[data-gender="female"]'); if (fb) fb.classList.add('active');
-                var txt = el('chtPsSaveBtnText'); if (txt) txt.textContent = '保存人设';
-            }
-
-            function fillPersonaForm(p) {
-                psEditingId = p.id;
-                psAvatarData = p.avatar || '';
-                var img = el('chtPsAvatarImg');
-                var ph = el('chtPsAvatarPlaceholder');
-                if (p.avatar && img) {
-                    img.src = p.avatar; img.style.display = 'block';
-                    if (ph) ph.style.display = 'none';
-                } else {
-                    if (img) { img.src = ''; img.style.display = 'none'; }
-                    if (ph) ph.style.display = '';
-                }
-                setVal('chtPsName', p.name);
-                setVal('chtPsNickname', p.nickname);
-                setVal('chtPsSign', p.sign);
-                setVal('chtPsDetail', p.detail);
-                document.querySelectorAll('.cht-ps-gender-btn').forEach(function (b) { b.classList.remove('active'); });
-                var gb = document.querySelector('.cht-ps-gender-btn[data-gender="' + (p.gender || 'female') + '"]');
-                if (gb) gb.classList.add('active');
-                var txt = el('chtPsSaveBtnText'); if (txt) txt.textContent = '更新人设';
-            }
-
-            window.chtOpenPersonaEditor = function () {
-                var aid = getActivePersonaId();
-                if (aid) {
-                    var ps = loadPersonas();
-                    for (var i = 0; i < ps.length; i++) { if (ps[i].id === aid) { fillPersonaForm(ps[i]); break; } }
-                } else { clearPersonaForm(); }
-                renderPersonaList();
-                var ov = el('chtPersonaOverlay');
-                if (ov) setTimeout(function () { ov.classList.add('active'); }, 20);
-            };
-
-            window.chtClosePersonaEditor = function () {
-                var ov = el('chtPersonaOverlay'); if (ov) ov.classList.remove('active');
-                syncProfileDisplay();
-            };
-
-            window.chtPersonaNew = function () {
-                clearPersonaForm();
-                var bd = el('chtPersonaBody'); if (bd) bd.scrollTo({ top: 0, behavior: 'smooth' });
-                showToast('已清空，开始新建');
-            };
-
-            window.chtPsSelectGender = function (btn) {
-                document.querySelectorAll('.cht-ps-gender-btn').forEach(function (b) { b.classList.remove('active'); });
-                btn.classList.add('active');
-            };
-
-            var psFileInput = el('chtPsAvatarFile');
-            if (psFileInput) psFileInput.addEventListener('change', function (e) {
-                var f = e.target.files && e.target.files[0]; if (!f) return;
-                compressImage(f, 200, 0.7, function (dataUrl) {
-                    psAvatarData = dataUrl;
-                    var img = el('chtPsAvatarImg');
-                    if (img) { img.src = dataUrl; img.style.display = 'block'; }
-                    var ph = el('chtPsAvatarPlaceholder'); if (ph) ph.style.display = 'none';
-                    showToast('头像已选择');
-                });
-                this.value = '';
-            });
-
-            window.chtPersonaSave = function () {
-                var name = val('chtPsName');
-                if (!name) { showToast('请填写名字'); return; }
-                var gBtn = document.querySelector('.cht-ps-gender-btn.active');
-                var gender = gBtn ? gBtn.getAttribute('data-gender') : 'female';
-                var persona = {
-                    id: psEditingId || genId(),
-                    name: name,
-                    nickname: val('chtPsNickname'),
-                    sign: val('chtPsSign'),
-                    gender: gender,
-                    detail: val('chtPsDetail'),
-                    avatar: psAvatarData,
-                    updatedAt: Date.now()
-                };
-                var ps = loadPersonas();
-                if (psEditingId) {
-                    var found = false;
-                    for (var i = 0; i < ps.length; i++) {
-                        if (ps[i].id === psEditingId) { ps[i] = persona; found = true; break; }
-                    }
-                    if (!found) ps.unshift(persona);
-                    showToast('人设已更新');
-                } else {
-                    ps.unshift(persona);
-                    psEditingId = persona.id;
-                    showToast('人设已保存');
-                }
-                savePersonas(ps);
-                setActivePersonaId(persona.id);
-                renderPersonaList();
-                syncProfileDisplay();
-                var txt = el('chtPsSaveBtnText'); if (txt) txt.textContent = '更新人设';
-            };
-
-            window.chtPersonaActivate = function (id) {
-                setActivePersonaId(id);
-                var ps = loadPersonas();
-                for (var i = 0; i < ps.length; i++) { if (ps[i].id === id) { fillPersonaForm(ps[i]); break; } }
-                renderPersonaList(); syncProfileDisplay();
-                showToast('已切换人设');
-            };
-
-            window.chtPersonaEdit = function (id) {
-                var ps = loadPersonas();
-                for (var i = 0; i < ps.length; i++) { if (ps[i].id === id) { fillPersonaForm(ps[i]); break; } }
-                var bd = el('chtPersonaBody'); if (bd) bd.scrollTo({ top: 0, behavior: 'smooth' });
-            };
-
-            window.chtPersonaDelete = function (id) {
-                if (!confirm('确定删除该人设？')) return;
-                var ps = loadPersonas().filter(function (p) { return p.id !== id; });
-                savePersonas(ps);
-                if (getActivePersonaId() === id) {
-                    if (ps.length) { setActivePersonaId(ps[0].id); fillPersonaForm(ps[0]); }
-                    else { setActivePersonaId(''); clearPersonaForm(); }
-                }
-                renderPersonaList(); syncProfileDisplay();
-                showToast('已删除');
-            };
-
-        })();
-    </script>
 </body>
 
 </html>

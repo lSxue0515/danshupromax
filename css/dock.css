@@ -1,102 +1,95 @@
 /* ============================================
-   dock.css — 独立悬浮毛玻璃Dock / 指示器 / Home横条
+   蛋薯机 DanShu Pro v2 — dock.css
    ============================================ */
 
-/* ----- 页面指示器小圆点 ----- */
-.page-dots {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    padding: 8px 0 4px;
-    flex-shrink: 0;
-}
-
-.dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: rgba(219, 112, 147, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.dot.active {
-    background: rgba(219, 112, 147, 0.6);
-    width: 20px;
-    border-radius: 4px;
-    border-color: rgba(255, 255, 255, 0.7);
-    box-shadow: 0 1px 6px rgba(219, 112, 147, 0.3);
-}
-
-/* ----- Dock 容器：独立悬浮毛玻璃胶囊 ----- */
 .dock-container {
+    height: var(--dock-height);
+    padding: 0 36px;
     display: flex;
-    justify-content: center;
-    gap: 18px;
-    padding: 10px 24px;
-    margin: 0 24px 6px;
-    background: rgba(255, 255, 255, 0.4);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-    border-radius: 28px;
-    border: 1px solid rgba(255, 255, 255, 0.65);
-    box-shadow:
-        0 8px 32px rgba(200, 140, 160, 0.12),
-        0 2px 8px rgba(255, 182, 193, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    justify-content: space-around;
+    align-items: center;
     flex-shrink: 0;
+    position: relative;
+    z-index: 50;
 }
 
-/* ----- Dock 图标（与普通图标同尺寸）----- */
+.dock-container::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 24px;
+    right: 24px;
+    bottom: 10px;
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    z-index: 0;
+}
+
+.dock-container .app-cell {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+/* ★ Dock 图标缩小10px：52→42 */
 .dock-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.55);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    box-shadow:
-        0 4px 15px rgba(219, 112, 147, 0.08),
-        0 1px 2px rgba(255, 182, 193, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
 }
 
-/* ★ 关键修复：Dock图标SVG强制白色描边、无填充 */
+/* ★ 图标SVG也等比缩小 */
 .dock-icon svg {
-    width: 26px;
-    height: 26px;
-    fill: none !important;
+    width: 20px;
+    height: 20px;
+    fill: none;
     stroke: #ffffff;
-    stroke-width: 2.5;
+    stroke-width: 2.8;
     stroke-linecap: round;
     stroke-linejoin: round;
-    filter: drop-shadow(0 1px 4px rgba(150, 60, 90, 0.35));
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.25));
 }
 
-/* ★ SVG内部所有path/circle/rect/line/polyline也强制 */
-.dock-icon svg path,
-.dock-icon svg circle,
-.dock-icon svg rect,
-.dock-icon svg line,
-.dock-icon svg polyline {
-    fill: none !important;
-    stroke: #ffffff;
-    stroke-width: 2.5;
+.dock-icon::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 50%;
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.22) 0%,
+        transparent 100%);
+    border-radius: 12px 12px 0 0;
+    pointer-events: none;
 }
 
-/* Dock 里不显示文字 */
-.dock-container .app-name {
-    display: none;
+.dock-icon:hover {
+    background: rgba(255, 255, 255, 0.72);
+    transform: scale(1.1) translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border-color: rgba(255, 255, 255, 0.75);
 }
 
-/* ----- 底部 Home 横条 ----- */
-.home-indicator {
-    width: 134px;
-    height: 5px;
-    background: rgba(219, 112, 147, 0.2);
-    border-radius: 3px;
-    margin: 6px auto 10px;
-    flex-shrink: 0;
+.dock-icon:active {
+    transform: scale(0.9);
 }

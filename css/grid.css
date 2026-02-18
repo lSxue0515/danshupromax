@@ -1,50 +1,18 @@
 /* ============================================
-   grid.css — 双页横滑视口 + 网格布局
+   蛋薯机 DanShu Pro v2 — grid.css
    ============================================ */
 
-/* ----- 滑动视口（可视窗口）----- */
+/* ★ 关键修复：pages-viewport 不能用 flex:1 无限撑开 */
 .pages-viewport {
-    flex: 1;
+    /* 减去状态栏 + dock + 指示器 + 底部横条 */
+    height: calc(100% - var(--status-bar-height) - var(--dock-height) - var(--page-dots-height) - var(--home-indicator-height));
     overflow: hidden;
     position: relative;
+    z-index: 5;
+    touch-action: pan-x;
+    flex-shrink: 0;
 }
 
-/* ----- 滑动轨道（两页并排）----- */
-.pages-track {
-    display: flex;
-    width: 200%;           /* 两页 = 200% */
-    height: 100%;
-    transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    will-change: transform;
-}
-
-/* ----- 单页 ----- */
-.page {
-    width: 50%;            /* 每页占轨道的一半 = 视口100% */
-    height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 6px 18px 10px;
-    scrollbar-width: none;
-}
-
-.page::-webkit-scrollbar {
-    display: none;
-}
-
-
-/* ============================================
-   grid.css — 双页横滑视口 + 网格布局
-   ============================================ */
-
-/* ----- 滑动视口 ----- */
-.pages-viewport {
-    flex: 1;
-    overflow: hidden;
-    position: relative;
-}
-
-/* ----- 滑动轨道 ----- */
 .pages-track {
     display: flex;
     width: 200%;
@@ -53,39 +21,119 @@
     will-change: transform;
 }
 
-/* ----- 单页 ----- */
+.pages-track.dragging {
+    transition: none;
+}
+
 .page {
     width: 50%;
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 6px 18px 10px;
-    scrollbar-width: none;
+    padding: 10px 20px 0;
+    -webkit-overflow-scrolling: touch;
 }
 
-.page::-webkit-scrollbar {
-    display: none;
-}
-
-/* ----- 网格容器（4列，行高auto）----- */
+/* ===== 第1页主网格：4列 ===== */
 .grid-container {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    grid-auto-rows: auto;
     gap: 14px 12px;
-    align-content: start;
+    padding-bottom: 10px;
 }
 
-/* ----- 跨列跨行规则 ----- */
+/* 大卡片 4列 */
 .widget-card {
     grid-column: span 4;
 }
 
+/* 倒数日 左侧2列，跨2行 */
 .widget-countdown {
     grid-column: span 2;
-    grid-row: span 2;      /* 跨2行，和右边2个app对齐 */
+    grid-row: span 2;
 }
 
-.widget-chat {
+/* 右侧2×2应用容器，占右2列、跨2行 */
+.apps-grid-2x2 {
+    grid-column: span 2;
+    grid-row: span 2;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 6px 6px;
+    align-content: center;
+}
+
+/* 气泡 4列 */
+.widget-chat-bubble {
     grid-column: span 4;
 }
+
+/* ===== 第2页：独立网格，不继承主页的跨列规则 ===== */
+.grid-apps-page {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px 12px;
+    padding-top: 30px;
+    padding-bottom: 10px;
+}
+
+/* ★ 关键修复：第2页的app-cell不跨列，每个占1列 */
+.grid-apps-page > .app-cell {
+    grid-column: span 1;
+    grid-row: span 1;
+}
+
+/* 应用单元格 */
+.app-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 2px 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.app-name {
+    font-size: 11px;
+    color: var(--text-primary);
+    text-align: center;
+    line-height: 1.2;
+    letter-spacing: 0.3px;
+    max-width: 68px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+/* 页面指示器 */
+.page-dots {
+    height: var(--page-dots-height);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+}
+
+.dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+    transition: all 0.35s ease;
+    cursor: pointer;
+}
+
+.dot.active {
+    width: 20px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+}
+
