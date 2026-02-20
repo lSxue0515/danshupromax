@@ -510,8 +510,13 @@
                                 placeholder="例：我的GPT接口"></div>
                         <div class="api-field"><label>API URL</label><input type="text" id="apiUrl" class="api-input"
                                 placeholder="https://api.example.com/v1"></div>
-                        <div class="api-field"><label>API Key</label><input type="password" id="apiKey"
-                                class="api-input" placeholder="sk-..."></div>
+                        <div class="api-field"><label>API Key</label>
+                            <div style="position:relative;">
+                                <input type="text" id="apiKey" class="api-input" placeholder="sk-..."
+                                    style="-webkit-text-security:disc;" autocomplete="off" autocorrect="off"
+                                    autocapitalize="off" spellcheck="false">
+                            </div>
+                        </div>
                     </div>
                     <div class="api-section">
                         <div class="api-section-title">
