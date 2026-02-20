@@ -535,33 +535,11 @@ function openConversation(rid) {
     h += myAv ? '<img src="' + myAv + '" id="convAvRight" alt="">' : SVG_USER;
     h += '</div></div>';
 
-    // 名称 + 自定义标签 + 右侧显示当前人设名
+    // 名称 + 自定义标签
     h += '<div class="chat-conv-name-wrap">';
-    h += '<div class="chat-conv-name">' + dn;
-    if (ap) {
-        h += ' <span class="chat-conv-persona-tag" onclick="event.stopPropagation();openConvPersonaSwitcher()">' + esc(ap.name) + '</span>';
-    }
-    h += '</div>';
+    h += '<div class="chat-conv-name">' + dn + '</div>';
     h += '<div class="chat-conv-subtitle">' + esc(customLabel || '正在聊天中') + '</div>';
     h += '</div></div>';
-    // --- 人设指示器 ---
-    var _bp = getActivePersona();
-    if (_bp) {
-        h += '<div class="conv-header-persona" onclick="event.stopPropagation();openConvPersonaSwitcher()">';
-        if (_bp.avatar) {
-            h += '<img src="' + _bp.avatar + '" class="conv-header-persona-av">';
-        } else {
-            h += '<div class="conv-header-persona-av-placeholder">' + (_bp.name || 'U').charAt(0) + '</div>';
-        }
-        h += '<span class="conv-header-persona-name">' + esc(_bp.name) + '</span>';
-        h += '</div>';
-    } else {
-        h += '<div class="conv-header-persona conv-header-persona-empty" onclick="event.stopPropagation();openConvPersonaSwitcher()">';
-        h += '<div class="conv-header-persona-av-placeholder">+</div>';
-        h += '<span class="conv-header-persona-name">挂载人设</span>';
-        h += '</div>';
-    }
-    // --- 人设指示器结束 ---
 
     // 消息体
     h += '<div class="chat-conv-body" id="chatConvBody"' + (role.chatWallpaper ? ' style="background-image:url(' + role.chatWallpaper + ');background-size:cover;background-position:center;"' : '') + '>';
@@ -572,6 +550,14 @@ function openConversation(rid) {
             h += '<div class="chat-bubble-time-center">' + m.time + '</div>';
         if (m.recalled) {
             h += '<div class="chat-bubble-recalled">' + (m.from === 'self' ? '你' : esc(role.nickname || role.name)) + ' 撤回了一条消息</div>';
+            continue;
+        }
+        // ★ 人设变更提示条（居中小字提示）
+        if (m.personaChange) {
+            h += '<div class="chat-bubble-persona-change">';
+            h += '<svg viewBox="0 0 24 24" width="12" height="12"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ';
+            h += '身份切换为「' + esc(m.newPersonaName || '默认') + '」';
+            h += '</div>';
             continue;
         }
         h += renderBubbleRow(m, i, myAv, roleAv);
@@ -810,12 +796,35 @@ function bindPersonaToRole(personaId) {
     var role = findRole(_chatCurrentConv);
     if (!role) return;
 
+    var oldPersonaId = role.boundPersonaId || role.personaId || '';
+
     role.boundPersonaId = personaId || '';
+    role.personaId = personaId || '';
     saveChatRoles();
     closeConvPersonaSwitcher();
 
-    // 重新渲染整个对话页，顶栏头像+气泡头像全部刷新
-    openConversation(role.id);
+    // 记录人设变更
+    if (oldPersonaId !== (personaId || '')) {
+        recordPersonaChange(role, oldPersonaId, personaId || '');
+        // 追加变更提示到聊天区
+        if (role.msgs && role.msgs.length > 0) {
+            var lastMsg = role.msgs[role.msgs.length - 1];
+            if (lastMsg.personaChange) {
+                var body = document.getElementById('chatConvBody');
+                if (body) {
+                    var changeHtml = '<div class="chat-bubble-persona-change">';
+                    changeHtml += '<svg viewBox="0 0 24 24" width="12" height="12"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ';
+                    changeHtml += '身份切换为「' + esc(lastMsg.newPersonaName || '默认') + '」';
+                    changeHtml += '</div>';
+                    body.insertAdjacentHTML('beforeend', changeHtml);
+                    body.scrollTop = body.scrollHeight;
+                }
+            }
+        }
+    }
+
+    // ★ 局部刷新头像，不重建页面
+    refreshUserAvatarInConv();
 
     var ap = getActivePersona();
     if (ap) {
@@ -824,7 +833,6 @@ function bindPersonaToRole(personaId) {
         showToast('当前窗口已恢复全局人设');
     }
 }
-
 
 /* ================================================================
    相机 & 相册 — 真实图片发送系统
@@ -1079,6 +1087,37 @@ function openSettingsMount(type) {
     openMountSelector(type);
 }
 
+/* 局部刷新对话页的user头像（顶栏+所有气泡），不重建整个页面 */
+function refreshUserAvatarInConv() {
+    var role = findRole(_chatCurrentConv);
+    if (!role) return;
+    var ap = getActivePersona();
+    var newAv = (ap && ap.avatar) ? ap.avatar : '';
+
+    // 1. 更新全局变量
+    _convRightAvatar = newAv;
+
+    // 2. 刷新顶栏右侧头像（user头像）
+    var boxes = document.querySelectorAll('.chat-conv-av-box');
+    if (boxes[1]) {
+        if (newAv) {
+            boxes[1].innerHTML = '<img src="' + newAv + '" id="convAvRight" alt="">';
+        } else {
+            boxes[1].innerHTML = SVG_USER;
+        }
+    }
+
+    // 3. 刷新所有self消息气泡的头像
+    var selfRows = document.querySelectorAll('.chat-bubble-row.self .chat-bubble-avatar');
+    for (var i = 0; i < selfRows.length; i++) {
+        if (newAv) {
+            selfRows[i].innerHTML = '<img src="' + newAv + '" alt="">';
+        } else {
+            selfRows[i].innerHTML = SVG_USER_SM;
+        }
+    }
+}
+
 // 覆写 selectMountOption，支持从设置页同步
 var _origSelectMountOption = (typeof selectMountOption === 'function') ? selectMountOption : null;
 
@@ -1100,18 +1139,28 @@ function selectMountOption(type, id) {
     if (window._mountFromSettings) {
         var role = findRole(_chatCurrentConv);
         if (role) {
-            if (type === 'persona') role.personaId = id;
+            if (type === 'persona') {
+                var oldPersonaId = role.personaId || role.boundPersonaId || '';
+                role.personaId = id;
+                role.boundPersonaId = id;
+                // 记录人设变更
+                if (oldPersonaId !== (id || '')) {
+                    recordPersonaChange(role, oldPersonaId, id);
+                }
+            }
             else if (type === 'worldbook') role.worldBookId = id;
             else if (type === 'sticker') role.stickerId = id;
             saveChatRoles();
             showToast(name ? '已挂载: ' + name : '已取消挂载');
         }
         window._mountFromSettings = false;
+
         closeChatSettingsPanel();
+        // ★ 重建对话页（让头像、气泡等全部刷新），再重新打开设置面板
+        openConversation(role.id);
         openChatSettings();
     }
 }
-
 function settingsClearChat() {
     if (!confirm('确认清理所有聊天记录？此操作不可恢复。')) return;
     var role = findRole(_chatCurrentConv); if (!role) return;
@@ -1143,11 +1192,9 @@ function saveChatSettings() {
     role.bgMsg = document.getElementById('csBgMode').checked;
     role.memory = parseInt(document.getElementById('csMemory').value) || 20;
     saveChatRoles();
-    var nameEl = document.querySelector('.chat-conv-name');
-    if (nameEl) nameEl.textContent = nickname || role.name;
-    var subEl = document.querySelector('.chat-conv-subtitle');
-    if (subEl) subEl.textContent = role.customLabel || '正在聊天中';
     closeChatSettingsPanel();
+    // ★ 直接重建整个对话页，确保头像、名字、标签、壁纸等全部刷新
+    openConversation(role.id);
     showToast('设置已保存');
 }
 
@@ -1565,6 +1612,31 @@ function buildChatMessages(role) {
     for (var i = startIdx; i < history.length; i++) {
         var m = history[i];
         if (m.recalled) continue;
+
+        // ★ 人设变更消息 — 注入为系统级提示，让char认知到user身份变化
+        if (m.personaChange) {
+            var changeNotice = '【系统通知：你的对话对象刚刚发生了身份切换。';
+            changeNotice += '对方从「' + (m.oldPersonaName || '默认身份') + '」变为了「' + (m.newPersonaName || '默认身份') + '」。';
+            var newP = m.newPersonaId ? findPersona(m.newPersonaId) : null;
+            if (newP) {
+                changeNotice += '新身份信息：';
+                changeNotice += '名字是「' + (newP.name || '未知') + '」';
+                if (newP.gender === 'male') changeNotice += '，性别男性';
+                else if (newP.gender === 'female') changeNotice += '，性别女性';
+                if (newP.nickname) changeNotice += '，昵称「' + newP.nickname + '」';
+                if (newP.detail) changeNotice += '，详细信息：' + newP.detail.substring(0, 100);
+                changeNotice += '。';
+            } else {
+                changeNotice += '对方切换回了默认身份，没有详细信息。';
+            }
+            changeNotice += '请你根据角色性格，自然地对这个身份变化做出反应。';
+            changeNotice += '比如你可能会感到困惑、惊讶、好奇，或者如果你认识这个新身份，表现出相应的态度。';
+            changeNotice += '不要生硬地说"你换了人设"，而是用符合角色的方式自然回应这种变化。';
+            changeNotice += '如果新旧身份差异很大（比如性别不同、关系不同），你应该表现出明显的察觉和反应。】';
+            messages.push({ role: 'system', content: changeNotice });
+            continue;
+        }
+
         var content = m.text;
 
         // 语音消息
@@ -2201,154 +2273,61 @@ function sendTransfer() {
     role.lastTime = now.getTime(); role.lastTimeStr = ts;
     saveChatRoles();
 
-    /* ================================================================
-   每角色独立人设切换系统
-   ================================================================ */
-
-    function openConvPersonaSwitcher() {
-        var role = findRole(_chatCurrentConv);
-        if (!role) return;
-        var conv = document.getElementById('chatConversation');
-        if (!conv) return;
-        closeConvPersonaSwitcher();
-
-        var currentBound = role.boundPersonaId || '';
-
-        var h = '<div class="conv-persona-switcher-overlay" id="convPersonaSwitcherOverlay" onclick="if(event.target===this)closeConvPersonaSwitcher()">';
-        h += '<div class="conv-persona-switcher-panel">';
-
-        // 头部
-        h += '<div class="conv-persona-switcher-header">';
-        h += '<div class="conv-persona-switcher-title">为「' + esc(role.nickname || role.name) + '」选择人设</div>';
-        h += '<div class="conv-persona-switcher-close" onclick="closeConvPersonaSwitcher()">';
-        h += '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-        h += '</div></div>';
-        h += '<div class="conv-persona-switcher-hint">每个角色独立绑定人设，互不影响</div>';
-
-        h += '<div class="conv-persona-switcher-list">';
-
-        // 不使用人设
-        h += '<div class="conv-persona-switcher-item' + (!currentBound ? ' active' : '') + '" onclick="bindPersonaToRole(\'\')">';
-        h += '<div class="conv-persona-switcher-item-av-wrap"><div class="conv-persona-switcher-item-av-none">×</div></div>';
-        h += '<div class="conv-persona-switcher-item-info"><div class="conv-persona-switcher-item-name">不使用人设</div>';
-        h += '<div class="conv-persona-switcher-item-desc">使用默认身份</div></div>';
-        if (!currentBound) h += '<div class="conv-persona-switcher-item-check">✓</div>';
-        h += '</div>';
-
-        // 遍历所有人设
-        for (var i = 0; i < _chatPersonas.length; i++) {
-            var p = _chatPersonas[i];
-            var isActive = (p.id === currentBound);
-            h += '<div class="conv-persona-switcher-item' + (isActive ? ' active' : '') + '" onclick="bindPersonaToRole(\'' + p.id + '\')">';
-            h += '<div class="conv-persona-switcher-item-av-wrap">';
-            if (p.avatar) {
-                h += '<img src="' + p.avatar + '" class="conv-persona-switcher-item-av">';
-            } else {
-                h += '<div class="conv-persona-switcher-item-av-letter">' + (p.name || '?').charAt(0) + '</div>';
-            }
-            h += '</div>';
-            h += '<div class="conv-persona-switcher-item-info">';
-            h += '<div class="conv-persona-switcher-item-name">' + esc(p.name || '未命名') + '</div>';
-            h += '<div class="conv-persona-switcher-item-desc">' + esc((p.description || p.content || p.bio || '').substring(0, 40) || '无简介') + '</div>';
-            h += '</div>';
-            if (isActive) h += '<div class="conv-persona-switcher-item-check">✓</div>';
-            h += '</div>';
-        }
-
-        if (_chatPersonas.length === 0) {
-            h += '<div class="conv-persona-switcher-empty">还没有创建人设<br>请在「我的」→「人设」中创建</div>';
-        }
-
-        h += '</div></div></div>';
-
-        conv.insertAdjacentHTML('beforeend', h);
-        setTimeout(function () {
-            var ov = document.getElementById('convPersonaSwitcherOverlay');
-            if (ov) ov.classList.add('show');
-        }, 10);
-    }
-
-    function closeConvPersonaSwitcher() {
-        var el = document.getElementById('convPersonaSwitcherOverlay');
-        if (el) el.remove();
-    }
-
-    function bindPersonaToRole(personaId) {
-        var role = findRole(_chatCurrentConv);
-        if (!role) return;
-
-        role.boundPersonaId = personaId || '';
-        saveChatRoles();
-        closeConvPersonaSwitcher();
-
-        // 重新渲染整个对话（顶栏+气泡头像全部刷新）
-        openConversation(role.id);
-
-        var ap = getActivePersona();
-        if (ap) {
-            showToast('已切换为「' + ap.name + '」');
-        } else {
-            showToast('已取消人设绑定');
-        }
-    }
-
-    /* ================================================================
-   拦截AI回复中的转账意图 → 自动触发转账卡片
-   在AI回复push到msgs之后、渲染之前调用
-   ================================================================ */
-    function interceptTransferIntent(role, msgObj) {
-        if (!msgObj || msgObj.from !== 'other') return false;
-        var t = msgObj.text || '';
-        // 匹配：转账、发红包、给你转、向你转账 + 金额
-        var patterns = [
-            /(?:转账|转给你|给你转|向你转账|发红包|打款|汇款)\s*[¥￥]?\s*(\d+(?:\.\d{1,2})?)/,
-            /[¥￥]\s*(\d+(?:\.\d{1,2})?)\s*(?:转账|红包|转给你)/,
-            /(?:给你|转你|发你)\s*(\d+(?:\.\d{1,2})?)\s*(?:元|块|¥|￥)?/,
-            /(?:转|发)\s*[¥￥]?\s*(\d+(?:\.\d{1,2})?)\s*(?:给你|过去|过来)/
-        ];
-
-        for (var i = 0; i < patterns.length; i++) {
-            var match = t.match(patterns[i]);
-            if (match) {
-                var amount = parseFloat(match[1]);
-                if (amount > 0 && amount < 100000) {
-                    // 从文本中提取备注（去掉金额部分）
-                    var remark = t.replace(match[0], '').trim();
-                    if (!remark || remark.length > 30) remark = '转账';
-
-                    // 把这条消息改造成转账卡片
-                    var txId = 'ctx' + Date.now() + Math.random().toString(36).substr(2, 4);
-                    msgObj.transfer = true;
-                    msgObj.transferId = txId;
-                    msgObj.transferAmount = amount;
-                    msgObj.transferRemark = remark || '转账';
-                    msgObj.transferStatus = 'pending';
-                    msgObj.transferDirection = 'char_to_user';
-                    msgObj.text = '[转账] ¥' + amount.toFixed(2);
-
-                    // 加入钱包记录
-                    loadWallet();
-                    _chatWallet.transactions.unshift({
-                        id: txId, type: 'transfer_in', amount: amount,
-                        remark: remark || '转账', target: role.nickname || role.name,
-                        time: new Date().toLocaleString(), status: 'pending'
-                    });
-                    saveWallet();
-
-                    return true; // 已拦截
-                }
-            }
-        }
-        return false; // 未匹配
-    }
-
     appendBubbleToBody(role, msgObj);
     closeTransferPanel();
     showToast('转账已发送');
 
     setTimeout(function () { charRespondTransfer(role, txId, amountVal, remark); }, 1500 + Math.random() * 2000);
 }
+/* ================================================================
+   拦截AI回复中的转账意图 → 自动触发转账卡片
+   在AI回复push到msgs之后、渲染之前调用
+   ================================================================ */
+function interceptTransferIntent(role, msgObj) {
+    if (!msgObj || msgObj.from !== 'other') return false;
+    var t = msgObj.text || '';
+    // 匹配：转账、发红包、给你转、向你转账 + 金额
+    var patterns = [
+        /(?:转账|转给你|给你转|向你转账|发红包|打款|汇款)\s*[¥￥]?\s*(\d+(?:\.\d{1,2})?)/,
+        /[¥￥]\s*(\d+(?:\.\d{1,2})?)\s*(?:转账|红包|转给你)/,
+        /(?:给你|转你|发你)\s*(\d+(?:\.\d{1,2})?)\s*(?:元|块|¥|￥)?/,
+        /(?:转|发)\s*[¥￥]?\s*(\d+(?:\.\d{1,2})?)\s*(?:给你|过去|过来)/
+    ];
 
+    for (var i = 0; i < patterns.length; i++) {
+        var match = t.match(patterns[i]);
+        if (match) {
+            var amount = parseFloat(match[1]);
+            if (amount > 0 && amount < 100000) {
+                // 从文本中提取备注（去掉金额部分）
+                var remark = t.replace(match[0], '').trim();
+                if (!remark || remark.length > 30) remark = '转账';
+
+                // 把这条消息改造成转账卡片
+                var txId = 'ctx' + Date.now() + Math.random().toString(36).substr(2, 4);
+                msgObj.transfer = true;
+                msgObj.transferId = txId;
+                msgObj.transferAmount = amount;
+                msgObj.transferRemark = remark || '转账';
+                msgObj.transferStatus = 'pending';
+                msgObj.transferDirection = 'char_to_user';
+                msgObj.text = '[转账] ¥' + amount.toFixed(2);
+
+                // 加入钱包记录
+                loadWallet();
+                _chatWallet.transactions.unshift({
+                    id: txId, type: 'transfer_in', amount: amount,
+                    remark: remark || '转账', target: role.nickname || role.name,
+                    time: new Date().toLocaleString(), status: 'pending'
+                });
+                saveWallet();
+
+                return true; // 已拦截
+            }
+        }
+    }
+    return false; // 未匹配
+}
 /* 公共：追加一条气泡到聊天区 */
 function appendBubbleToBody(role, msgObj) {
     var body = document.getElementById('chatConvBody');

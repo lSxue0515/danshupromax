@@ -487,3 +487,12 @@
 .api-import-file {
     display: none;
 }
+
+/* ===== 修复移动端输入框无法输入/粘贴 ===== */
+.api-input,
+.api-select {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+    touch-action: manipulation !important;
+}

@@ -102,57 +102,57 @@ function fetchApiModels() {
             'Authorization': 'Bearer ' + key
         }
     })
-    .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-    })
-    .then(function (json) {
-        btn.classList.remove('loading');
-        var models = [];
+        .then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        })
+        .then(function (json) {
+            btn.classList.remove('loading');
+            var models = [];
 
-        // 兼容 OpenAI 格式
-        if (json.data && Array.isArray(json.data)) {
-            for (var i = 0; i < json.data.length; i++) {
-                var id = json.data[i].id || json.data[i].name;
-                if (id) models.push(id);
+            // 兼容 OpenAI 格式
+            if (json.data && Array.isArray(json.data)) {
+                for (var i = 0; i < json.data.length; i++) {
+                    var id = json.data[i].id || json.data[i].name;
+                    if (id) models.push(id);
+                }
             }
-        }
-        // 兼容数组直接返回
-        else if (Array.isArray(json)) {
-            for (var j = 0; j < json.length; j++) {
-                var mid = typeof json[j] === 'string' ? json[j] : (json[j].id || json[j].name);
-                if (mid) models.push(mid);
+            // 兼容数组直接返回
+            else if (Array.isArray(json)) {
+                for (var j = 0; j < json.length; j++) {
+                    var mid = typeof json[j] === 'string' ? json[j] : (json[j].id || json[j].name);
+                    if (mid) models.push(mid);
+                }
             }
-        }
 
-        models.sort();
+            models.sort();
 
-        if (models.length === 0) {
-            status.textContent = '未找到可用模型';
-            showToast('未找到模型数据');
-            return;
-        }
+            if (models.length === 0) {
+                status.textContent = '未找到可用模型';
+                showToast('未找到模型数据');
+                return;
+            }
 
-        // 填充 select
-        var sel = document.getElementById('apiModelSelect');
-        sel.innerHTML = '';
-        for (var k = 0; k < models.length; k++) {
-            var opt = document.createElement('option');
-            opt.value = models[k];
-            opt.textContent = models[k];
-            sel.appendChild(opt);
-        }
+            // 填充 select
+            var sel = document.getElementById('apiModelSelect');
+            sel.innerHTML = '';
+            for (var k = 0; k < models.length; k++) {
+                var opt = document.createElement('option');
+                opt.value = models[k];
+                opt.textContent = models[k];
+                sel.appendChild(opt);
+            }
 
-        // 缓存模型列表到临时变量
-        window._apiFetchedModels = models;
-        status.textContent = '成功拉取 ' + models.length + ' 个模型';
-        showToast('拉取到 ' + models.length + ' 个模型');
-    })
-    .catch(function (err) {
-        btn.classList.remove('loading');
-        status.textContent = '拉取失败: ' + err.message;
-        showToast('拉取失败');
-    });
+            // 缓存模型列表到临时变量
+            window._apiFetchedModels = models;
+            status.textContent = '成功拉取 ' + models.length + ' 个模型';
+            showToast('拉取到 ' + models.length + ' 个模型');
+        })
+        .catch(function (err) {
+            btn.classList.remove('loading');
+            status.textContent = '拉取失败: ' + err.message;
+            showToast('拉取失败');
+        });
 }
 
 /* ========== 保存预设 ========== */
@@ -437,9 +437,9 @@ function handleApiImport(event) {
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/"/g, '&quot;');
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }
 
 /* ========== 获取当前激活的 API 配置（供其他模块调用） ========== */
@@ -460,3 +460,27 @@ function getActiveApiConfig() {
     }
     return null;
 }
+/* ========== 修复移动端 input 无法输入 / 粘贴 ========== */
+(function () {
+    // 阻止手机模拟器外壳拦截 input/select/textarea 的触摸事件
+    document.addEventListener('touchstart', function (e) {
+        var tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+            e.stopPropagation();
+        }
+    }, true); // ← 捕获阶段，优先于外壳的事件处理
+
+    document.addEventListener('touchmove', function (e) {
+        var tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+            e.stopPropagation();
+        }
+    }, true);
+
+    document.addEventListener('touchend', function (e) {
+        var tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+            e.stopPropagation();
+        }
+    }, true);
+})();
