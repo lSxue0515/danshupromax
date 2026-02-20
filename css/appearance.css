@@ -570,15 +570,10 @@
 }
 
 /* ===== 隐藏顶栏状态 ===== */
-.phone-frame.statusbar-hidden .status-bar {
-    height: 20px !important;
-    padding: 0 !important;
-    overflow: hidden;
-}
-
 .phone-frame.statusbar-hidden .status-bar>* {
     opacity: 0 !important;
     visibility: hidden !important;
+    pointer-events: none !important;
 }
 
 /* 壁纸上传隐藏input */

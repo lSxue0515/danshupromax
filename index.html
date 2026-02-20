@@ -14,7 +14,13 @@
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/api.css">
     <link rel="stylesheet" href="css/appearance.css">
+    <link rel="stylesheet" href="css/notify/notify.css">
     <link rel="stylesheet" href="css/chat.css">
+    <link rel="stylesheet" href="css/favorite/favorite.css">
+    <link rel="stylesheet" href="css/beautify/beautify.css">
+    <link rel="stylesheet" href="css/sticker/sticker.css">
+    <link rel="stylesheet" href="css/worldbook.css">
+
 </head>
 
 <body>
@@ -256,16 +262,17 @@
                 </div>
                 <div class="app-name">手帐</div>
             </div>
-            <div class="app-cell" data-icon-id="icon_dock_browser">
+            <div class="app-cell" data-icon-id="icon_dock_browser" onclick="openWorldBookApp()">
                 <div class="app-icon dock-icon" id="icon_dock_browser">
                     <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="2" y1="12" x2="22" y2="12" />
-                        <path
-                            d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                        <line x1="9" y1="7" x2="17" y2="7" />
+                        <line x1="9" y1="11" x2="17" y2="11" />
+                        <line x1="9" y1="15" x2="13" y2="15" />
                     </svg>
                 </div>
-                <div class="app-name">浏览器</div>
+                <div class="app-name">世界书</div>
             </div>
         </div>
 
@@ -660,50 +667,6 @@
                     <div class="appear-section">
                         <div class="appear-section-title">
                             <svg viewBox="0 0 24 24" width="14" height="14">
-                                <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                                <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                                <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                                <rect x="14" y="14" width="7" height="7" rx="1.5" />
-                            </svg>
-                            应用图标风格
-                        </div>
-                        <div class="appear-icon-styles">
-                            <div class="appear-icon-option active" data-style="glass"
-                                onclick="selectIconStyle('glass')">
-                                <div class="appear-icon-demo style-glass">
-                                    <svg viewBox="0 0 24 24">
-                                        <circle cx="12" cy="12" r="3" />
-                                        <path
-                                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33" />
-                                    </svg>
-                                </div>
-                                <div class="appear-icon-label">毛玻璃</div>
-                            </div>
-                            <div class="appear-icon-option" data-style="gradient" onclick="selectIconStyle('gradient')">
-                                <div class="appear-icon-demo style-gradient">
-                                    <svg viewBox="0 0 24 24">
-                                        <circle cx="12" cy="12" r="3" />
-                                        <path
-                                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33" />
-                                    </svg>
-                                </div>
-                                <div class="appear-icon-label">渐变</div>
-                            </div>
-                            <div class="appear-icon-option" data-style="solid" onclick="selectIconStyle('solid')">
-                                <div class="appear-icon-demo style-solid">
-                                    <svg viewBox="0 0 24 24">
-                                        <circle cx="12" cy="12" r="3" />
-                                        <path
-                                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33" />
-                                    </svg>
-                                </div>
-                                <div class="appear-icon-label">纯色</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="appear-section">
-                        <div class="appear-section-title">
-                            <svg viewBox="0 0 24 24" width="14" height="14">
                                 <rect x="3" y="3" width="18" height="18" rx="2" />
                                 <circle cx="8.5" cy="8.5" r="1.5" />
                                 <polyline points="21 15 16 10 5 21" />
@@ -781,6 +744,38 @@
                             </label>
                         </div>
                     </div>
+                    <!-- 消息铃声 -->
+                    <div class="appear-section">
+                        <div class="appear-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                            </svg>
+                            消息铃声
+                        </div>
+                        <div class="appear-field">
+                            <label>铃声URL（支持 mp3 / wav / ogg）</label>
+                            <input type="text" class="appear-input" id="appearRingtoneUrl" value=""
+                                placeholder="https://example.com/notify.mp3">
+                        </div>
+                        <div class="appear-ringtone-btns">
+                            <div class="appear-wp-btn" onclick="testRingtone()">
+                                <svg viewBox="0 0 24 24" width="14" height="14">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                                <span>试听</span>
+                            </div>
+                            <div class="appear-wp-btn"
+                                onclick="document.getElementById('appearRingtoneUrl').value='';showToast('已清空铃声')">
+                                <svg viewBox="0 0 24 24" width="14" height="14">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                                <span>清空</span>
+                            </div>
+                        </div>
+                        <div class="appear-font-hint">设置后，收到角色消息时会播放此铃声。留空则无提示音。</div>
+                    </div>
                     <div class="appear-section appear-section-danger">
                         <div class="appear-clear-btn" onclick="clearAllAppearSettings()">
                             <svg viewBox="0 0 24 24" width="16" height="16">
@@ -789,6 +784,80 @@
                                     d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                             </svg>
                             清除所有外观设置
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 世界书 App ====== -->
+        <div class="wb-app-overlay" id="wbAppOverlay">
+            <div class="wb-app-panel">
+                <div class="wb-app-header">
+                    <div class="wb-app-back" onclick="closeWorldBookApp()">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                    </div>
+                    <div class="wb-app-title">世界书</div>
+                    <div class="wb-app-header-add" onclick="openWbEditor()">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="wb-group-bar" id="wbGroupBar"></div>
+                <div class="wb-tab-bar" id="wbTabBar">
+                    <div class="wb-tab active" data-tab="global" onclick="switchWbTab('global')">全局世界书</div>
+                    <div class="wb-tab" data-tab="role" onclick="switchWbTab('role')">角色世界书</div>
+                </div>
+                <div class="wb-app-body" id="wbAppBody"></div>
+            </div>
+            <!-- 世界书编辑器 -->
+            <div class="wb-editor-overlay" id="wbEditorOverlay">
+                <div class="wb-editor-panel">
+                    <div class="wb-editor-header">
+                        <div class="wb-app-back" onclick="closeWbEditor()">
+                            <svg viewBox="0 0 24 24" width="18" height="18">
+                                <polyline points="15 18 9 12 15 6" />
+                            </svg>
+                        </div>
+                        <div class="wb-app-title" id="wbEditorTitle">新建世界书</div>
+                        <div class="wb-editor-save" onclick="saveWbEntry()">保存</div>
+                    </div>
+                    <div class="wb-editor-body">
+                        <div class="wb-editor-field">
+                            <label>名称</label>
+                            <input type="text" id="wbEdName" class="wb-editor-input" placeholder="世界书名称">
+                        </div>
+                        <div class="wb-editor-field">
+                            <label>分组</label>
+                            <select id="wbEdGroup" class="wb-editor-input">
+                                <option value="默认">默认</option>
+                            </select>
+                        </div>
+                        <div class="wb-editor-field">
+                            <label>类型</label>
+                            <div class="wb-type-row">
+                                <div class="wb-type-btn active" data-type="global" onclick="selectWbType('global')">
+                                    全局世界书</div>
+                                <div class="wb-type-btn" data-type="role" onclick="selectWbType('role')">角色世界书</div>
+                            </div>
+                        </div>
+                        <div class="wb-editor-field">
+                            <label>详细内容</label>
+                            <textarea id="wbEdContent" class="wb-editor-textarea" rows="8"
+                                placeholder="世界观设定、背景故事、规则..."></textarea>
+                        </div>
+                        <div class="wb-editor-field">
+                            <label>注入位置</label>
+                            <div class="wb-inject-row">
+                                <div class="wb-inject-btn active" data-pos="before" onclick="selectWbInject('before')">前
+                                </div>
+                                <div class="wb-inject-btn" data-pos="middle" onclick="selectWbInject('middle')">中</div>
+                                <div class="wb-inject-btn" data-pos="after" onclick="selectWbInject('after')">后</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -838,6 +907,168 @@
                     <div class="chat-profile-title">个人主页</div>
                 </div>
                 <div class="chat-profile-body" id="chatProfileBody"></div>
+            </div>
+
+            <!-- ====== 聊天美化面板 ====== -->
+            <div class="beautify-page" id="beautifyPage">
+                <div class="beautify-header">
+                    <div class="beautify-back" onclick="closeBeautifyPage()">
+                        <svg viewBox="0 0 24 24">
+                            <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                    </div>
+                    <div class="beautify-title">聊天美化</div>
+                    <div class="beautify-header-spacer"></div>
+                </div>
+                <div class="beautify-body">
+
+                    <!-- ===== CSS气泡主题 ===== -->
+                    <div class="beautify-section">
+                        <div class="beautify-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="16" y1="13" x2="8" y2="13" />
+                                <line x1="16" y1="17" x2="8" y2="17" />
+                            </svg>
+                            CSS 气泡主题
+                        </div>
+
+                        <!-- ★ 气泡实时预览 -->
+                        <div class="beautify-bubble-preview-wrap" id="bfBubblePreviewWrap">
+                            <div class="beautify-bubble-preview-label">气泡预览</div>
+                            <div class="beautify-bubble-preview-box" id="bfBubblePreviewBox">
+                                <!-- 角色气泡（左） -->
+                                <div class="beautify-bp-row beautify-bp-left">
+                                    <div class="beautify-bp-name-left">角色</div>
+                                    <div class="chat-bubble beautify-bp-bubble" id="bfBpCharBubble">
+                                        <span>今天天气真好呀～要不要一起出去走走？</span>
+                                    </div>
+                                </div>
+                                <!-- 用户气泡（右） -->
+                                <div class="beautify-bp-row beautify-bp-right">
+                                    <div class="chat-bubble chat-bubble-self beautify-bp-bubble" id="bfBpUserBubble">
+                                        <span>好呀！我马上准备 ♡</span>
+                                    </div>
+                                    <div class="beautify-bp-name-right">我</div>
+                                </div>
+                                <!-- 角色气泡2（左） -->
+                                <div class="beautify-bp-row beautify-bp-left">
+                                    <div class="beautify-bp-name-left">角色</div>
+                                    <div class="chat-bubble beautify-bp-bubble" id="bfBpCharBubble2">
+                                        <span>那我在老地方等你～ 🌸</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 预览区专属style，实时注入 -->
+                            <style id="bfBubblePreviewStyle"></style>
+                        </div>
+
+                        <div class="beautify-field">
+                            <label>自定义CSS代码（可修改气泡、工具栏图标、返回键等）</label>
+                            <textarea id="bfCssCode" class="beautify-textarea" rows="8"
+                                oninput="liveUpdateBubblePreview()"
+                                placeholder="/* 在这里写你的自定义CSS */&#10;/* 例如修改角色气泡: */&#10;.chat-bubble {&#10;    background: rgba(255,192,203,0.3) !important;&#10;    border-radius: 20px !important;&#10;}&#10;/* 例如修改用户气泡: */&#10;.chat-bubble-row.self .chat-bubble {&#10;    background: rgba(173,216,230,0.3) !important;&#10;    border-radius: 20px !important;&#10;}"></textarea>
+                        </div>
+
+                        <div class="beautify-btn-row">
+                            <div class="beautify-btn" onclick="previewCssTheme()">
+                                <svg viewBox="0 0 24 24" width="14" height="14">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                应用到聊天
+                            </div>
+                            <div class="beautify-btn beautify-btn-primary" onclick="saveCssPreset()">
+                                <svg viewBox="0 0 24 24" width="14" height="14">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                                    <polyline points="17 21 17 13 7 13 7 21" />
+                                    <polyline points="7 3 7 8 15 8" />
+                                </svg>
+                                保存主题
+                            </div>
+                        </div>
+
+                        <!-- CSS主题预设列表 -->
+                        <div class="beautify-sub-title">主题预设</div>
+                        <div class="beautify-preset-list" id="bfCssPresetList">
+                            <div class="beautify-preset-empty">暂无主题预设</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== 全局背景 ===== -->
+                    <div class="beautify-section">
+                        <div class="beautify-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            全局背景
+                        </div>
+                        <div class="beautify-field">
+                            <label>聊天背景（图片URL/文件上传）</label>
+                            <div class="beautify-wallpaper-preview" id="bfWallpaperPreview">
+                                <img id="bfWallpaperImg" src="" alt="" style="display:none">
+                                <div class="beautify-wallpaper-placeholder" id="bfWallpaperPlaceholder">
+                                    <svg viewBox="0 0 24 24" width="24" height="24">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                        <circle cx="8.5" cy="8.5" r="1.5" />
+                                        <polyline points="21 15 16 10 5 21" />
+                                    </svg>
+                                    <span>暂无背景</span>
+                                </div>
+                            </div>
+                            <div class="beautify-input-row" style="margin-bottom:8px">
+                                <input type="text" id="bfWallpaperUrl" class="beautify-input beautify-input-flex"
+                                    placeholder="粘贴图片URL">
+                            </div>
+                            <div class="beautify-btn-row">
+                                <div class="beautify-btn" onclick="triggerWallpaperUpload()">
+                                    <svg viewBox="0 0 24 24" width="14" height="14">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                        <polyline points="17 8 12 3 7 8" />
+                                        <line x1="12" y1="3" x2="12" y2="15" />
+                                    </svg>
+                                    上传图片
+                                </div>
+                                <div class="beautify-btn beautify-btn-primary" onclick="applyWallpaper()">
+                                    <svg viewBox="0 0 24 24" width="14" height="14">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    应用背景
+                                </div>
+                            </div>
+                            <input type="file" id="bfWallpaperFile" accept="image/*" style="display:none"
+                                onchange="handleWallpaperFile(event)">
+                        </div>
+                    </div>
+
+                    <!-- ===== 恢复默认 ===== -->
+                    <div class="beautify-section beautify-section-danger">
+                        <div class="beautify-danger-btn" onclick="resetAllBeautify()">
+                            <svg viewBox="0 0 24 24" width="16" height="16">
+                                <polyline points="1 4 1 10 7 10" />
+                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                            </svg>
+                            恢复默认外观
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ====== 表情包管理页面 ====== -->
+            <div class="sticker-manager-page" id="stickerManagerPage" style="display:none">
+                <div class="stk-header">
+                    <div class="stk-header-back" onclick="closeStickerManager()">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                    </div>
+                    <div class="stk-header-title">表情包管理</div>
+                    <div class="stk-header-spacer"></div>
+                </div>
+                <div class="stk-body" id="stickerManagerBody"></div>
             </div>
 
             <!-- 人设编辑器 -->
@@ -902,7 +1133,8 @@
                     <div class="chat-pe-section">
                         <div class="chat-pe-section-title">详细信息</div>
                         <div class="chat-pe-field"><textarea id="peDetail" class="chat-pe-textarea" rows="4"
-                                placeholder="年龄、身份、性格、外貌等详细描述..."></textarea></div>
+                                placeholder="年龄、身份、性格、外貌等详细描述..."></textarea>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1107,7 +1339,12 @@
     <script src="js/countdown.js"></script>
     <script src="js/api.js"></script>
     <script src="js/appearance.js"></script>
+    <script src="js/notify.js"></script>
     <script src="js/chat.js"></script>
+    <script src="js/favorite.js"></script>
+    <script src="js/beautify/beautify.js"></script>
+    <script src="js/sticker/sticker.js"></script>
+    <script src="js/worldbook.js"></script>
     <script src="js/app.js"></script>
 
 </body>

@@ -1,0 +1,431 @@
+/* ============================================
+   蛋薯机 DanShu Pro v2 — worldbook.css
+   世界书 App 样式
+   ============================================ */
+
+/* ===== 全屏遮罩 ===== */
+.wb-app-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 100;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+.wb-app-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ===== 面板 ===== */
+.wb-app-panel {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.45s cubic-bezier(0.32,0.72,0,1);
+    background: rgba(245,235,240,0.65);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+}
+.wb-app-overlay.show .wb-app-panel {
+    transform: translateY(0);
+}
+
+/* ===== 顶栏 ===== */
+.wb-app-header,
+.wb-editor-header {
+    height: 56px;
+    padding: 0 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.35);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+.wb-app-back {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 1px solid rgba(255,255,255,0.3);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: rgba(80,60,70,0.8);
+}
+.wb-app-back:active { transform: scale(0.9); }
+.wb-app-back svg {
+    fill: none; stroke: currentColor;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.wb-app-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(80,60,70,0.9);
+    letter-spacing: 0.5px;
+}
+.wb-app-header-add {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(248,164,184,0.2);
+    border: 1px solid rgba(248,164,184,0.3);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: rgba(220,100,130,0.8);
+}
+.wb-app-header-add:active { transform: scale(0.9); }
+.wb-app-header-add svg {
+    fill: none; stroke: currentColor;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* ===== 分组胶囊横向栏 ===== */
+.wb-group-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    overflow-x: auto;
+    flex-shrink: 0;
+    -webkit-overflow-scrolling: touch;
+}
+.wb-group-bar::-webkit-scrollbar { display: none; }
+
+.wb-group-pill {
+    flex-shrink: 0;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    background: rgba(255,255,255,0.45);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: rgba(80,60,70,0.7);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+.wb-group-pill.active {
+    background: rgba(248,164,184,0.3);
+    border-color: rgba(248,164,184,0.5);
+    color: rgba(200,80,120,0.9);
+    font-weight: 600;
+}
+.wb-group-pill:active { transform: scale(0.95); }
+
+.wb-group-add {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.35);
+    border: 1px solid rgba(255,255,255,0.4);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: rgba(80,60,70,0.5);
+    font-size: 16px;
+    transition: all 0.2s;
+}
+.wb-group-add:active { transform: scale(0.9); }
+
+/* ===== Tab 栏 ===== */
+.wb-tab-bar {
+    display: flex;
+    gap: 0;
+    padding: 0 18px;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+.wb-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    font-size: 13px;
+    color: rgba(80,60,70,0.5);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+.wb-tab.active {
+    color: rgba(200,80,120,0.9);
+    border-bottom-color: rgba(248,164,184,0.8);
+    font-weight: 600;
+}
+
+/* ===== 内容区 ===== */
+.wb-app-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ===== 世界书卡片 ===== */
+.wb-card {
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.5);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    transition: all 0.2s;
+    cursor: pointer;
+}
+.wb-card:active {
+    transform: scale(0.98);
+    background: rgba(255,255,255,0.7);
+}
+.wb-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.wb-card-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(80,60,70,0.9);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.wb-card-group-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(248,164,184,0.15);
+    color: rgba(200,80,120,0.7);
+    border: 1px solid rgba(248,164,184,0.2);
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+.wb-card-inject-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(120,160,220,0.12);
+    color: rgba(80,120,180,0.7);
+    border: 1px solid rgba(120,160,220,0.2);
+    flex-shrink: 0;
+    margin-left: 6px;
+}
+.wb-card-preview {
+    font-size: 12px;
+    color: rgba(80,60,70,0.5);
+    line-height: 1.5;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.wb-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    justify-content: flex-end;
+}
+.wb-card-btn {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid rgba(255,255,255,0.3);
+}
+.wb-card-btn.edit {
+    background: rgba(248,164,184,0.15);
+    color: rgba(200,80,120,0.8);
+    border-color: rgba(248,164,184,0.3);
+}
+.wb-card-btn.delete {
+    background: rgba(220,80,80,0.08);
+    color: rgba(200,80,80,0.6);
+    border-color: rgba(220,80,80,0.15);
+}
+.wb-card-btn:active { transform: scale(0.92); }
+
+.wb-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(80,60,70,0.35);
+    font-size: 13px;
+}
+.wb-empty svg {
+    display: block;
+    margin: 0 auto 12px;
+    width: 40px; height: 40px;
+    fill: none;
+    stroke: rgba(80,60,70,0.2);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* ===== 编辑器覆层 ===== */
+.wb-editor-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 10;
+    background: rgba(245,235,240,0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+    display: flex;
+    flex-direction: column;
+}
+.wb-editor-overlay.show {
+    transform: translateX(0);
+}
+.wb-editor-save {
+    padding: 6px 16px;
+    border-radius: 18px;
+    background: rgba(248,164,184,0.25);
+    border: 1px solid rgba(248,164,184,0.4);
+    color: rgba(200,80,120,0.9);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.wb-editor-save:active { transform: scale(0.92); }
+.wb-editor-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
+}
+.wb-editor-field {
+    margin-bottom: 16px;
+}
+.wb-editor-field label {
+    display: block;
+    font-size: 12px;
+    color: rgba(80,60,70,0.6);
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+.wb-editor-input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    font-size: 13px;
+    color: rgba(80,60,70,0.9);
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s;
+}
+.wb-editor-input:focus {
+    border-color: rgba(248,164,184,0.5);
+    background: rgba(255,255,255,0.7);
+}
+.wb-editor-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    font-size: 13px;
+    color: rgba(80,60,70,0.9);
+    outline: none;
+    resize: vertical;
+    min-height: 120px;
+    box-sizing: border-box;
+    font-family: inherit;
+    line-height: 1.6;
+    transition: all 0.2s;
+}
+.wb-editor-textarea:focus {
+    border-color: rgba(248,164,184,0.5);
+    background: rgba(255,255,255,0.7);
+}
+
+/* 类型选择 */
+.wb-type-row,
+.wb-inject-row {
+    display: flex;
+    gap: 8px;
+}
+.wb-type-btn,
+.wb-inject-btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    border-radius: 12px;
+    font-size: 12px;
+    background: rgba(255,255,255,0.4);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: rgba(80,60,70,0.6);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.wb-type-btn.active,
+.wb-inject-btn.active {
+    background: rgba(248,164,184,0.25);
+    border-color: rgba(248,164,184,0.5);
+    color: rgba(200,80,120,0.9);
+    font-weight: 600;
+}
+.wb-type-btn:active,
+.wb-inject-btn:active {
+    transform: scale(0.95);
+}
+
+/* ===== 挂载选择器 — 分组折叠 ===== */
+.wb-mount-group {
+    margin-bottom: 8px;
+}
+.wb-mount-group-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(248,164,184,0.08);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 12px;
+    color: rgba(80,60,70,0.6);
+    font-weight: 500;
+}
+.wb-mount-group-header:active { background: rgba(248,164,184,0.15); }
+.wb-mount-group-header svg {
+    width: 14px; height: 14px;
+    fill: none;
+    stroke: rgba(80,60,70,0.4);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.2s;
+}
+.wb-mount-group-header.open svg {
+    transform: rotate(90deg);
+}
+.wb-mount-group-header .wb-mount-group-count {
+    font-size: 10px;
+    color: rgba(80,60,70,0.35);
+    margin-left: auto;
+}
+.wb-mount-group-items {
+    display: none;
+    padding-left: 8px;
+}
+.wb-mount-group-items.open {
+    display: block;
+}

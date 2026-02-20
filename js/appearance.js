@@ -4,16 +4,16 @@
    ============================================ */
 
 var ICON_LIST = [
-    { id: 'icon_api',          name: 'API' },
-    { id: 'icon_appear',       name: '外观' },
-    { id: 'icon_tieba',        name: '贴吧' },
-    { id: 'icon_meituan',      name: '美团' },
-    { id: 'icon_mail',         name: '邮件' },
-    { id: 'icon_weather',      name: '天气' },
-    { id: 'icon_music',        name: '音乐' },
-    { id: 'icon_album',        name: '相册' },
-    { id: 'icon_dock_msg',     name: '消息' },
-    { id: 'icon_dock_note',    name: '手帐' },
+    { id: 'icon_api', name: 'API' },
+    { id: 'icon_appear', name: '外观' },
+    { id: 'icon_tieba', name: '贴吧' },
+    { id: 'icon_meituan', name: '美团' },
+    { id: 'icon_mail', name: '邮件' },
+    { id: 'icon_weather', name: '天气' },
+    { id: 'icon_music', name: '音乐' },
+    { id: 'icon_album', name: '相册' },
+    { id: 'icon_dock_msg', name: '消息' },
+    { id: 'icon_dock_note', name: '手帐' },
     { id: 'icon_dock_browser', name: '浏览器' }
 ];
 
@@ -39,9 +39,6 @@ function loadAppearanceSettings() {
     document.getElementById('appearWpUrl').value = wpUrl;
     refreshWallpaperPreview();
 
-    var iconStyle = localStorage.getItem('ds_appear_iconStyle') || 'glass';
-    highlightIconOption(iconStyle);
-
     var fontUrl = localStorage.getItem('ds_appear_fontUrl') || '';
     document.getElementById('appearFontUrl').value = fontUrl;
 
@@ -54,6 +51,14 @@ function loadAppearanceSettings() {
 
     var statusbar = localStorage.getItem('ds_appear_statusbar');
     document.getElementById('appearStatusbarToggle').checked = statusbar !== 'hidden';
+
+    // 加载铃声URL
+    var ringtoneUrl = '';
+    if (typeof loadRingtoneUrl === 'function') {
+        ringtoneUrl = loadRingtoneUrl();
+    }
+    var ringtoneInput = document.getElementById('appearRingtoneUrl');
+    if (ringtoneInput) ringtoneInput.value = ringtoneUrl;
 }
 
 /* ========== 壁纸 ========== */
@@ -95,30 +100,6 @@ function handleAppearWpFile(event) {
     };
     reader.readAsDataURL(file);
     event.target.value = '';
-}
-
-/* ========== 图标风格 ========== */
-function selectIconStyle(style) {
-    highlightIconOption(style);
-}
-
-function highlightIconOption(style) {
-    document.querySelectorAll('.appear-icon-option').forEach(function (opt) {
-        opt.classList.toggle('active', opt.getAttribute('data-style') === style);
-    });
-}
-
-function getSelectedIconStyle() {
-    var active = document.querySelector('.appear-icon-option.active');
-    return active ? active.getAttribute('data-style') : 'glass';
-}
-
-function applyIconStyle(style) {
-    var frame = document.getElementById('phoneFrame');
-    frame.classList.remove('icon-style-glass', 'icon-style-gradient', 'icon-style-solid');
-    if (style !== 'glass') {
-        frame.classList.add('icon-style-' + style);
-    }
 }
 
 /* ========== 自定义图标图片 ========== */
@@ -165,18 +146,15 @@ function handleIconCustomFile(event) {
 
     var reader = new FileReader();
     reader.onload = function (e) {
-        // ★ 图标压缩到3KB以内（54x54显示绰绰有余）
         smartCompress(e.target.result, 3, function (compressed) {
             var sizeKB = Math.round(compressed.length / 1024);
             var key = 'ds_icon_' + iconId;
 
-            // ★ 用safeSetItem（自动先删旧值 + 清理大数据 + 重试）
             if (safeSetItem(key, compressed)) {
                 applyOneIconImage(iconId, compressed);
                 renderIconGrid();
                 showToast('图标已更换 (' + sizeKB + 'KB)');
             } else {
-                // ★ safeSetItem已经自动清理还失败 → 最后手段：清掉其他图标和壁纸base64
                 for (var i = 0; i < ICON_LIST.length; i++) {
                     if (ICON_LIST[i].id !== iconId) {
                         localStorage.removeItem('ds_icon_' + ICON_LIST[i].id);
@@ -310,7 +288,6 @@ function applyStatusbarState(visible) {
 /* ========== 保存全部外观设置 ========== */
 function saveAppearanceSettings() {
     var wpUrl = document.getElementById('appearWpUrl').value.trim();
-    var iconStyle = getSelectedIconStyle();
     var fontUrl = document.getElementById('appearFontUrl').value.trim();
     var bubbleColor = document.getElementById('appearBubbleColorHex').value.trim() || 'rgba(80,60,70,0.9)';
     var statusbar = document.getElementById('appearStatusbarToggle').checked;
@@ -318,29 +295,31 @@ function saveAppearanceSettings() {
     if (wpUrl) {
         if (wpUrl.startsWith('data:')) {
             showToast('正在压缩保存壁纸...');
-            // ★ 壁纸压缩到60KB
             smartCompress(wpUrl, 60, function (compressed) {
                 var sizeKB = Math.round(compressed.length / 1024);
-                // ★ 用safeSetItem自动清理重试
                 if (safeSetItem('ds_appear_wallpaper', compressed)) {
-                    doFinishAppearSave(compressed, iconStyle, fontUrl, bubbleColor, statusbar);
+                    doFinishAppearSave(compressed, fontUrl, bubbleColor, statusbar);
                 } else {
                     showToast('壁纸太大无法保存，请使用图片URL链接');
                 }
             });
             return;
         }
-        // URL链接很小直接存
         safeSetItem('ds_appear_wallpaper', wpUrl);
     } else {
         localStorage.removeItem('ds_appear_wallpaper');
     }
 
-    doFinishAppearSave(wpUrl, iconStyle, fontUrl, bubbleColor, statusbar);
+    doFinishAppearSave(wpUrl, fontUrl, bubbleColor, statusbar);
 }
 
-function doFinishAppearSave(wpSrc, iconStyle, fontUrl, bubbleColor, statusbar) {
-    safeSetItem('ds_appear_iconStyle', iconStyle);
+function doFinishAppearSave(wpSrc, fontUrl, bubbleColor, statusbar) {
+    // 保存铃声
+    var ringtoneUrl = document.getElementById('appearRingtoneUrl');
+    if (ringtoneUrl && typeof saveRingtoneUrl === 'function') {
+        saveRingtoneUrl(ringtoneUrl.value.trim());
+    }
+
     safeSetItem('ds_appear_fontUrl', fontUrl);
     safeSetItem('ds_appear_bubbleColor', bubbleColor);
     safeSetItem('ds_appear_statusbar', statusbar ? 'visible' : 'hidden');
@@ -353,7 +332,6 @@ function doFinishAppearSave(wpSrc, iconStyle, fontUrl, bubbleColor, statusbar) {
         wallpaper.style.backgroundImage = '';
     }
 
-    applyIconStyle(iconStyle);
     if (fontUrl) { applyGlobalFont(fontUrl); }
     else { document.getElementById('phoneFrame').style.fontFamily = ''; }
     applyBubbleColor(bubbleColor);
@@ -367,10 +345,17 @@ function doFinishAppearSave(wpSrc, iconStyle, fontUrl, bubbleColor, statusbar) {
 function clearAllAppearSettings() {
     if (!confirm('确认清除所有外观设置？')) return;
 
-    ['ds_appear_wallpaper', 'ds_appear_iconStyle', 'ds_appear_fontUrl',
-     'ds_appear_bubbleColor', 'ds_appear_statusbar'].forEach(function (k) {
-        localStorage.removeItem(k);
-    });
+    ['ds_appear_wallpaper', 'ds_appear_fontUrl',
+        'ds_appear_bubbleColor', 'ds_appear_statusbar'].forEach(function (k) {
+            localStorage.removeItem(k);
+        });
+
+    // 清除铃声
+    if (typeof saveRingtoneUrl === 'function') {
+        saveRingtoneUrl('');
+    }
+    var ringtoneInput = document.getElementById('appearRingtoneUrl');
+    if (ringtoneInput) ringtoneInput.value = '';
 
     for (var i = 0; i < ICON_LIST.length; i++) {
         localStorage.removeItem('ds_icon_' + ICON_LIST[i].id);
@@ -378,7 +363,6 @@ function clearAllAppearSettings() {
     }
 
     document.getElementById('wallpaper').style.backgroundImage = '';
-    applyIconStyle('glass');
     document.getElementById('phoneFrame').style.fontFamily = '';
     _globalFontLoaded = '';
     document.querySelectorAll('.bubble-text').forEach(function (el) { el.style.color = ''; });
@@ -389,7 +373,6 @@ function clearAllAppearSettings() {
     document.getElementById('appearBubbleColorHex').value = 'rgba(80,60,70,0.9)';
     document.getElementById('appearBubbleColorPicker').value = '#503c46';
     document.getElementById('appearStatusbarToggle').checked = true;
-    highlightIconOption('glass');
     highlightAppearColorDot('');
     refreshWallpaperPreview();
     renderIconGrid();
@@ -405,9 +388,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('wallpaper').style.backgroundImage = 'url(' + savedWp + ')';
     }
 
-    var iconStyle = localStorage.getItem('ds_appear_iconStyle') || 'glass';
-    applyIconStyle(iconStyle);
-
     var fontUrl = localStorage.getItem('ds_appear_fontUrl');
     if (fontUrl) applyGlobalFont(fontUrl);
 
@@ -419,5 +399,3 @@ document.addEventListener('DOMContentLoaded', function () {
 
     setTimeout(function () { applyAllIconImages(); }, 100);
 });
-
-

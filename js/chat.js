@@ -17,11 +17,11 @@ var _peAvatarData = '';
 var _chatWorldBookLib = [];
 var _chatStickerLib = [];
 var _crMountPersona = '';
-var _crMountWorldBook = '';
-var _crMountSticker = '';
+var _crMountWorldBook = [];
+var _crMountSticker = [];
 
 // 对话页双头像
-var _convLeftAvatar = '';
+var _convLetAvatar = '';
 var _convRightAvatar = '';
 var _pendingImageData = null; // 待发送的图片base64
 
@@ -208,13 +208,11 @@ function renderMe() {
     h += '<div class="chat-me-menu">';
     h += '<div class="chat-me-menu-group">';
     h += '<div class="chat-me-menu-item" onclick="openWalletPage()"><div class="chat-me-menu-text">钱包</div><svg class="chat-me-menu-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
-    h += menuItem('收藏');
+    h += '<div class="chat-me-menu-item" onclick="openFavoritePage()"><div class="chat-me-menu-text">收藏</div><svg class="chat-me-menu-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
     h += '</div>';
     h += '<div class="chat-me-menu-group">';
-    h += menuItem('聊天美化'); h += menuItem('表情包管理');
-    h += '</div>';
-    h += '<div class="chat-me-menu-group">';
-    h += menuItem('设置');
+    h += '<div class="chat-me-menu-item" onclick="openBeautifyPage()"><div class="chat-me-menu-text">聊天美化</div><svg class="chat-me-menu-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
+    h += '<div class="chat-me-menu-item" onclick="openStickerManager()"><div class="chat-me-menu-text">表情包管理</div><svg class="chat-me-menu-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
     h += '</div></div>';
     return h;
 }
@@ -360,7 +358,7 @@ function savePersona() {
    ================================================================ */
 function openCreateRole(editId) {
     _chatEditingRoleId = editId || null; _crAvatarData = '';
-    _crMountPersona = ''; _crMountWorldBook = ''; _crMountSticker = '';
+    _crMountPersona = ''; _crMountWorldBook = []; _crMountSticker = [];
     var p = document.getElementById('chatCreateRole'); if (!p) return;
     document.getElementById('crName').value = '';
     document.getElementById('crNickname').value = '';
@@ -372,7 +370,7 @@ function openCreateRole(editId) {
     document.getElementById('crMemory').value = 20;
     updateMemoryDisplay();
     selectRoleGender('male');
-    updateMountDisplay('persona', ''); updateMountDisplay('worldbook', ''); updateMountDisplay('sticker', '');
+    updateMountDisplay('persona', ''); updateMountDisplay('worldbook', '未选择'); updateMountDisplay('sticker', '');
     var av = document.getElementById('crAvatarPreview');
     av.innerHTML = SVG_USER + '<div class="chat-cr-avatar-hint">上传头像</div>';
     if (editId) {
@@ -386,9 +384,11 @@ function openCreateRole(editId) {
             document.getElementById('crBgMsg').checked = !!r.bgMsg;
             document.getElementById('crMemory').value = r.memory || 20;
             updateMemoryDisplay(); selectRoleGender(r.gender || 'male');
-            _crMountPersona = r.personaId || ''; _crMountWorldBook = r.worldBookId || ''; _crMountSticker = r.stickerId || '';
-            var pn = findPersona(_crMountPersona), wn = findWorldBook(_crMountWorldBook), sn = findStickerPack(_crMountSticker);
-            updateMountDisplay('persona', pn ? pn.name : ''); updateMountDisplay('worldbook', wn ? wn.name : ''); updateMountDisplay('sticker', sn ? sn.name : '');
+            _crMountPersona = r.personaId || ''; _crMountWorldBook = r.worldBookIds || (r.worldBookId ? [r.worldBookId] : []); _crMountSticker = r.stickerIds || (r.stickerId ? [r.stickerId] : []);
+            var pn = findPersona(_crMountPersona);
+            var wbNames = []; for (var wi = 0; wi < _crMountWorldBook.length; wi++) { var _wb = findWorldBook(_crMountWorldBook[wi]); if (_wb) wbNames.push(_wb.name); }
+            var skNames = []; for (var si = 0; si < _crMountSticker.length; si++) { var _sk = findStickerPack(_crMountSticker[si]); if (_sk) skNames.push(_sk.name); }
+            updateMountDisplay('persona', pn ? pn.name : ''); updateMountDisplay('worldbook', wbNames.length ? wbNames.join(', ') : ''); updateMountDisplay('sticker', skNames.length ? skNames.join(', ') : '');
             if (r.avatar) { _crAvatarData = r.avatar; av.innerHTML = '<img src="' + r.avatar + '" alt=""><div class="chat-cr-avatar-hint">更换头像</div>'; }
             var gs = document.getElementById('crGroup'); var ex = false;
             for (var oi = 0; oi < gs.options.length; oi++)if (gs.options[oi].value === r.group) { ex = true; break; }
@@ -437,21 +437,161 @@ function openMountSelector(type) {
     closeMountModal();
     var title, items, selectedId;
     if (type === 'persona') { title = '选择人设'; items = _chatPersonas; selectedId = _crMountPersona; }
-    else if (type === 'worldbook') { title = '选择世界书'; items = _chatWorldBookLib; selectedId = _crMountWorldBook; }
-    else if (type === 'sticker') { title = '选择表情包'; items = _chatStickerLib; selectedId = _crMountSticker; }
+    else if (type === 'worldbook') { title = '选择世界书（多选）'; items = _chatWorldBookLib; selectedId = _crMountWorldBook; }
+    else if (type === 'sticker') { title = '选择表情包（多选）'; items = _chatStickerLib; selectedId = _crMountSticker; }
     var h = '<div class="chat-mount-modal show" id="chatMountModal" onclick="if(event.target===this)closeMountModal()">';
     h += '<div class="chat-mount-panel"><div class="chat-mount-panel-header"><div class="chat-mount-panel-title">' + title + '</div>';
     h += '<div class="chat-mount-panel-close" onclick="closeMountModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>';
     h += '<div class="chat-mount-panel-body">';
-    h += '<div class="chat-mount-option' + (selectedId === '' ? ' selected' : '') + '" onclick="selectMountOption(\'' + type + '\',\'\')"><div class="chat-mount-option-name" style="color:var(--chat-text-hint)">不挂载</div><div class="chat-mount-option-check">' + (selectedId === '' ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>';
-    if (!items.length) { h += '<div class="chat-mount-empty">暂无可选项</div>'; }
-    else { for (var i = 0; i < items.length; i++) { var it = items[i], sel = it.id === selectedId; h += '<div class="chat-mount-option' + (sel ? ' selected' : '') + '" onclick="selectMountOption(\'' + type + '\',\'' + it.id + '\')"><div class="chat-mount-option-name">' + esc(it.name) + '</div><div class="chat-mount-option-check">' + (sel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>'; } }
-    h += '</div>';
-    if (type !== 'persona') { h += '<div class="chat-mount-panel-footer"><div class="chat-mount-confirm-btn" onclick="openMountCreator(\'' + type + '\')">+ 新建</div></div>'; }
+    if (type === 'worldbook') {
+        if (typeof buildWorldBookMountList === 'function') {
+            h += buildWorldBookMountList(selectedId);
+        } else {
+            var selArr = Array.isArray(selectedId) ? selectedId : [];
+            h += '<div class="chat-mount-option' + (!selArr.length ? ' selected' : '') + '" onclick="toggleWbMountOption(\'\')"><div class="chat-mount-option-name" style="color:var(--chat-text-hint)">不挂载</div><div class="chat-mount-option-check">' + (!selArr.length ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>';
+            for (var i = 0; i < items.length; i++) { var it = items[i], sel = selArr.indexOf(it.id) !== -1; h += '<div class="chat-mount-option' + (sel ? ' selected' : '') + '" onclick="toggleWbMountOption(\'' + it.id + '\')"><div class="chat-mount-option-name">' + esc(it.name) + '</div><div class="chat-mount-option-check">' + (sel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>'; }
+        }
+        h += '</div>';
+        h += '<div class="chat-mount-panel-footer"><div class="chat-mount-confirm-btn" onclick="confirmWbMount()">确定</div><div class="chat-mount-confirm-btn" onclick="openMountCreator(\'worldbook\')" style="margin-left:8px">+ 新建</div></div>';
+    } else if (type === 'sticker') {
+        // ★ 表情包多选 — 分组折叠式
+        var selStkArr = Array.isArray(selectedId) ? selectedId : [];
+        h += '<div class="chat-mount-option' + (!selStkArr.length ? ' selected' : '') + '" onclick="toggleStkMountOption(\'\')"><div class="chat-mount-option-name" style="color:var(--chat-text-hint)">不挂载</div><div class="chat-mount-option-check">' + (!selStkArr.length ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>';
+        for (var i = 0; i < items.length; i++) {
+            var it = items[i], sel = selStkArr.indexOf(it.id) !== -1;
+            var previewHtml = '';
+            if (it.urls && it.urls.length > 0) {
+                previewHtml = '<div style="display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;">';
+                var showCount = Math.min(it.urls.length, 4);
+                for (var pi = 0; pi < showCount; pi++) {
+                    previewHtml += '<img src="' + esc(it.urls[pi]) + '" style="width:28px;height:28px;border-radius:4px;object-fit:cover;">';
+                }
+                if (it.urls.length > 4) previewHtml += '<span style="font-size:10px;color:#999;align-self:center;">+' + (it.urls.length - 4) + '</span>';
+                previewHtml += '</div>';
+            }
+            h += '<div class="chat-mount-option' + (sel ? ' selected' : '') + '" onclick="toggleStkMountOption(\'' + it.id + '\')">';
+            h += '<div style="flex:1"><div class="chat-mount-option-name">' + esc(it.name) + ' <span style="font-size:11px;color:#999;">(' + (it.urls ? it.urls.length : 0) + '张)</span></div>' + previewHtml + '</div>';
+            h += '<div class="chat-mount-option-check">' + (sel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>';
+        }
+        h += '</div>';
+        h += '<div class="chat-mount-panel-footer"><div class="chat-mount-confirm-btn" onclick="confirmStkMount()">确定</div><div class="chat-mount-confirm-btn" onclick="openMountCreator(\'sticker\')" style="margin-left:8px">+ 新建</div></div>';
+    } else {
+        h += '<div class="chat-mount-option' + (selectedId === '' ? ' selected' : '') + '" onclick="selectMountOption(\'' + type + '\',\'\')"><div class="chat-mount-option-name" style="color:var(--chat-text-hint)">不挂载</div><div class="chat-mount-option-check">' + (selectedId === '' ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>';
+        if (!items.length) { h += '<div class="chat-mount-empty">暂无可选项</div>'; }
+        else { for (var i = 0; i < items.length; i++) { var it = items[i], sel = it.id === selectedId; h += '<div class="chat-mount-option' + (sel ? ' selected' : '') + '" onclick="selectMountOption(\'' + type + '\',\'' + it.id + '\')"><div class="chat-mount-option-name">' + esc(it.name) + '</div><div class="chat-mount-option-check">' + (sel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>'; } }
+        h += '</div>';
+        if (type !== 'persona') { h += '<div class="chat-mount-panel-footer"><div class="chat-mount-confirm-btn" onclick="openMountCreator(\'' + type + '\')">+ 新建</div></div>'; }
+    }
     h += '</div></div>';
     overlay.insertAdjacentHTML('beforeend', h);
 }
 function closeMountModal() { var m = document.getElementById('chatMountModal'); if (m) m.remove(); }
+
+// ★ 世界书多选切换
+function toggleWbMountOption(id) {
+    if (!id) {
+        _crMountWorldBook = [];
+    } else {
+        if (!Array.isArray(_crMountWorldBook)) _crMountWorldBook = [];
+        var idx = _crMountWorldBook.indexOf(id);
+        if (idx !== -1) _crMountWorldBook.splice(idx, 1);
+        else _crMountWorldBook.push(id);
+    }
+    var modal = document.getElementById('chatMountModal');
+    if (modal) {
+        var opts = modal.querySelectorAll('.chat-mount-option');
+        opts.forEach(function (el) {
+            var onc = el.getAttribute('onclick') || '';
+            var match = onc.match(/toggleWbMountOption\('([^']*)'\)/);
+            if (match) {
+                var optId = match[1];
+                if (!optId) {
+                    el.classList.toggle('selected', !_crMountWorldBook.length);
+                    el.querySelector('.chat-mount-option-check').innerHTML = !_crMountWorldBook.length ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '';
+                } else {
+                    var isSel = _crMountWorldBook.indexOf(optId) !== -1;
+                    el.classList.toggle('selected', isSel);
+                    el.querySelector('.chat-mount-option-check').innerHTML = isSel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '';
+                }
+            }
+        });
+    }
+}
+function confirmWbMount() {
+    var names = [];
+    for (var i = 0; i < _crMountWorldBook.length; i++) {
+        var wb = findWorldBook(_crMountWorldBook[i]);
+        if (wb) names.push(wb.name);
+    }
+    updateMountDisplay('worldbook', names.length ? names.join(', ') : '');
+    closeMountModal();
+    if (window._mountFromSettings) {
+        var role = findRole(_chatCurrentConv);
+        if (role) {
+            role.worldBookIds = _crMountWorldBook.slice();
+            role.worldBookId = _crMountWorldBook[0] || '';
+            saveChatRoles();
+            showToast(names.length ? '已挂载 ' + names.length + ' 个世界书' : '已取消挂载');
+        }
+        window._mountFromSettings = false;
+        closeChatSettingsPanel();
+        openConversation(role.id);
+        openChatSettings();
+    }
+}
+// ★ 表情包多选切换
+function toggleStkMountOption(id) {
+    if (!id) {
+        _crMountSticker = [];
+    } else {
+        if (!Array.isArray(_crMountSticker)) _crMountSticker = [];
+        var idx = _crMountSticker.indexOf(id);
+        if (idx !== -1) _crMountSticker.splice(idx, 1);
+        else _crMountSticker.push(id);
+    }
+    var modal = document.getElementById('chatMountModal');
+    if (modal) {
+        var opts = modal.querySelectorAll('.chat-mount-option');
+        opts.forEach(function (el) {
+            var onc = el.getAttribute('onclick') || '';
+            var match = onc.match(/toggleStkMountOption\('([^']*)'\)/);
+            if (match) {
+                var optId = match[1];
+                if (!optId) {
+                    el.classList.toggle('selected', !_crMountSticker.length);
+                    el.querySelector('.chat-mount-option-check').innerHTML = !_crMountSticker.length ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '';
+                } else {
+                    var isSel = _crMountSticker.indexOf(optId) !== -1;
+                    el.classList.toggle('selected', isSel);
+                    el.querySelector('.chat-mount-option-check').innerHTML = isSel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '';
+                }
+            }
+        });
+    }
+}
+function confirmStkMount() {
+    var names = [];
+    for (var i = 0; i < _crMountSticker.length; i++) {
+        var sp = findStickerPack(_crMountSticker[i]);
+        if (sp) names.push(sp.name);
+    }
+    updateMountDisplay('sticker', names.length ? names.join(', ') : '');
+    closeMountModal();
+    if (window._mountFromSettings) {
+        var role = findRole(_chatCurrentConv);
+        if (role) {
+            role.stickerIds = _crMountSticker.slice();
+            role.stickerId = _crMountSticker[0] || '';
+            saveChatRoles();
+            showToast(names.length ? '已挂载 ' + names.length + ' 个表情包' : '已取消挂载');
+        }
+        window._mountFromSettings = false;
+        closeChatSettingsPanel();
+        openConversation(role.id);
+        openChatSettings();
+    }
+}
+
 function selectMountOption(type, id) {
     if (type === 'persona') _crMountPersona = id; else if (type === 'worldbook') _crMountWorldBook = id; else if (type === 'sticker') _crMountSticker = id;
     var name = '', item;
@@ -471,17 +611,23 @@ function saveMountNew(type) {
     var content = document.getElementById('mountNewContent').value.trim();
     if (!name) { showToast('请输入名称'); return; }
     var id = genId();
-    if (type === 'worldbook') { _chatWorldBookLib.push({ id: id, name: name, content: content }); saveWorldBookLib(); _crMountWorldBook = id; }
-    else if (type === 'sticker') { var urls = content ? content.split('\n').map(function (s) { return s.trim(); }).filter(Boolean) : []; _chatStickerLib.push({ id: id, name: name, urls: urls }); saveStickerLib(); _crMountSticker = id; }
-    updateMountDisplay(type, name); closeMountModal(); showToast('已创建: ' + name);
+    if (type === 'worldbook') { _chatWorldBookLib.push({ id: id, name: name, content: content }); saveWorldBookLib(); if (!Array.isArray(_crMountWorldBook)) _crMountWorldBook = []; _crMountWorldBook.push(id); }
+    else if (type === 'sticker') { var urls = content ? content.split('\n').map(function (s) { return s.trim(); }).filter(Boolean) : []; _chatStickerLib.push({ id: id, name: name, urls: urls }); saveStickerLib(); if (!Array.isArray(_crMountSticker)) _crMountSticker = []; _crMountSticker.push(id); }
+    if (type === 'sticker') {
+        var _skn = []; for (var _si = 0; _si < _crMountSticker.length; _si++) { var _skp = findStickerPack(_crMountSticker[_si]); if (_skp) _skn.push(_skp.name); }
+        updateMountDisplay('sticker', _skn.length ? _skn.join(', ') : '');
+    } else {
+        updateMountDisplay(type, name);
+    }
+    closeMountModal(); showToast('已创建: ' + name);
 }
 
 /* ========== 保存AI角色 ========== */
 function saveRole() {
     var name = document.getElementById('crName').value.trim(); if (!name) { showToast('请输入角色名字'); return; }
     var nickname = document.getElementById('crNickname').value.trim(), gender = getSelectedGender(), detail = document.getElementById('crDetail').value.trim(), group = document.getElementById('crGroup').value, notify = document.getElementById('crNotify').checked, bgMsg = document.getElementById('crBgMsg').checked, memory = parseInt(document.getElementById('crMemory').value) || 20;
-    if (_chatEditingRoleId) { var r = findRole(_chatEditingRoleId); if (r) { r.name = name; r.nickname = nickname; r.gender = gender; r.detail = detail; r.group = group; r.personaId = _crMountPersona; r.worldBookId = _crMountWorldBook; r.stickerId = _crMountSticker; r.notify = notify; r.bgMsg = bgMsg; r.memory = memory; if (_crAvatarData) r.avatar = _crAvatarData; } showToast('角色已更新'); }
-    else { _chatRoles.push({ id: genId(), name: name, nickname: nickname, gender: gender, detail: detail, group: group, personaId: _crMountPersona, worldBookId: _crMountWorldBook, stickerId: _crMountSticker, notify: notify, bgMsg: bgMsg, memory: memory, avatar: _crAvatarData, msgs: [], lastMsg: '', lastTime: 0, lastTimeStr: '', unread: 0 }); showToast('角色创建成功'); }
+    if (_chatEditingRoleId) { var r = findRole(_chatEditingRoleId); if (r) { r.name = name; r.nickname = nickname; r.gender = gender; r.detail = detail; r.group = group; r.personaId = _crMountPersona; r.worldBookIds = Array.isArray(_crMountWorldBook) ? _crMountWorldBook.slice() : []; r.worldBookId = r.worldBookIds[0] || ''; r.stickerIds = Array.isArray(_crMountSticker) ? _crMountSticker.slice() : []; r.stickerId = r.stickerIds[0] || ''; r.notify = notify; r.bgMsg = bgMsg; r.memory = memory; if (_crAvatarData) r.avatar = _crAvatarData; } showToast('角色已更新'); }
+    else { var _wbIds = Array.isArray(_crMountWorldBook) ? _crMountWorldBook.slice() : []; var _skIds = Array.isArray(_crMountSticker) ? _crMountSticker.slice() : []; _chatRoles.push({ id: genId(), name: name, nickname: nickname, gender: gender, detail: detail, group: group, personaId: _crMountPersona, worldBookIds: _wbIds, worldBookId: _wbIds[0] || '', stickerIds: _skIds, stickerId: _skIds[0] || '', notify: notify, bgMsg: bgMsg, memory: memory, avatar: _crAvatarData, msgs: [], lastMsg: '', lastTime: 0, lastTimeStr: '', unread: 0 }); showToast('角色创建成功'); }
     saveChatRoles(); closeCreateRole(); renderChatTab(_chatCurrentTab);
 }
 
@@ -592,13 +738,16 @@ function openConversation(rid) {
 
     // 输入行 — 续写在左，发送在右
     h += '<div class="chat-conv-input-row" id="chatInputRow">';
-    h += '<div class="chat-conv-action-btn" onclick="showToast(\'表情包\')" title="表情包"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>';
+    h += '<div class="chat-conv-action-btn" onclick="toggleStickerPanel()" title="表情包"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>';
     h += '<input class="chat-conv-input" id="chatConvInput" type="text" placeholder="说点什么..." onkeydown="if(event.key===\'Enter\'){sendChatMessage();event.preventDefault();}">';
     // 续写键
     h += '<div class="chat-conv-action-btn send-btn" onclick="continueChat()" title="续写"><svg viewBox="0 0 24 24"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg></div>';
     // 发送键
     h += '<div class="chat-conv-action-btn send-btn" onclick="sendChatMessage()" title="发送"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>';
     h += '</div>';
+    h += '</div>'; // 关闭 bottombar
+    // 表情包选择面板（移到 bottombar 外面）
+    h += '<div class="chat-sticker-panel" id="chatStickerPanel"></div>';
 
     // 头像上传
     h += '<input type="file" id="convAvFileLeft" class="chat-conv-av-file" accept="image/*" onchange="handleConvAvFile(event,\'left\')">';
@@ -609,7 +758,21 @@ function openConversation(rid) {
 
     conv.innerHTML = h;
     conv.classList.add('show');
-    setTimeout(function () { var b = document.getElementById('chatConvBody'); if (b) b.scrollTop = b.scrollHeight; }, 50);
+    setTimeout(function () {
+        var b = document.getElementById('chatConvBody');
+        if (b) b.scrollTop = b.scrollHeight;
+        if (typeof applyPendantToChat === 'function') {
+            var pid = localStorage.getItem('ds_bf_pendant_active');
+            if (pid) {
+                try {
+                    var pList = JSON.parse(localStorage.getItem('ds_bf_pendant_presets') || '[]');
+                    for (var pi = 0; pi < pList.length; pi++) {
+                        if (pList[pi].id === pid) { applyPendantToChat(pList[pi]); break; }
+                    }
+                } catch (e) { }
+            }
+        }
+    }, 80);
 }
 
 /* 渲染单条气泡（统一入口，区分语音/文字/图片） */
@@ -617,6 +780,7 @@ function openConversation(rid) {
 function renderBubbleRow(m, idx, myAv, roleAv) {
     if (m.voice) return renderVoiceBubbleRow(m, idx, myAv, roleAv);
     if (m.image) return renderImageBubbleRow(m, idx, myAv, roleAv);
+    if (m.sticker) return renderStickerBubbleRow(m, idx, myAv, roleAv);
     if (m.transfer) return renderTransferBubbleRow(m, idx, myAv, roleAv);
 
     var h = '';
@@ -629,7 +793,17 @@ function renderBubbleRow(m, idx, myAv, roleAv) {
     if (m.quoteText) {
         h += '<div class="chat-bubble-quote"><span class="chat-bubble-quote-name">' + esc(m.quoteName || '') + '：</span>' + esc(m.quoteText) + '</div>';
     }
-    h += '<div class="chat-bubble">' + esc(m.text) + '</div>';
+    h += '<div class="chat-bubble">' + esc(m.text);
+    // ★ 翻译功能：如果该消息有翻译内容，在气泡内虚线下方显示
+    if (m.translation) {
+        h += '<div class="chat-bubble-translate-divider"></div>';
+        h += '<div class="chat-bubble-translate">' + esc(m.translation) + '</div>';
+    }
+    h += '</div>';
+    // ★ 翻译中的加载提示
+    if (m._translating) {
+        h += '<div class="chat-bubble-translating">翻译中...</div>';
+    }
     h += '<div class="chat-bubble-ts">' + (m.time || '') + '</div>';
     h += '</div></div>';
     return h;
@@ -679,6 +853,7 @@ function closeChatConversation() {
     _chatCurrentConv = null;
     _chatMultiSelectMode = false; _chatMultiSelected = []; _chatQuoteData = null;
     _pendingImageData = null;
+    closeStickerPanel();
     closeChatSettingsPanel();
     if (_chatCurrentTab === 'messages') renderChatTab('messages');
 }
@@ -885,8 +1060,12 @@ function openChatSettings() {
 
     // 挂载名
     var pn = role.personaId ? findPersona(role.personaId) : null;
-    var wn = role.worldBookId ? findWorldBook(role.worldBookId) : null;
-    var sn = role.stickerId ? findStickerPack(role.stickerId) : null;
+    var _wbIds = role.worldBookIds || (role.worldBookId ? [role.worldBookId] : []);
+    var _wbNames = []; for (var _wi = 0; _wi < _wbIds.length; _wi++) { var _wbi = findWorldBook(_wbIds[_wi]); if (_wbi) _wbNames.push(_wbi.name); }
+    var wn = _wbNames.length ? { name: _wbNames.join(', ') } : null;
+    var _skIds = role.stickerIds || (role.stickerId ? [role.stickerId] : []);
+    var _skNames = []; for (var _si = 0; _si < _skIds.length; _si++) { var _ski = findStickerPack(_skIds[_si]); if (_ski) _skNames.push(_ski.name); }
+    var sn = _skNames.length ? { name: _skNames.join(', ') } : null;
 
     var h = '<div class="chat-settings-overlay show" id="chatSettingsOverlay" onclick="if(event.target===this)closeChatSettingsPanel()">';
     h += '<div class="chat-settings-panel">';
@@ -992,6 +1171,11 @@ function openChatSettings() {
     h += '<label class="chat-cr-toggle"><input type="checkbox" id="csBgMode"' + (role.bgMsg ? ' checked' : '') + '><span class="chat-cr-toggle-track"></span></label>';
     h += '</div>';
 
+    // ★ 主动消息开关（只保留1次）
+    if (typeof buildAutoMessageToggle === 'function') {
+        h += buildAutoMessageToggle(role);
+    }
+
     // 记忆轮数
     h += '<div class="chat-settings-section">';
     h += '<div class="chat-settings-label">记忆轮数</div>';
@@ -1081,8 +1265,8 @@ function handleWallpaperFile(e) {
 function openSettingsMount(type) {
     var role = findRole(_chatCurrentConv); if (!role) return;
     _crMountPersona = role.personaId || '';
-    _crMountWorldBook = role.worldBookId || '';
-    _crMountSticker = role.stickerId || '';
+    _crMountWorldBook = role.worldBookIds || (role.worldBookId ? [role.worldBookId] : []);
+    _crMountSticker = role.stickerIds || (role.stickerId ? [role.stickerId] : []);
     window._mountFromSettings = true;
     openMountSelector(type);
 }
@@ -1123,9 +1307,8 @@ var _origSelectMountOption = (typeof selectMountOption === 'function') ? selectM
 
 function selectMountOption(type, id) {
     if (type === 'persona') _crMountPersona = id;
-    else if (type === 'worldbook') _crMountWorldBook = id;
-    else if (type === 'sticker') _crMountSticker = id;
-
+    else if (type === 'worldbook') { _crMountWorldBook = id ? [id] : []; }
+    // sticker 现在走 toggleStkMountOption + confirmStkMount
     var name = '', item;
     if (id) {
         if (type === 'persona') item = findPersona(id);
@@ -1148,8 +1331,8 @@ function selectMountOption(type, id) {
                     recordPersonaChange(role, oldPersonaId, id);
                 }
             }
-            else if (type === 'worldbook') role.worldBookId = id;
-            else if (type === 'sticker') role.stickerId = id;
+            else if (type === 'worldbook') { role.worldBookIds = Array.isArray(_crMountWorldBook) ? _crMountWorldBook.slice() : (id ? [id] : []); role.worldBookId = role.worldBookIds[0] || ''; }
+            else if (type === 'sticker') { role.stickerIds = Array.isArray(_crMountSticker) ? _crMountSticker.slice() : (id ? [id] : []); role.stickerId = role.stickerIds[0] || ''; }
             saveChatRoles();
             showToast(name ? '已挂载: ' + name : '已取消挂载');
         }
@@ -1190,6 +1373,12 @@ function saveChatSettings() {
     role.offlineMode = document.getElementById('csOfflineMode').checked;
     role.translateOn = document.getElementById('csTranslate').checked;
     role.bgMsg = document.getElementById('csBgMode').checked;
+    // ★ 新增：保存主动消息开关
+    var autoMsgEl = document.getElementById('csAutoMessage');
+    if (autoMsgEl && typeof setCharAutoEnabled === 'function') {
+        setCharAutoEnabled(role.id, autoMsgEl.checked);
+    }
+
     role.memory = parseInt(document.getElementById('csMemory').value) || 20;
     saveChatRoles();
     closeChatSettingsPanel();
@@ -1235,6 +1424,7 @@ function showBubbleMenu(ev, idx) {
     }
     items += '<div class="chat-bubble-menu-item" onclick="recallMsg(' + idx + ');removeBubbleMenu()"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span>撤回</span></div>';
     items += '<div class="chat-bubble-menu-item" onclick="quoteMsg(' + idx + ');removeBubbleMenu()"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>引用</span></div>';
+    items += '<div class="chat-bubble-menu-item" onclick="favoriteMsg(' + idx + ');removeBubbleMenu()"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>收藏</span></div>';
     items += '<div class="chat-bubble-menu-item danger" onclick="deleteMsg(' + idx + ');removeBubbleMenu()"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>删除</span></div>';
     items += '<div class="chat-bubble-menu-item" onclick="enterMultiSelect(' + idx + ');removeBubbleMenu()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><polyline points="9 11 12 14 22 4"/></svg><span>多选</span></div>';
 
@@ -1350,12 +1540,21 @@ function updateLastMsg(role) {
 /* ================================================================
    发送 & 续写 & AI回复
    ================================================================ */
+
+var _chatGenerating = false;
+
 function sendChatMessage() {
     var inp = document.getElementById('chatConvInput'); if (!inp) return;
     var text = inp.value.trim();
     var role = findRole(_chatCurrentConv); if (!role) return;
+
+    // 记录用户活动时间（用于主动消息30分钟检测）
+    if (typeof recordUserActivity === 'function') recordUserActivity(role.id);
+
     var now = new Date(), ts = pad(now.getHours()) + ':' + pad(now.getMinutes());
+
     if (!role.msgs) role.msgs = [];
+
     var max = (role.memory || 20) * 2;
     if (role.msgs.length >= max) role.msgs = role.msgs.slice(role.msgs.length - max + 2);
 
@@ -1378,6 +1577,8 @@ function sendChatMessage() {
         inp.value = '';
         clearQuote();
         clearPendingImage();
+        // ★ 修复：发送图片后自动触发AI回复
+        continueChat();
         return;
     }
 
@@ -1401,8 +1602,6 @@ function sendChatMessage() {
     inp.value = '';
     clearQuote();
 }
-
-var _chatGenerating = false;
 
 function continueChat() {
     var role = findRole(_chatCurrentConv);
@@ -1442,6 +1641,26 @@ function continueChat() {
             content = content.trim();
             if (!content) { showToast('AI返回为空'); return; }
 
+            // ★ 提取内嵌翻译：如果有 [trans] 标记，拆分原文和翻译
+            var inlineTranslation = '';
+            var inlineTransParts = []; // 按 [p] 分段的翻译数组
+            if (role.translateOn) {
+                var transIdx = content.indexOf('[trans]');
+                if (transIdx === -1) transIdx = content.indexOf('[Trans]');
+                if (transIdx === -1) transIdx = content.indexOf('[TRANS]');
+                if (transIdx > -1) {
+                    inlineTranslation = content.substring(transIdx + 7).trim();
+                    content = content.substring(0, transIdx).trim();
+                    // 按 [p] 分割翻译，对应各段原文
+                    inlineTransParts = inlineTranslation.split(/\[p\]/i);
+                    for (var tp = 0; tp < inlineTransParts.length; tp++) {
+                        inlineTransParts[tp] = inlineTransParts[tp].trim();
+                    }
+                    // 过滤空段
+                    inlineTransParts = inlineTransParts.filter(function (s) { return s.length > 0; });
+                }
+            }
+
             var segments = content.split(/\n\n+/);
             var cleanSegments = [];
             for (var i = 0; i < segments.length; i++) { var s = segments[i].trim(); if (s) cleanSegments.push(s); }
@@ -1456,6 +1675,40 @@ function continueChat() {
             for (var j = 0; j < cleanSegments.length; j++) {
                 var txt = cleanSegments[j];
                 var msgObj = { from: 'other', text: txt, time: ts };
+
+                // ★ 内嵌翻译：按段落一一对应分配翻译
+                if (inlineTransParts.length > 0) {
+                    if (inlineTransParts.length >= cleanSegments.length) {
+                        // 翻译段数 >= 原文段数，一一对应
+                        msgObj.translation = inlineTransParts[j];
+                    } else if (inlineTransParts.length === 1) {
+                        // AI只输出了一整段翻译，全部给最后一条
+                        if (j === cleanSegments.length - 1) {
+                            msgObj.translation = inlineTransParts[0];
+                        }
+                    } else {
+                        // 翻译段数 < 原文段数，尽量对应，剩余的合并到最后
+                        if (j < inlineTransParts.length) {
+                            msgObj.translation = inlineTransParts[j];
+                        }
+                    }
+                }
+
+                // 检测AI发的表情包意图 [sticker:描述]
+                var stkMatch = txt.match(/^\[sticker:(.+?)\]$/i);
+                if (stkMatch) {
+                    var stkDesc = stkMatch[1].trim();
+                    // 尝试从已有表情包中找匹配的
+                    var matchedUrl = findMatchingSticker(stkDesc);
+                    if (matchedUrl) {
+                        msgObj.sticker = true;
+                        msgObj.stickerUrl = matchedUrl;
+                        msgObj.stickerDesc = stkDesc;
+                        msgObj.text = '[表情包]';
+                        delete msgObj.translation; // 表情包不需要翻译
+                    }
+                }
+
                 interceptTransferIntent(role, msgObj);
 
                 role.msgs.push(msgObj);
@@ -1464,9 +1717,28 @@ function continueChat() {
                     body2.insertAdjacentHTML('beforeend', renderBubbleRow(msgObj, msgIdx, myAv, role.avatar || ''));
                 }
             }
+
+            // ★ 翻译功能：内嵌翻译未生效时的降级处理（如果AI没输出[trans]标记，走异步翻译）
+            if (role.translateOn && !inlineTranslation) {
+                (function (roleRef, startMsgIdx, segCount) {
+                    for (var ti = 0; ti < segCount; ti++) {
+                        (function (msgIndex) {
+                            var msg = roleRef.msgs[msgIndex];
+                            if (!msg || msg.from === 'self' || msg.sticker || msg.transfer || msg.translation) return;
+                            translateMessage(roleRef, msgIndex);
+                        })(startMsgIdx + ti);
+                    }
+                })(role, role.msgs.length - cleanSegments.length, cleanSegments.length);
+            }
+
             role.lastMsg = cleanSegments[cleanSegments.length - 1];
             role.lastTime = now.getTime(); role.lastTimeStr = ts;
             saveChatRoles();
+
+            if (typeof triggerNotification === 'function') {
+                triggerNotification(role, cleanSegments[0], false);
+            }
+
             if (body2) body2.scrollTop = body2.scrollHeight;
         })
         .catch(function (err) {
@@ -1475,6 +1747,114 @@ function continueChat() {
             showToast('AI请求失败: ' + err.message);
         });
 }
+
+/* ================================================================
+   翻译功能 — 调用 AI API 把外语翻译成中文，显示在气泡虚线下方
+   ================================================================ */
+function translateMessage(role, msgIndex) {
+    var msg = role.msgs[msgIndex];
+    if (!msg || !msg.text || msg.translation) return; // 已有翻译则跳过
+
+    var apiConfig = getActiveApiConfig();
+    if (!apiConfig || !apiConfig.url || !apiConfig.key || !apiConfig.model) return;
+
+    // 标记翻译中
+    msg._translating = true;
+    refreshTranslateBubble(msgIndex);
+
+    var url = apiConfig.url.replace(/\/+$/, '') + '/chat/completions';
+
+    var transMessages = [
+        {
+            role: 'system',
+            content: '你是一个翻译助手。将用户发送的文本翻译成简体中文。只输出翻译结果，不要加任何解释、前缀或标点修饰。如果原文已经是中文，则原样输出。'
+        },
+        {
+            role: 'user',
+            content: msg.text
+        }
+    ];
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + apiConfig.key
+        },
+        body: JSON.stringify({
+            model: apiConfig.model,
+            messages: transMessages,
+            temperature: 0.1,
+            max_tokens: 1024
+        })
+    })
+        .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+        .then(function (json) {
+            delete msg._translating;
+            var translated = '';
+            if (json.choices && json.choices.length > 0) {
+                translated = (json.choices[0].message && json.choices[0].message.content) || '';
+            }
+            translated = translated.trim();
+
+            // 如果翻译结果和原文一样（说明本身就是中文），不显示翻译
+            if (translated && translated !== msg.text && !isSameContent(translated, msg.text)) {
+                msg.translation = translated;
+                saveChatRoles();
+            }
+            refreshTranslateBubble(msgIndex);
+        })
+        .catch(function (err) {
+            delete msg._translating;
+            console.warn('翻译失败:', err.message);
+            refreshTranslateBubble(msgIndex);
+        });
+}
+
+// 判断翻译结果是否和原文基本相同（去掉标点后比较）
+function isSameContent(a, b) {
+    var clean = function (s) { return s.replace(/[\s\.,!?;:，。！？；：、""''「」\-—…~～]/g, '').toLowerCase(); };
+    return clean(a) === clean(b);
+}
+
+// 局部刷新单条气泡的翻译区域（不重建整个对话）
+function refreshTranslateBubble(msgIndex) {
+    var row = document.querySelector('.chat-bubble-row[data-msg-idx="' + msgIndex + '"]');
+    if (!row) return;
+    var role = findRole(_chatCurrentConv);
+    if (!role || !role.msgs[msgIndex]) return;
+    var msg = role.msgs[msgIndex];
+    var bubble = row.querySelector('.chat-bubble');
+    if (!bubble) return;
+
+    // 移除旧的翻译元素
+    var oldDivider = bubble.querySelector('.chat-bubble-translate-divider');
+    var oldTrans = bubble.querySelector('.chat-bubble-translate');
+    if (oldDivider) oldDivider.remove();
+    if (oldTrans) oldTrans.remove();
+
+    // 移除旧的"翻译中"提示
+    var oldLoading = row.querySelector('.chat-bubble-translating');
+    if (oldLoading) oldLoading.remove();
+
+    // 添加翻译内容
+    if (msg.translation) {
+        var divider = document.createElement('div');
+        divider.className = 'chat-bubble-translate-divider';
+        bubble.appendChild(divider);
+
+        var transEl = document.createElement('div');
+        transEl.className = 'chat-bubble-translate';
+        transEl.textContent = msg.translation;
+        bubble.appendChild(transEl);
+    } else if (msg._translating) {
+        var loading = document.createElement('div');
+        loading.className = 'chat-bubble-translating';
+        loading.textContent = '翻译中...';
+        bubble.parentNode.insertBefore(loading, bubble.nextSibling);
+    }
+}
+
 /* ================================================================
    构建API messages — 深度读取角色认知 & 用户人设
    ================================================================ */
@@ -1532,13 +1912,21 @@ function buildChatMessages(role) {
         sp += role.customLabel + '\n';
     }
 
-    if (role.worldBookId) {
-        var wb = findWorldBook(role.worldBookId);
-        if (wb && wb.content) {
-            sp += '\n# 世界观与背景设定\n';
-            sp += '以下是当前故事/对话所处的世界观背景。你在对话中应当默认遵循这个世界的规则和设定，不要说出与世界观矛盾的内容：\n\n';
-            sp += wb.content + '\n';
+    var _allWbIds = role.worldBookIds || (role.worldBookId ? [role.worldBookId] : []);
+    var _beforeWbs = [], _middleWbs = [], _afterWbs = [];
+    for (var _wbi = 0; _wbi < _allWbIds.length; _wbi++) {
+        var _wb = findWorldBook(_allWbIds[_wbi]);
+        if (_wb && _wb.content) {
+            var _inj = _wb.inject || 'before';
+            if (_inj === 'middle') _middleWbs.push(_wb);
+            else if (_inj === 'after') _afterWbs.push(_wb);
+            else _beforeWbs.push(_wb);
         }
+    }
+    if (_beforeWbs.length) {
+        sp += '\\n# 世界观与背景设定\\n';
+        sp += '以下是当前故事/对话所处的世界观背景。你在对话中应当默认遵循这个世界的规则和设定，不要说出与世界观矛盾的内容：\\n\\n';
+        for (var _bwi = 0; _bwi < _beforeWbs.length; _bwi++) { sp += _beforeWbs[_bwi].content + '\\n\\n'; }
     }
 
     sp += '\n# 你的对话对象\n';
@@ -1590,6 +1978,29 @@ function buildChatMessages(role) {
 
     sp += '11. 回复长度应根据话题自然调节：闲聊可以简短（1-3句），深入话题可以稍长（3-8句），但避免过长的独白。\n';
     sp += '12. 要有真实的情感波动，不要每句话都很积极或中性，应根据话题内容表现出相应的情绪。\n';
+
+    // ★ 内嵌翻译指令：翻译开关打开时，让AI回复自带翻译
+    if (role.translateOn) {
+        sp += '\n# 翻译输出要求（重要！必须遵守！）\n';
+        sp += '你的回复中如果包含任何非简体中文的内容（英语、日语、韩语、法语等任何外语），则必须在回复末尾添加翻译区块。\n';
+        sp += '格式规则：\n';
+        sp += '1. 先正常写你角色的完整回复（可以有多个段落，段落之间用空行隔开）\n';
+        sp += '2. 在所有回复内容写完后，换行写 [trans] 标记\n';
+        sp += '3. [trans] 后面的翻译必须和原文段落一一对应，用 [p] 标记分隔每段翻译\n';
+        sp += '\n示例：\n';
+        sp += 'Hey darling! I missed you so much!\n\n';
+        sp += 'By the way, 오늘 날씨가 정말 좋다~\n\n';
+        sp += '[trans]\n';
+        sp += '嘿亲爱的！我好想你！\n';
+        sp += '[p]\n';
+        sp += '对了，今天天气真好~\n\n';
+        sp += '重要规则：\n';
+        sp += '- 每个段落的翻译之间用 [p] 分隔，确保和原文段落数量一致\n';
+        sp += '- 只翻译外语部分，中文部分保留原样\n';
+        sp += '- 如果回复全部都是中文，不要加 [trans] 标记\n';
+        sp += '- [trans] 标记必须单独一行\n';
+        sp += '- 翻译要自然通顺，不要生硬的机翻\n';
+    }
 
     messages.push({ role: 'system', content: sp });
 
@@ -1659,12 +2070,58 @@ function buildChatMessages(role) {
             }
         }
 
-        // 图片消息
+        // 图片消息 — 多模态格式，让AI真正看到图片内容
+        if (m.image && m.imageData && m.from === 'self') {
+            var imgText = '';
+            if (m.text && m.text !== '[图片]') {
+                imgText = '用户发送了一张图片，并附文字："' + m.text + '"。请仔细观察图片内容，结合附文字自然回复。';
+            } else {
+                imgText = '用户发送了一张图片。请仔细观察图片中的内容，根据你看到的内容自然回应，例如描述你看到了什么、评论图片、表达感受等。';
+            }
+            if (m.quoteText) {
+                imgText = '【引用：' + m.quoteName + '说"' + m.quoteText + '"】\n' + imgText;
+            }
+            // 使用OpenAI多模态content格式
+            messages.push({
+                role: 'user',
+                content: [
+                    { type: 'text', text: imgText },
+                    { type: 'image_url', image_url: { url: m.imageData, detail: 'low' } }
+                ]
+            });
+            continue;
+        }
+
+        // 图片消息 — 没有base64数据的老消息（历史兼容）
         if (m.image) {
             if (m.text && m.text !== '[图片]') {
                 content = '【对方发送了一张图片，并附文字："' + m.text + '"。请根据文字内容自然回复，你可以评论图片或回应文字。】';
             } else {
                 content = '【对方发送了一张图片。你可以自然地回应，例如评论图片、表达感受等。】';
+            }
+        }
+
+        // 表情包消息 — 如果有URL也传给AI看
+        if (m.sticker) {
+            if (m.from === 'self') {
+                var stkText = '用户发了一个表情包。请仔细观察这个表情包图片的内容，根据你看到的画面自然回应。' + (m.stickerDesc ? '（表情描述：' + m.stickerDesc + '）' : '') + '你可以用文字描述你的反应，也可以在回复中用 [sticker:表情描述] 来表示你也想发一个表情包。';
+                if (m.stickerUrl) {
+                    // 表情包URL也用多模态格式传给AI看
+                    if (m.quoteText) {
+                        stkText = '【引用：' + m.quoteName + '说"' + m.quoteText + '"】\n' + stkText;
+                    }
+                    messages.push({
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: stkText },
+                            { type: 'image_url', image_url: { url: m.stickerUrl, detail: 'low' } }
+                        ]
+                    });
+                    continue;
+                }
+                content = stkText;
+            } else {
+                content = m.text || '[表情包]';
             }
         }
 
@@ -1690,6 +2147,22 @@ function buildChatMessages(role) {
         if (persona && persona.name) hint += '你在和' + persona.name + '说话。';
         hint += ']';
         messages.push({ role: 'user', content: hint });
+    }
+
+    // ★ 世界书中间注入
+    if (_middleWbs.length) {
+        var midContent = '【世界观提醒】以下是当前故事的世界观背景，请在后续对话中遵循：\n';
+        for (var _mwi = 0; _mwi < _middleWbs.length; _mwi++) { midContent += _middleWbs[_mwi].content + '\n'; }
+        var midIdx = Math.floor(messages.length / 2);
+        if (midIdx < 1) midIdx = 1;
+        messages.splice(midIdx, 0, { role: 'system', content: midContent });
+    }
+
+    // ★ 世界书后置注入
+    if (_afterWbs.length) {
+        var aftContent = '【世界观与背景设定】以下是当前故事的世界观背景，请务必在回复中遵循这些设定：\n';
+        for (var _awi = 0; _awi < _afterWbs.length; _awi++) { aftContent += _afterWbs[_awi].content + '\n'; }
+        messages.push({ role: 'system', content: aftContent });
     }
 
     return messages;
@@ -1805,15 +2278,24 @@ function startVoiceRecord() {
             _voiceStream = stream;
             _voiceIsRecording = true;
 
-            var mimeType = 'audio/webm;codecs=opus';
-            if (!MediaRecorder.isTypeSupported(mimeType)) {
-                mimeType = 'audio/webm';
-                if (!MediaRecorder.isTypeSupported(mimeType)) {
-                    mimeType = 'audio/mp4';
-                    if (!MediaRecorder.isTypeSupported(mimeType)) {
-                        mimeType = '';
+            // ★ 移动端兼容：iOS Safari 只支持 audio/mp4，安卓支持 webm
+            var mimeType = '';
+            var tryTypes = [
+                'audio/webm;codecs=opus',
+                'audio/webm',
+                'audio/mp4',
+                'audio/aac',
+                'audio/ogg;codecs=opus',
+                ''  // 留空让浏览器自动选择
+            ];
+            for (var mt = 0; mt < tryTypes.length; mt++) {
+                if (!tryTypes[mt]) { mimeType = ''; break; }
+                try {
+                    if (MediaRecorder.isTypeSupported(tryTypes[mt])) {
+                        mimeType = tryTypes[mt];
+                        break;
                     }
-                }
+                } catch (e) { continue; }
             }
 
             var options = mimeType ? { mimeType: mimeType } : {};
@@ -1894,7 +2376,11 @@ function stopVoiceRecord(isCancel) {
         if (btnInner) btnInner.classList.remove('recording');
         if (btnSend) btnSend.style.display = 'flex';
         if (preview) {
-            preview.textContent = _voiceTranscript || '（未识别到语音内容）';
+            if (_voiceTranscript) {
+                preview.textContent = _voiceTranscript;
+            } else {
+                preview.textContent = '（语音内容未识别，但录音已保存，可直接发送）';
+            }
         }
     }
 }
@@ -1911,7 +2397,10 @@ function updateVoiceTimer() {
 function startSpeechRecognition() {
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-        console.warn('SpeechRecognition not supported');
+        console.warn('SpeechRecognition not supported on this device');
+        // ★ 移动端不支持语音识别时，提示用户但录音仍然可以继续
+        var preview = document.getElementById('voiceTranscriptPreview');
+        if (preview) preview.textContent = '录音中…（此设备不支持语音转文字，录音完成后可正常发送）';
         return;
     }
 
@@ -1942,9 +2431,15 @@ function startSpeechRecognition() {
 
     _voiceRecognition.onerror = function (e) {
         console.warn('Speech recognition error:', e.error);
-        if (e.error === 'no-speech') {
+        if (e.error === 'not-allowed') {
+            var preview = document.getElementById('voiceTranscriptPreview');
+            if (preview) preview.textContent = '麦克风权限被拒绝，请在浏览器设置中允许';
+        } else if (e.error === 'no-speech') {
             var preview = document.getElementById('voiceTranscriptPreview');
             if (preview && !_voiceTranscript) preview.textContent = '未检测到语音，请靠近麦克风...';
+        } else if (e.error === 'network') {
+            var preview = document.getElementById('voiceTranscriptPreview');
+            if (preview) preview.textContent = '录音中…（语音识别需要网络，但录音不影响）';
         }
     };
 
@@ -1954,7 +2449,11 @@ function startSpeechRecognition() {
         }
     };
 
-    try { _voiceRecognition.start(); } catch (e) { console.warn('SR start error:', e); }
+    try { _voiceRecognition.start(); } catch (e) {
+        console.warn('SR start error:', e);
+        var preview = document.getElementById('voiceTranscriptPreview');
+        if (preview) preview.textContent = '录音中…（语音识别启动失败，录音不影响）';
+    }
 }
 
 var _voiceAnalyser = null;
@@ -2064,6 +2563,9 @@ function sendVoiceMessage() {
         clearQuote();
         closeVoiceRecorder(true);
         showToast('语音已发送');
+
+        // ★ 修复：发送语音后自动触发AI回复（和图片发送一致）
+        setTimeout(function () { continueChat(); }, 300);
     };
 
     reader.readAsDataURL(blob);
@@ -2711,5 +3213,228 @@ function injectImageButtons() {
         bar.insertBefore(btnAlbum, btnCam.nextSibling);
     }
 }
+/* ========== 表情包匹配 ========== */
+function findMatchingSticker(desc) {
+    try {
+        var groups = JSON.parse(localStorage.getItem('ds_sticker_groups') || '[]');
+        var allStickers = [];
+        for (var i = 0; i < groups.length; i++) {
+            for (var j = 0; j < groups[i].stickers.length; j++) {
+                allStickers.push(groups[i].stickers[j]);
+            }
+        }
+        // 也读取角色挂载的多个表情包
+        if (_chatCurrentConv) {
+            var role = findRole(_chatCurrentConv);
+            if (role) {
+                var mountedIds = role.stickerIds || (role.stickerId ? [role.stickerId] : []);
+                for (var mi = 0; mi < mountedIds.length; mi++) {
+                    var pack = findStickerPack(mountedIds[mi]);
+                    if (pack && pack.urls) {
+                        for (var u = 0; u < pack.urls.length; u++) {
+                            allStickers.push({ url: pack.urls[u], desc: '' });
+                        }
+                    }
+                }
+            }
+        }
+        if (!allStickers.length) return '';
+        // 先尝试desc关键词匹配
+        if (desc) {
+            var descLower = desc.toLowerCase();
+            for (var k = 0; k < allStickers.length; k++) {
+                if (allStickers[k].desc && allStickers[k].desc.toLowerCase().indexOf(descLower) >= 0) {
+                    return allStickers[k].url;
+                }
+            }
+        }
+        // 没匹配到就随机选一个
+        return allStickers[Math.floor(Math.random() * allStickers.length)].url;
+    } catch (e) { return ''; }
+}
 
+/* ========== 表情包：缺失的函数补全 ========== */
 
+// 渲染表情包气泡
+function renderStickerBubbleRow(m, idx, myAv, roleAv) {
+    var isSelf = m.from === 'self';
+    var av = isSelf ? myAv : roleAv;
+    var avHtml = av ? '<img src="' + av + '">' : SVG_USER;
+    var h = '';
+    h += '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-msg-idx="' + idx + '" onclick="showBubbleMenu(event,' + idx + ')">';
+    h += '<div class="chat-bubble-av">' + avHtml + '</div>';
+    h += '<div class="chat-bubble-sticker">';
+    h += '<img src="' + esc(m.stickerUrl || '') + '" alt="' + esc(m.stickerDesc || '表情包') + '" style="max-width:120px;max-height:120px;border-radius:8px;">';
+    h += '</div>';
+    h += '<div class="chat-bubble-time">' + esc(m.time || '') + '</div>';
+    h += '</div>';
+    return h;
+}
+
+// 打开/关闭表情包面板
+function toggleStickerPanel() {
+    var panel = document.getElementById('chatStickerPanel');
+    if (!panel) return;
+    if (panel.classList.contains('show')) {
+        closeStickerPanel();
+    } else {
+        renderStickerPanel();
+        panel.classList.add('show');
+    }
+}
+
+function closeStickerPanel() {
+    var panel = document.getElementById('chatStickerPanel');
+    if (panel) panel.classList.remove('show');
+}
+
+// 渲染表情包面板内容
+function renderStickerPanel() {
+    var panel = document.getElementById('chatStickerPanel');
+    if (!panel) return;
+
+    var groups = [];
+    try { groups = JSON.parse(localStorage.getItem('ds_sticker_groups') || '[]'); } catch (e) { groups = []; }
+
+    // 也从角色挂载的表情包里读（支持多选）
+    if (_chatCurrentConv) {
+        var role = findRole(_chatCurrentConv);
+        if (role) {
+            var mountedIds = role.stickerIds || (role.stickerId ? [role.stickerId] : []);
+            for (var mi = 0; mi < mountedIds.length; mi++) {
+                var pack = findStickerPack(mountedIds[mi]);
+                if (pack && pack.urls && pack.urls.length) {
+                    var already = false;
+                    for (var g = 0; g < groups.length; g++) {
+                        if (groups[g].name === pack.name) { already = true; break; }
+                    }
+                    if (!already) {
+                        var stickers = [];
+                        for (var u = 0; u < pack.urls.length; u++) {
+                            stickers.push({ url: pack.urls[u], desc: '' });
+                        }
+                        groups.push({ name: pack.name, stickers: stickers });
+                    }
+                }
+            }
+        }
+    }
+
+    if (!groups.length) {
+        panel.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px;">暂无表情包<br>请在「我」→「表情包管理」中添加</div>';
+        return;
+    }
+
+    var h = '<div style="height:100%;overflow-y:auto;padding:8px;">';
+    for (var i = 0; i < groups.length; i++) {
+        var grp = groups[i];
+        h += '<div style="font-size:12px;color:#999;padding:4px 0;">' + esc(grp.name || '表情包') + '</div>';
+        h += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+        var stickers = grp.stickers || [];
+        for (var j = 0; j < stickers.length; j++) {
+            var s = stickers[j];
+            h += '<img src="' + esc(s.url || '') + '" style="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="sendStickerMsg(\'' + esc(s.url || '') + '\',\'' + esc(s.desc || '') + '\')">';
+        }
+        h += '</div>';
+    }
+    h += '</div>';
+    panel.innerHTML = h;
+}
+
+// 发送表情包消息
+function sendStickerMsg(url, desc) {
+    if (!_chatCurrentConv || !url) return;
+    var role = findRole(_chatCurrentConv);
+    if (!role) return;
+    var now = new Date();
+    var ts = formatTime(now);
+    var msg = { from: 'self', text: '[表情包]', time: ts, sticker: true, stickerUrl: url, stickerDesc: desc || '' };
+    role.msgs.push(msg);
+    role.lastMsg = '[表情包]';
+    role.lastTime = now.getTime();
+    role.lastTimeStr = ts;
+    saveChatRoles();
+
+    var body = document.getElementById('chatConvBody');
+    if (body) {
+        var ap = getActivePersona();
+        var myAv = ap && ap.avatar ? ap.avatar : '';
+        body.insertAdjacentHTML('beforeend', renderStickerBubbleRow(msg, role.msgs.length - 1, myAv, role.avatar || ''));
+        body.scrollTop = body.scrollHeight;
+    }
+    closeStickerPanel();
+}
+
+// 表情包管理页
+function openStickerManager() {
+    var groups = [];
+    try { groups = JSON.parse(localStorage.getItem('ds_sticker_groups') || '[]'); } catch (e) { groups = []; }
+
+    var h = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;" id="stickerManagerOverlay" onclick="if(event.target===this)closeStickerManager()">';
+    h += '<div style="background:#fff;border-radius:16px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;padding:20px;">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><b style="font-size:16px;">表情包管理</b><span onclick="closeStickerManager()" style="cursor:pointer;font-size:20px;color:#999;">✕</span></div>';
+
+    if (!groups.length) {
+        h += '<div style="text-align:center;color:#999;padding:20px;font-size:13px;">暂无表情包分组</div>';
+    } else {
+        for (var i = 0; i < groups.length; i++) {
+            var g = groups[i];
+            h += '<div style="border:1px solid #eee;border-radius:10px;padding:10px;margin-bottom:10px;">';
+            h += '<div style="display:flex;justify-content:space-between;align-items:center;"><b>' + esc(g.name || '未命名') + '</b><span onclick="deleteStickerGroup(' + i + ')" style="color:#e55;cursor:pointer;font-size:12px;">删除</span></div>';
+            h += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">';
+            var stickers = g.stickers || [];
+            for (var j = 0; j < stickers.length; j++) {
+                h += '<img src="' + esc(stickers[j].url || '') + '" style="width:50px;height:50px;object-fit:cover;border-radius:4px;">';
+            }
+            h += '</div></div>';
+        }
+    }
+
+    h += '<div style="margin-top:12px;">';
+    h += '<input id="stkGrpName" placeholder="分组名称" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;margin-bottom:6px;box-sizing:border-box;">';
+    h += '<textarea id="stkGrpUrls" placeholder="表情图片URL（每行一个）" rows="4" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;margin-bottom:6px;box-sizing:border-box;resize:vertical;"></textarea>';
+    h += '<div onclick="addStickerGroup()" style="background:#f48fb1;color:#fff;text-align:center;padding:10px;border-radius:10px;cursor:pointer;">添加分组</div>';
+    h += '</div>';
+
+    h += '</div></div>';
+    document.body.insertAdjacentHTML('beforeend', h);
+}
+
+function closeStickerManager() {
+    var el = document.getElementById('stickerManagerOverlay');
+    if (el) el.remove();
+}
+
+function addStickerGroup() {
+    var name = document.getElementById('stkGrpName').value.trim();
+    var urlsText = document.getElementById('stkGrpUrls').value.trim();
+    if (!name) { showToast('请输入分组名称'); return; }
+    if (!urlsText) { showToast('请输入至少一个URL'); return; }
+    var urls = urlsText.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    var stickers = urls.map(function (u) { return { url: u, desc: '' }; });
+
+    var groups = [];
+    try { groups = JSON.parse(localStorage.getItem('ds_sticker_groups') || '[]'); } catch (e) { groups = []; }
+    groups.push({ name: name, stickers: stickers });
+    localStorage.setItem('ds_sticker_groups', JSON.stringify(groups));
+    showToast('已添加');
+    closeStickerManager();
+    openStickerManager();
+}
+
+function deleteStickerGroup(idx) {
+    var groups = [];
+    try { groups = JSON.parse(localStorage.getItem('ds_sticker_groups') || '[]'); } catch (e) { groups = []; }
+    groups.splice(idx, 1);
+    localStorage.setItem('ds_sticker_groups', JSON.stringify(groups));
+    showToast('已删除');
+    closeStickerManager();
+    openStickerManager();
+}
+
+// ★ 翻译功能样式注入
+(function () {
+    var style = document.createElement('style');
+    style.textContent = '.chat-bubble-translate-divider{border-top:1px dashed rgba(0,0,0,0.2);margin:8px 0 6px 0}.chat-bubble-translate{font-size:12px;color:#666;line-height:1.5;white-space:pre-wrap;word-break:break-word}.chat-bubble-row.self .chat-bubble-translate-divider{border-top-color:rgba(255,255,255,0.3)}.chat-bubble-row.self .chat-bubble-translate{color:rgba(255,255,255,0.7)}.chat-bubble-translating{font-size:11px;color:#999;padding:2px 0;font-style:italic}';
+    document.head.appendChild(style);
+})();

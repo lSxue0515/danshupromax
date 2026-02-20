@@ -808,13 +808,22 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    overflow: hidden;
+    overflow: visible;
     flex-shrink: 0;
     background: rgba(255, 255, 255, 0.5);
     border: 1.5px solid var(--chat-pink-light);
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+}
+
+/* 头像图片自身保持圆形裁切 */
+.chat-bubble-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
 .chat-bubble-avatar img {
@@ -2131,6 +2140,56 @@
 /* user气泡时间在右 */
 .chat-bubble-row.self .chat-bubble-ts {
     text-align: right;
+}
+
+/* ========== 翻译功能样式 ========== */
+
+/* 气泡内虚线分隔线 */
+.chat-bubble-translate-divider {
+    border: none;
+    border-top: 1.5px dashed rgba(212, 120, 140, 0.35);
+    margin: 8px 0 6px 0;
+}
+
+/* 翻译文本 */
+.chat-bubble-translate {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: rgba(50, 40, 55, 0.55);
+    word-break: break-word;
+    white-space: pre-wrap;
+    padding: 0;
+    margin: 0;
+}
+
+/* 翻译中加载提示 */
+.chat-bubble-translating {
+    font-size: 11px;
+    color: rgba(212, 120, 140, 0.6);
+    padding: 2px 0 0 0;
+    font-style: italic;
+    animation: chatTransPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes chatTransPulse {
+
+    0%,
+    100% {
+        opacity: 0.4;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* 自己的气泡翻译文字颜色稍微调整 */
+.chat-bubble-row.self .chat-bubble-translate {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.chat-bubble-row.self .chat-bubble-translate-divider {
+    border-top-color: rgba(255, 255, 255, 0.3);
 }
 
 /* ========== 引用样式 ========== */
