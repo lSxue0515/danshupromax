@@ -3,6 +3,11 @@
    真人社交模块（独立文件）
    ============================================ */
 
+/* ============================================
+   蛋薯机 DanShu Pro v2 — social.js
+   真人社交模块（独立文件）
+   ============================================ */
+
 var SOCIAL_API_URL = 'https://danshu-social.3924872948.workers.dev/api';
 var SOCIAL_KEY = 'ds_social_profile';
 var SOCIAL_FRIENDS_KEY = 'ds_social_friends';
@@ -14,6 +19,7 @@ var _socialInbox = {};
 var _socialRequests = [];
 var _socialPollTimer = null;
 var _socialCurrentChat = null;
+var _socialRegistered = false;
 
 /* ========== 初始化 ========== */
 function socialInit() {
@@ -32,22 +38,48 @@ function socialInit() {
         saveSocialProfile();
     }
 
-    if (SOCIAL_API_URL) {
-        // ★★★ 关键修复：每次初始化都自动注册/更新到服务器 ★★★
-        socialRegister(function (res) {
-            if (res && res.success) {
-                console.log('社交ID已同步到服务器: ' + _socialProfile.id);
-                // 如果服务器返回了不同的ID（比如冲突），更新本地
-                if (res.id && res.id !== _socialProfile.id) {
-                    _socialProfile.id = res.id;
+    socialDoRegister();
+}
+
+function socialDoRegister() {
+    if (!SOCIAL_API_URL || !_socialProfile) return;
+
+    var url = SOCIAL_API_URL.replace(/\/+$/, '') + '/register';
+    var data = {
+        id: _socialProfile.id,
+        nickname: _socialProfile.nickname,
+        avatar: _socialProfile.avatar || '',
+        bio: _socialProfile.bio || ''
+    };
+
+    console.log('[社交] 正在注册到服务器...', _socialProfile.id);
+
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+        .then(function (res) { return res.json(); })
+        .then(function (json) {
+            console.log('[社交] 注册结果:', JSON.stringify(json));
+            if (json && json.success) {
+                _socialRegistered = true;
+                console.log('[社交] ✅ 注册成功: ' + _socialProfile.id);
+                if (json.id && json.id !== _socialProfile.id) {
+                    _socialProfile.id = json.id;
                     saveSocialProfile();
                 }
             } else {
-                console.log('服务器同步失败，将在下次重试');
+                console.log('[社交] ❌ 注册失败:', JSON.stringify(json));
             }
+        })
+        .catch(function (err) {
+            console.log('[社交] ❌ 网络错误:', err.message);
+            // 5秒后重试
+            setTimeout(socialDoRegister, 5000);
         });
-        socialStartPolling();
-    }
+
+    socialStartPolling();
 }
 
 function saveSocialProfile() {
@@ -87,10 +119,32 @@ function socialFetch(endpoint, method, data, callback) {
     if (data && method !== 'GET') {
         opts.body = JSON.stringify(data);
     }
+    console.log('[社交] 请求:', method, endpoint);
     fetch(url, opts)
         .then(function (res) { return res.json(); })
-        .then(function (json) { if (callback) callback(json); })
-        .catch(function (err) { if (callback) callback({ error: err.message }); });
+        .then(function (json) {
+            console.log('[社交] 响应:', endpoint, JSON.stringify(json));
+            if (callback) callback(json);
+        })
+        .catch(function (err) {
+            console.log('[社交] 错误:', endpoint, err.message);
+            if (callback) callback({ error: err.message });
+        });
+}
+
+function socialRegister(callback) {
+    socialFetch('/register', 'POST', {
+        id: _socialProfile.id,
+        nickname: _socialProfile.nickname,
+        avatar: _socialProfile.avatar,
+        bio: _socialProfile.bio
+    }, function (res) {
+        if (res && res.success && res.id && res.id !== _socialProfile.id) {
+            _socialProfile.id = res.id;
+            saveSocialProfile();
+        }
+        if (callback) callback(res);
+    });
 }
 
 function socialRegister(callback) {
