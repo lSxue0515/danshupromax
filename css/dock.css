@@ -39,10 +39,10 @@
     flex: 1;
 }
 
-/* ★ Dock 图标缩小10px：52→42 */
+/* ★ Dock 图标：48px */
 .dock-icon {
-    width: 42px;
-    height: 42px;
+    width: 48px;
+    height: 48px;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.62);
     backdrop-filter: blur(20px);
@@ -57,10 +57,10 @@
     transition: all 0.2s ease;
 }
 
-/* ★ 图标SVG也等比缩小 */
+/* ★ 图标SVG等比放大 */
 .dock-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 23px;
+    height: 23px;
     fill: none;
     stroke: #ffffff;
     stroke-width: 2.8;
@@ -74,11 +74,13 @@
 .dock-icon::before {
     content: '';
     position: absolute;
-    top: 0; left: 0; right: 0;
+    top: 0;
+    left: 0;
+    right: 0;
     height: 50%;
     background: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.22) 0%,
-        transparent 100%);
+            rgba(255, 255, 255, 0.22) 0%,
+            transparent 100%);
     border-radius: 12px 12px 0 0;
     pointer-events: none;
 }

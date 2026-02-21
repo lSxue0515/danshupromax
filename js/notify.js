@@ -102,9 +102,8 @@ function triggerNotification(role, text, isAutoMsg) {
 }
 
 function showNotifyBanner(roleId, name, avatar, text, isAutoMsg) {
-    // 先移除已有的横幅
-    removeNotifyBanner();
-
+    // 先立即移除已有的横幅（不等动画，防止时序冲突）
+    removeNotifyBanner(true);
     var frame = document.getElementById('phoneFrame');
     if (!frame) return;
 
@@ -133,18 +132,27 @@ function showNotifyBanner(roleId, name, avatar, text, isAutoMsg) {
         if (banner) banner.classList.add('show');
     }, 30);
 
-    // 5秒后自动消失
-    setTimeout(function () {
+    // 5秒后自动消失（用全局变量管理，防止旧定时器误删新横幅）
+    if (window._notifyAutoHideTimer) clearTimeout(window._notifyAutoHideTimer);
+    window._notifyAutoHideTimer = setTimeout(function () {
         removeNotifyBanner();
     }, 5000);
 }
 
-function removeNotifyBanner() {
+function removeNotifyBanner(immediate) {
     var b = document.getElementById('dsNotifyBanner');
     if (b) {
-        b.classList.remove('show');
-        b.classList.add('hide');
-        setTimeout(function () { if (b.parentNode) b.remove(); }, 400);
+        if (immediate) {
+            // 立即移除，不等动画（给 showNotifyBanner 内部调用）
+            b.removeAttribute('id');
+            if (b.parentNode) b.remove();
+        } else {
+            // 正常带动画消失
+            b.removeAttribute('id');  // ★ 先摘掉id，防止新banner被误删
+            b.classList.remove('show');
+            b.classList.add('hide');
+            setTimeout(function () { if (b.parentNode) b.remove(); }, 400);
+        }
     }
 }
 

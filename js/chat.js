@@ -2051,11 +2051,16 @@ function buildChatMessages(role) {
         var content = m.text;
 
         // 语音消息
+        // 原来的：
+        // content = '【对方发送了一条语音消息（时长' + (m.voiceDuration || '?') + '秒），但语音内容未能识别。
+        //            你可以回复"没听清，可以再说一遍吗？"或类似的自然回应。】';
+
+        // ★ 修改为更自然的处理：
         if (m.voice) {
             if (m.voiceTranscript) {
                 content = '【对方发送了一条语音消息（时长' + (m.voiceDuration || '?') + '秒），语音转文字内容："' + m.voiceTranscript + '"。请当作语音来理解和回复，不要提"转文字"这个过程，直接当作对方说的话来回应。】';
             } else {
-                content = '【对方发送了一条语音消息（时长' + (m.voiceDuration || '?') + '秒），但语音内容未能识别。你可以回复"没听清，可以再说一遍吗？"或类似的自然回应。】';
+                content = '【对方发送了一条语音消息（时长' + (m.voiceDuration || '?') + '秒），语音内容未能转为文字（可能是环境音、叹息、笑声、或者设备不支持语音识别）。请根据对话上下文自然回应，可以回复类似"嗯嗯""怎么了？""在听呢"等简短自然的回应。】';
             }
         }
 
@@ -2251,6 +2256,7 @@ function openVoiceRecorder() {
 
 function closeVoiceRecorder(silent) {
     stopVoiceRecord(true);
+
     var ov = document.getElementById('voiceRecorderOverlay');
     if (ov) {
         ov.classList.remove('show');
@@ -2273,7 +2279,15 @@ function startVoiceRecord() {
     _voiceTranscript = '';
     _voiceChunks = [];
 
-    navigator.mediaDevices.getUserMedia({ audio: true })
+    navigator.mediaDevices.getUserMedia({
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 44100,
+            channelCount: 1
+        }
+    })
         .then(function (stream) {
             _voiceStream = stream;
             _voiceIsRecording = true;
@@ -2307,7 +2321,7 @@ function startVoiceRecord() {
 
             _voiceRecorder.onstop = function () { };
 
-            _voiceRecorder.start(100);
+            _voiceRecorder.start(250);
             _voiceStartTime = Date.now();
 
             updateVoiceTimer();
@@ -2327,12 +2341,18 @@ function startVoiceRecord() {
             if (btnLabel) btnLabel.textContent = '停止录音';
             if (btnInner) btnInner.classList.add('recording');
             if (btnCancel) btnCancel.style.display = 'flex';
-            if (preview) preview.textContent = '正在聆听...';
+            if (preview) preview.textContent = '🎙️ 录音中…';
 
             startWaveAnimation(stream);
         })
         .catch(function (err) {
-            showToast('无法访问麦克风：' + err.message);
+            var errMsg = err.message || '';
+            // 安卓叠加层导致的权限拦截
+            if (errMsg.indexOf('dismissed') > -1 || errMsg.indexOf('not allowed') > -1 || errMsg.indexOf('NotAllowedError') > -1 || err.name === 'NotAllowedError') {
+                showToast('麦克风权限被拒绝。如果弹出"无法请求授权"，请关闭手机上的悬浮窗/叠加层应用后重试', 5000);
+            } else {
+                showToast('无法访问麦克风：' + errMsg);
+            }
             console.error('Microphone error:', err);
         });
 }
@@ -2379,7 +2399,7 @@ function stopVoiceRecord(isCancel) {
             if (_voiceTranscript) {
                 preview.textContent = _voiceTranscript;
             } else {
-                preview.textContent = '（语音内容未识别，但录音已保存，可直接发送）';
+                preview.textContent = '✅ 录音完成，点击发送';
             }
         }
     }
@@ -2394,66 +2414,18 @@ function updateVoiceTimer() {
     el.textContent = pad(m) + ':' + pad(s);
 }
 
+// ============================================
+// 替换第 2403~2498 行
+// ============================================
 function startSpeechRecognition() {
-    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        console.warn('SpeechRecognition not supported on this device');
-        // ★ 移动端不支持语音识别时，提示用户但录音仍然可以继续
-        var preview = document.getElementById('voiceTranscriptPreview');
-        if (preview) preview.textContent = '录音中…（此设备不支持语音转文字，录音完成后可正常发送）';
-        return;
-    }
+    // ★ 国内环境 SpeechRecognition 不可用（Google语音服务被墙、iOS不支持）
+    // ★ 直接跳过，录音本身(MediaRecorder)完全正常
+    var preview = document.getElementById('voiceTranscriptPreview');
+    if (preview) preview.textContent = '🎙️ 录音中…';
 
-    _voiceRecognition = new SpeechRecognition();
-    _voiceRecognition.continuous = true;
-    _voiceRecognition.interimResults = true;
-    _voiceRecognition.lang = 'zh-CN';
-    _voiceRecognition.maxAlternatives = 1;
-
-    var finalTranscript = '';
-
-    _voiceRecognition.onresult = function (e) {
-        var interim = '';
-        for (var i = e.resultIndex; i < e.results.length; i++) {
-            var t = e.results[i][0].transcript;
-            if (e.results[i].isFinal) {
-                finalTranscript += t;
-            } else {
-                interim += t;
-            }
-        }
-        _voiceTranscript = finalTranscript + interim;
-        var preview = document.getElementById('voiceTranscriptPreview');
-        if (preview) {
-            preview.textContent = _voiceTranscript || '正在聆听...';
-        }
-    };
-
-    _voiceRecognition.onerror = function (e) {
-        console.warn('Speech recognition error:', e.error);
-        if (e.error === 'not-allowed') {
-            var preview = document.getElementById('voiceTranscriptPreview');
-            if (preview) preview.textContent = '麦克风权限被拒绝，请在浏览器设置中允许';
-        } else if (e.error === 'no-speech') {
-            var preview = document.getElementById('voiceTranscriptPreview');
-            if (preview && !_voiceTranscript) preview.textContent = '未检测到语音，请靠近麦克风...';
-        } else if (e.error === 'network') {
-            var preview = document.getElementById('voiceTranscriptPreview');
-            if (preview) preview.textContent = '录音中…（语音识别需要网络，但录音不影响）';
-        }
-    };
-
-    _voiceRecognition.onend = function () {
-        if (_voiceIsRecording && _voiceRecognition) {
-            try { _voiceRecognition.start(); } catch (e) { }
-        }
-    };
-
-    try { _voiceRecognition.start(); } catch (e) {
-        console.warn('SR start error:', e);
-        var preview = document.getElementById('voiceTranscriptPreview');
-        if (preview) preview.textContent = '录音中…（语音识别启动失败，录音不影响）';
-    }
+    // ★ 如果用户配置了支持 Whisper 的 API，录音结束后自动转写
+    // 否则就是纯语音消息，不做转文字
+    console.log('[Voice] SpeechRecognition skipped (not available in China), using pure voice mode');
 }
 
 var _voiceAnalyser = null;
@@ -2503,6 +2475,41 @@ function stopWaveAnimation() {
     _voiceAnalyser = null;
 }
 
+/* ---- Whisper API 语音转文字 ---- */
+function whisperTranscribe(audioBlob, callback) {
+    if (typeof getActiveApiConfig !== 'function') { callback(''); return; }
+    var apiConfig = getActiveApiConfig();
+    if (!apiConfig || !apiConfig.url || !apiConfig.key) { callback(''); return; }
+
+    var baseUrl = apiConfig.url.replace(/\/+$/, '').replace(/\/chat\/completions\s*$/, '').replace(/\/v1\s*$/, '');
+    var whisperUrl = baseUrl + '/v1/audio/transcriptions';
+
+    var formData = new FormData();
+    var ext = audioBlob.type.indexOf('mp4') > -1 ? 'mp4' : audioBlob.type.indexOf('ogg') > -1 ? 'ogg' : 'webm';
+    formData.append('file', audioBlob, 'voice.' + ext);
+    formData.append('model', 'whisper-1');
+    formData.append('language', 'zh');
+
+    fetch(whisperUrl, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + apiConfig.key },
+        body: formData
+    })
+        .then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        })
+        .then(function (json) {
+            var text = (json.text || '').trim();
+            console.log('[Whisper] 转写结果：', text);
+            callback(text);
+        })
+        .catch(function (err) {
+            console.log('[Whisper] 转写失败（API可能不支持），使用纯语音模式：', err.message);
+            callback('');
+        });
+}
+
 function sendVoiceMessage() {
     var role = findRole(_chatCurrentConv);
     if (!role) { showToast('角色不存在'); return; }
@@ -2522,53 +2529,62 @@ function sendVoiceMessage() {
     var now = new Date();
     var ts = pad(now.getHours()) + ':' + pad(now.getMinutes());
 
-    var transcript = _voiceTranscript.trim() || '';
+    // ★ 显示转写中提示
+    showToast('正在识别语音内容…');
 
-    var reader = new FileReader();
-    reader.onloadend = function () {
-        var audioBase64 = reader.result;
+    // ★ 先尝试 Whisper 转写，完成后再发送消息
+    whisperTranscribe(blob, function (whisperText) {
+        var transcript = whisperText || _voiceTranscript.trim() || '';
 
-        if (!role.msgs) role.msgs = [];
+        var reader = new FileReader();
+        reader.onloadend = function () {
+            var audioBase64 = reader.result;
 
-        var msgObj = {
-            from: 'self',
-            text: '[语音消息]',
-            time: ts,
-            voice: true,
-            voiceData: audioBase64,
-            voiceDuration: duration,
-            voiceTranscript: transcript
+            if (!role.msgs) role.msgs = [];
+
+            var msgObj = {
+                from: 'self',
+                text: transcript ? '[语音消息] ' + transcript : '[语音消息]',
+                time: ts,
+                voice: true,
+                voiceData: audioBase64,
+                voiceDuration: duration,
+                voiceTranscript: transcript
+            };
+
+            if (_chatQuoteData) {
+                msgObj.quoteText = _chatQuoteData.text;
+                msgObj.quoteName = _chatQuoteData.name;
+            }
+
+            role.msgs.push(msgObj);
+            role.lastMsg = '[语音消息] ' + (transcript || '');
+            role.lastTime = now.getTime();
+            role.lastTimeStr = ts;
+            saveChatRoles();
+
+            var body = document.getElementById('chatConvBody');
+            if (body) {
+                var ap = getActivePersona();
+                var myAv = ap && ap.avatar ? ap.avatar : '';
+                var idx = role.msgs.length - 1;
+                body.insertAdjacentHTML('beforeend', renderVoiceBubbleRow(msgObj, idx, myAv, role.avatar || ''));
+                body.scrollTop = body.scrollHeight;
+            }
+
+            clearQuote();
+            closeVoiceRecorder(true);
+            if (transcript) {
+                showToast('语音已发送（已识别：' + transcript.substring(0, 20) + (transcript.length > 20 ? '…' : '') + '）');
+            } else {
+                showToast('语音已发送（未识别到文字）');
+            }
+
+            // 不自动续写，等用户手动点续写按钮
         };
 
-        if (_chatQuoteData) {
-            msgObj.quoteText = _chatQuoteData.text;
-            msgObj.quoteName = _chatQuoteData.name;
-        }
-
-        role.msgs.push(msgObj);
-        role.lastMsg = '[语音消息] ' + (transcript || '');
-        role.lastTime = now.getTime();
-        role.lastTimeStr = ts;
-        saveChatRoles();
-
-        var body = document.getElementById('chatConvBody');
-        if (body) {
-            var ap = getActivePersona();
-            var myAv = ap && ap.avatar ? ap.avatar : '';
-            var idx = role.msgs.length - 1;
-            body.insertAdjacentHTML('beforeend', renderVoiceBubbleRow(msgObj, idx, myAv, role.avatar || ''));
-            body.scrollTop = body.scrollHeight;
-        }
-
-        clearQuote();
-        closeVoiceRecorder(true);
-        showToast('语音已发送');
-
-        // ★ 修复：发送语音后自动触发AI回复（和图片发送一致）
-        setTimeout(function () { continueChat(); }, 300);
-    };
-
-    reader.readAsDataURL(blob);
+        reader.readAsDataURL(blob);
+    });
 }
 
 function renderVoiceBubbleRow(m, idx, myAv, roleAv) {
