@@ -1,0 +1,691 @@
+/* ============================================
+   蛋薯机 DanShu Pro v2 — social.css
+   真人社交模块 — 白色毛玻璃风格
+   ============================================ */
+
+/* ===== 「我」页 — 社交 ID 卡片 ===== */
+.social-id-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    margin: 0 0 2px 0;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.social-id-card:active {
+    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.social-id-card-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 180, 200, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.social-id-card-icon svg {
+    stroke: rgba(255, 140, 170, 0.8);
+    stroke-width: 1.8;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.social-id-card-info {
+    flex: 1;
+}
+
+.social-id-card-label {
+    font-size: 11px;
+    color: rgba(50, 40, 55, 0.45);
+    margin-bottom: 2px;
+}
+
+.social-id-card-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(50, 40, 55, 0.8);
+    letter-spacing: 1.5px;
+    font-family: 'Courier New', monospace;
+}
+
+.social-id-card-arrow svg {
+    stroke: rgba(50, 40, 55, 0.25);
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* ===== 添加好友搜索页（全屏覆盖） ===== */
+.social-search-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(248, 242, 250, 0.95);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    display: flex;
+    flex-direction: column;
+    z-index: 900;
+    border-radius: 44px;
+    overflow: hidden;
+}
+
+.social-search-header {
+    height: 56px;
+    padding: 50px 18px 0 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+.social-search-back {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.social-search-back:active {
+    transform: scale(0.93);
+    background: rgba(255, 255, 255, 0.75);
+}
+
+.social-search-back svg {
+    stroke: rgba(50, 40, 55, 0.5);
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.social-search-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: rgba(50, 40, 55, 0.85);
+    letter-spacing: 0.5px;
+}
+
+/* 我的 ID 横幅 */
+.social-my-id-banner {
+    margin: 16px 18px 12px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.social-my-id-label {
+    font-size: 12px;
+    color: rgba(50, 40, 55, 0.4);
+}
+
+.social-my-id-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: rgba(50, 40, 55, 0.75);
+    letter-spacing: 1px;
+    font-family: 'Courier New', monospace;
+    flex: 1;
+}
+
+/* 搜索框 */
+.social-search-box {
+    margin: 0 18px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.social-search-box svg {
+    stroke: rgba(50, 40, 55, 0.3);
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+}
+
+.social-search-box .social-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    color: rgba(50, 40, 55, 0.85);
+    outline: none;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+    padding: 0;
+}
+
+.social-search-box .social-input::placeholder {
+    font-family: inherit;
+    letter-spacing: 0;
+    color: rgba(50, 40, 55, 0.25);
+}
+
+.social-search-go {
+    padding: 7px 16px;
+    border-radius: 12px;
+    background: rgba(255, 180, 200, 0.6);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.social-search-go:active {
+    transform: scale(0.95);
+    background: rgba(255, 180, 200, 0.8);
+}
+
+/* 搜索结果 */
+.social-search-result {
+    flex: 1;
+    padding: 0 18px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.social-searching {
+    text-align: center;
+    padding: 40px;
+    color: rgba(50, 40, 55, 0.35);
+    font-size: 13px;
+}
+
+.social-not-found {
+    text-align: center;
+    padding: 50px 20px;
+    color: rgba(50, 40, 55, 0.45);
+    font-size: 14px;
+    line-height: 2;
+}
+
+.social-not-found span {
+    font-size: 12px;
+    color: rgba(50, 40, 55, 0.25);
+}
+
+/* 用户卡片 */
+.social-user-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.social-user-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(255, 180, 200, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.social-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.social-user-avatar svg {
+    stroke: rgba(255, 140, 170, 0.6);
+    stroke-width: 1.8;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.social-user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.social-user-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: rgba(50, 40, 55, 0.85);
+}
+
+.social-user-id {
+    font-size: 11px;
+    color: rgba(50, 40, 55, 0.4);
+    font-family: 'Courier New', monospace;
+    margin-top: 2px;
+}
+
+.social-user-bio {
+    font-size: 11px;
+    color: rgba(50, 40, 55, 0.35);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.social-add-btn {
+    padding: 8px 18px;
+    border-radius: 14px;
+    background: rgba(255, 180, 200, 0.55);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.social-add-btn:active {
+    transform: scale(0.95);
+    background: rgba(255, 180, 200, 0.8);
+}
+
+/* ===== 个人资料页 ===== */
+.social-profile-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0 10px;
+}
+
+.social-profile-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(14px);
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+
+.social-profile-avatar:active {
+    transform: scale(0.95);
+}
+
+.social-profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.social-profile-avatar svg {
+    stroke: rgba(50, 40, 55, 0.3);
+    stroke-width: 1.5;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.social-avatar-edit-hint {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 9px;
+    text-align: center;
+    padding: 2px 0;
+}
+
+.social-profile-id-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.social-profile-id-label {
+    font-size: 12px;
+    color: rgba(50, 40, 55, 0.35);
+}
+
+.social-profile-id-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: rgba(50, 40, 55, 0.75);
+    letter-spacing: 2px;
+    font-family: 'Courier New', monospace;
+}
+
+/* 复制按钮 */
+.social-copy-btn {
+    padding: 4px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    color: rgba(50, 40, 55, 0.55);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.social-copy-btn:active {
+    transform: scale(0.93);
+    background: rgba(255, 180, 200, 0.25);
+}
+
+/* ===== 表单 ===== */
+.social-profile-form {
+    padding: 10px 0;
+}
+
+.social-form-group {
+    margin-bottom: 12px;
+}
+
+.social-form-group label {
+    display: block;
+    font-size: 12px;
+    color: rgba(50, 40, 55, 0.45);
+    margin-bottom: 4px;
+    padding-left: 2px;
+}
+
+.social-input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(10px);
+    font-size: 14px;
+    color: rgba(50, 40, 55, 0.85);
+    outline: none;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: all 0.2s;
+}
+
+.social-input:focus {
+    border-color: rgba(255, 180, 200, 0.5);
+    background: rgba(255, 255, 255, 0.65);
+    box-shadow: 0 0 0 3px rgba(255, 180, 200, 0.1);
+}
+
+.social-save-btn {
+    margin-top: 4px;
+    padding: 12px 0;
+    border-radius: 16px;
+    text-align: center;
+    background: rgba(255, 180, 200, 0.55);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.social-save-btn:active {
+    transform: scale(0.98);
+    background: rgba(255, 180, 200, 0.75);
+}
+
+/* ===== 好友请求 ===== */
+.social-section-card {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.social-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(50, 40, 55, 0.6);
+    margin-bottom: 10px;
+}
+
+.social-request-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.social-request-item:last-child {
+    border-bottom: none;
+}
+
+.social-request-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(255, 180, 200, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.social-request-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.social-request-avatar svg {
+    stroke: rgba(50, 40, 55, 0.3);
+    stroke-width: 1.8;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.social-request-info {
+    flex: 1;
+}
+
+.social-request-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(50, 40, 55, 0.8);
+}
+
+.social-request-id {
+    font-size: 10px;
+    color: rgba(50, 40, 55, 0.35);
+    font-family: 'Courier New', monospace;
+}
+
+.social-request-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.social-accept-btn {
+    padding: 5px 12px;
+    border-radius: 10px;
+    background: rgba(134, 239, 172, 0.35);
+    color: #2d6a4f;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.social-accept-btn:active {
+    transform: scale(0.95);
+}
+
+.social-reject-btn {
+    padding: 5px 12px;
+    border-radius: 10px;
+    background: rgba(255, 100, 100, 0.12);
+    color: rgba(200, 80, 80, 0.6);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.social-reject-btn:active {
+    transform: scale(0.95);
+}
+
+/* ===== 服务器状态 ===== */
+.social-server-status {
+    margin-top: 20px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    font-size: 12px;
+    color: rgba(50, 40, 55, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.social-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.social-status-dot.online {
+    background: #86efac;
+    box-shadow: 0 0 6px rgba(134, 239, 172, 0.5);
+}
+
+.social-status-dot.offline {
+    background: rgba(200, 80, 80, 0.4);
+}
+
+.social-server-hint {
+    width: 100%;
+    margin-top: 6px;
+    font-size: 11px;
+    color: rgba(50, 40, 55, 0.28);
+    line-height: 1.6;
+}
+
+/* ===== 联系人页好友列表 ===== */
+.social-friends-section {
+    padding: 10px 0 4px;
+}
+
+.social-friend-item {
+    position: relative;
+}
+
+.social-avatar {
+    border-color: rgba(255, 180, 200, 0.3) !important;
+}
+
+.social-avatar svg {
+    stroke: rgba(50, 40, 55, 0.35);
+    stroke-width: 1.8;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.social-friend-id {
+    font-size: 10px;
+    color: rgba(50, 40, 55, 0.35);
+    font-family: 'Courier New', monospace;
+}
+
+.social-unread-badge {
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    background: rgba(255, 100, 100, 0.7);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    flex-shrink: 0;
+}
+
+/* 真人标识 */
+.social-online-hint {
+    font-size: 10px;
+    color: rgba(50, 40, 55, 0.4);
+    background: rgba(255, 255, 255, 0.45);
+    padding: 1px 8px;
+    border-radius: 6px;
+    backdrop-filter: blur(6px);
+}
+
+.social-chat-empty {
+    text-align: center;
+    padding: 60px 20px;
+    font-size: 14px;
+    color: rgba(50, 40, 55, 0.3);
+}

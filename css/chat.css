@@ -304,17 +304,77 @@
     box-shadow: 0 2px 8px rgba(255, 180, 200, 0.4);
 }
 
-/* ========== 联系人 ========== */
-.chat-contact-group {
-    margin-bottom: 12px;
+/* ========== 联系人 — 横向胶囊分组 Tab ========== */
+
+/* 分组 Tab 条 */
+.contact-group-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 4px 14px 10px;
+    overflow-x: auto;
+    flex-shrink: 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
 }
 
-.chat-contact-group-title {
+.contact-group-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+/* 胶囊 Tab */
+.contact-group-tab {
+    padding: 6px 14px;
+    border-radius: 20px;
     font-size: 12px;
+    font-weight: 500;
+    color: rgba(80, 60, 70, 0.55);
+    background: var(--chat-glass);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--chat-glass-border);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.contact-group-tab.active {
+    background: var(--chat-pink);
+    border-color: var(--chat-pink-light);
+    color: #fff;
     font-weight: 600;
-    color: var(--chat-text-hint);
-    padding: 8px 14px 6px 14px;
-    letter-spacing: 1px;
+    box-shadow: 0 2px 10px rgba(255, 180, 200, 0.3);
+}
+
+.contact-group-tab:active {
+    transform: scale(0.95);
+}
+
+.contact-group-cnt {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+/* 小加号胶囊 */
+.contact-group-add {
+    background: rgba(255, 220, 230, 0.25);
+    border: 1px dashed var(--chat-pink-light);
+    color: var(--chat-pink-text);
+    font-size: 16px;
+    font-weight: 400;
+    padding: 4px 14px;
+    line-height: 1;
+}
+
+.contact-group-add:active {
+    background: rgba(255, 180, 200, 0.3);
+}
+
+/* 联系人列表容器 */
+.chat-contact-list-wrap {
+    padding: 0 4px;
 }
 
 .chat-contact-list {
@@ -371,17 +431,40 @@
     fill: none;
 }
 
+.chat-contact-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .chat-contact-name {
     font-size: 14px;
     color: var(--chat-text);
     font-weight: 500;
-    flex: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-contact-group-tag {
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: rgba(255, 180, 200, 0.15);
+    color: var(--chat-pink-text);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .chat-contact-gender {
     font-size: 10px;
     padding: 2px 8px;
     border-radius: 8px;
+    flex-shrink: 0;
 }
 
 .chat-contact-gender.male {
@@ -2037,6 +2120,56 @@
     background: rgba(255, 200, 215, 0.5);
 }
 
+/* ========== 表情包挂载分组筛选 ========== */
+.chat-mount-group-filter {
+    display: flex;
+    gap: 6px;
+    padding: 8px 14px 4px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(255, 180, 200, 0.12);
+}
+
+.chat-mount-group-tag {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+    background: rgba(255, 220, 230, 0.25);
+    border: 1px solid rgba(255, 200, 215, 0.3);
+    color: var(--chat-text-sub);
+    white-space: nowrap;
+}
+
+.chat-mount-group-tag:active {
+    transform: scale(0.95);
+}
+
+.chat-mount-group-tag.active {
+    background: var(--chat-pink);
+    border-color: var(--chat-pink);
+    color: #fff;
+}
+
+.chat-mount-group-header {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--chat-text-sub);
+    padding: 10px 14px 4px;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.chat-mount-group-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 180, 200, 0.15);
+}
+
 /* ========== 右键菜单 ========== */
 .chat-ctx-menu {
     position: absolute;
@@ -3323,7 +3456,7 @@
     align-items: center;
     gap: 8px;
     padding: 10px 14px !important;
-    cursor: default;
+    cursor: pointer;
     min-width: 30%;
 }
 
@@ -4515,4 +4648,100 @@
     stroke-linecap: round;
     stroke-linejoin: round;
     flex-shrink: 0;
+}
+
+/* ===== 语音输入面板 ===== */
+.voice-input-area {
+    padding: 16px 0;
+}
+
+.voice-input-hint {
+    font-size: 13px;
+    color: rgba(80, 60, 70, 0.6);
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.voice-input-textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    font-size: 15px;
+    color: rgba(60, 40, 50, 0.9);
+    resize: none;
+    outline: none;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.voice-input-textarea:focus {
+    border-color: rgba(255, 150, 180, 0.6);
+}
+
+.voice-input-textarea::placeholder {
+    color: rgba(80, 60, 70, 0.35);
+}
+
+/* ===== 语音条麦克风图标 ===== */
+.voice-bubble-play-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.voice-bubble-play-icon svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.7;
+}
+
+.chat-bubble-row.self .voice-bubble-play-icon svg {
+    stroke: rgba(255, 255, 255, 0.85);
+}
+
+/* ===== 语音条展开文字 ===== */
+.voice-bubble-text-content {
+    margin-top: 6px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    animation: voiceTextFadeIn 0.25s ease;
+}
+
+@keyframes voiceTextFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.voice-bubble-text-inner {
+    font-size: 13px;
+    color: rgba(60, 40, 50, 0.8);
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.chat-bubble-row.self .voice-bubble-text-content {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.chat-bubble-row.self .voice-bubble-text-inner {
+    color: rgba(255, 255, 255, 0.9);
 }

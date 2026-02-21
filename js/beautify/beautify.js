@@ -110,7 +110,6 @@ function scopeCssToPreview(css) {
     while (i < len) {
         var ch = css.charAt(i);
 
-        // 跳过注释
         if (ch === '/' && i + 1 < len && css.charAt(i + 1) === '*') {
             var endIdx = css.indexOf('*/', i + 2);
             if (endIdx === -1) endIdx = len;
@@ -134,14 +133,13 @@ function scopeCssToPreview(css) {
                     if (sel.charAt(0) === '@') {
                         prefixed.push(sel);
                     } else {
-                        prefixed.push(prefix + ' ' + sel);
-                        // 映射 .chat-bubble-row.self .chat-bubble → .chat-bubble-self
-                        var mapped = sel.replace(
-                            /\.chat-bubble-row\.self\s+(?:\.chat-bubble-content-wrap\s+)?\.chat-bubble/g,
-                            '.chat-bubble-self'
-                        );
-                        if (mapped !== sel) {
-                            prefixed.push(prefix + ' ' + mapped);
+                        // ★ 将聊天页选择器映射为预览区选择器
+                        var mappedSel = mapSelectorToPreview(sel);
+                        prefixed.push(prefix + ' ' + mappedSel);
+
+                        // ★ 同时保留原始选择器的scoped版本（以防用户用简单选择器）
+                        if (mappedSel !== sel) {
+                            prefixed.push(prefix + ' ' + sel);
                         }
                     }
                 }
@@ -174,6 +172,40 @@ function scopeCssToPreview(css) {
 
     if (buffer.trim()) result += buffer;
     return result;
+}
+
+/* ★ 将聊天页CSS选择器映射到预览区对应的class */
+function mapSelectorToPreview(sel) {
+    var mapped = sel;
+
+    // 1. .chat-bubble-row.self ... .chat-bubble → .chat-bubble-self
+    mapped = mapped.replace(
+        /\.chat-bubble-row\.self\s+(?:\.chat-bubble-content-wrap\s+)?\.chat-bubble\b/g,
+        '.chat-bubble-self'
+    );
+
+    // 2. .chat-bubble-row:not(.self) ... .chat-bubble → .chat-bubble（char气泡）
+    mapped = mapped.replace(
+        /\.chat-bubble-row:not\(\.self\)\s+(?:\.chat-bubble-content-wrap\s+)?\.chat-bubble\b/g,
+        '.chat-bubble'
+    );
+
+    // 3. .chat-bubble-row.self → .beautify-bp-row.beautify-bp-right
+    mapped = mapped.replace(/\.chat-bubble-row\.self\b/g, '.beautify-bp-row.beautify-bp-right');
+
+    // 4. .chat-bubble-row → .beautify-bp-row（通用行）
+    mapped = mapped.replace(/\.chat-bubble-row\b/g, '.beautify-bp-row');
+
+    // 5. .chat-bubble-content-wrap → 直接移除（预览区没有这层包裹）
+    mapped = mapped.replace(/\s*\.chat-bubble-content-wrap\s*/g, ' ');
+
+    // 6. .chat-conv-body → .beautify-bubble-preview-box
+    mapped = mapped.replace(/\.chat-conv-body\b/g, '.beautify-bubble-preview-box');
+
+    // 清理多余空格
+    mapped = mapped.replace(/\s+/g, ' ').trim();
+
+    return mapped;
 }
 
 function previewCssTheme() {
@@ -228,8 +260,8 @@ function renderCssPresetList() {
         html += '    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
         html += '  </div>';
         html += '  <div class="beautify-preset-info">';
-        html += '    <div class="beautify-preset-name">' + escapeHtml(p.name) + '</div>';
-        html += '    <div class="beautify-preset-desc">' + (p.css.length) + '字符 · ' + escapeHtml(p.time || '') + '</div>';
+        html += '    <div class="beautify-preset-name">' + esc(p.name) + '</div>';
+        html += '    <div class="beautify-preset-desc">' + (p.css.length) + '字符 · ' + esc(p.time || '') + '</div>';
         html += '  </div>';
         if (isActive) html += '  <div class="beautify-preset-badge">使用中</div>';
         html += '  <div class="beautify-preset-actions">';
@@ -348,17 +380,25 @@ function applyWallpaper() {
 }
 
 function applyChatWallpaper(url) {
-    var chatOverlay = document.getElementById('chatAppOverlay');
-    if (chatOverlay) {
+    // ★ 壁纸设在 chatAppOverlay 上（整个聊天App可见）
+    var overlay = document.getElementById('chatAppOverlay');
+    if (overlay) {
         if (url) {
-            chatOverlay.style.backgroundImage = 'url(' + url + ')';
-            chatOverlay.style.backgroundSize = 'cover';
-            chatOverlay.style.backgroundPosition = 'center';
+            overlay.style.backgroundImage = 'url(' + url + ')';
+            overlay.style.backgroundSize = 'cover';
+            overlay.style.backgroundPosition = 'center';
         } else {
-            chatOverlay.style.backgroundImage = '';
-            chatOverlay.style.backgroundSize = '';
-            chatOverlay.style.backgroundPosition = '';
+            overlay.style.backgroundImage = '';
+            overlay.style.backgroundSize = '';
+            overlay.style.backgroundPosition = '';
         }
+    }
+    // ★ 清除上次残留在 chatConversation 上的旧样式（兼容过渡）
+    var conv = document.getElementById('chatConversation');
+    if (conv) {
+        conv.style.backgroundImage = '';
+        conv.style.backgroundSize = '';
+        conv.style.backgroundPosition = '';
     }
 }
 

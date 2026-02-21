@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="css/beautify/beautify.css">
     <link rel="stylesheet" href="css/sticker/sticker.css">
     <link rel="stylesheet" href="css/worldbook.css">
+    <link rel="stylesheet" href="css/social/social.css">
 
 </head>
 
@@ -891,6 +892,19 @@
                         </svg>
                         <span>创建角色</span>
                     </div>
+                    <!-- ★ 在"创建角色"菜单项的下面，新增"导入角色" -->
+                    <div class="chat-plus-menu-item" onclick="triggerImportRole()">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        <span>导入角色</span>
+                    </div>
+
+                    <!-- ★ 隐藏的文件输入 -->
+                    <input type="file" id="importRoleFile" accept=".json" style="display:none"
+                        onchange="handleImportRoleFile(event)">
                 </div>
             </div>
             <div class="chat-body" id="chatBody"></div>
@@ -1210,10 +1224,6 @@
                         <div class="chat-cr-field">
                             <select id="crGroup" class="chat-cr-select">
                                 <option value="默认">默认</option>
-                                <option value="置顶">置顶</option>
-                                <option value="好友">好友</option>
-                                <option value="家人">家人</option>
-                                <option value="工作">工作</option>
                             </select>
                             <div class="chat-cr-custom-group"><input type="text" id="crCustomGroup"
                                     class="chat-cr-input" placeholder="或输入自定义分组名">
@@ -1341,6 +1351,7 @@
     <script src="js/appearance.js"></script>
     <script src="js/notify.js"></script>
     <script src="js/chat.js"></script>
+    <script src="js/social.js"></script>
     <script src="js/favorite.js"></script>
     <script src="js/beautify/beautify.js"></script>
     <script src="js/sticker/sticker.js"></script>

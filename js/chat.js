@@ -19,11 +19,52 @@ var _chatStickerLib = [];
 var _crMountPersona = '';
 var _crMountWorldBook = [];
 var _crMountSticker = [];
+var _stkMountGroupFilter = '全部'; // 表情包挂载分组筛选
 
 // 对话页双头像
 var _convLetAvatar = '';
 var _convRightAvatar = '';
 var _pendingImageData = null; // 待发送的图片base64
+// ★ 统一分组系统
+var _contactGroups = [];        // 自定义分组列表
+var _contactActiveGroup = '全部'; // 联系人当前选中的分组 tab
+var CONTACT_GROUPS_KEY = 'ds_chat_contact_groups';
+// 固定分组（联系人页显示，但创建/编辑角色中不出现）
+var FIXED_CONTACT_GROUPS = ['置顶', '好友', '家人', '工作'];
+
+function loadContactGroups() {
+    try { _contactGroups = JSON.parse(localStorage.getItem(CONTACT_GROUPS_KEY) || '[]'); } catch (e) { _contactGroups = []; }
+}
+function saveContactGroups() {
+    try { localStorage.setItem(CONTACT_GROUPS_KEY, JSON.stringify(_contactGroups)); } catch (e) { }
+}
+loadContactGroups();
+// 获取所有分组名（从角色数据 + 自定义分组中收集）
+function getAllGroupNames() {
+    var set = {};
+    // 固定分组
+    for (var i = 0; i < FIXED_CONTACT_GROUPS.length; i++) set[FIXED_CONTACT_GROUPS[i]] = 1;
+    // 自定义分组
+    for (var i = 0; i < _contactGroups.length; i++) set[_contactGroups[i]] = 1;
+    // 从角色数据中收集
+    for (var i = 0; i < _chatRoles.length; i++) {
+        var g = _chatRoles[i].group;
+        if (g && g !== '默认') set[g] = 1;
+    }
+    set['默认'] = 1;
+    return set;
+}
+// 获取只用于创建/编辑角色的分组（排除固定分组）
+function getRoleGroupOptions() {
+    var all = getAllGroupNames();
+    var result = ['默认'];
+    for (var k in all) {
+        if (k !== '默认' && FIXED_CONTACT_GROUPS.indexOf(k) === -1) {
+            result.push(k);
+        }
+    }
+    return result;
+}
 
 function loadChatRoles() {
     try { _chatRoles = JSON.parse(localStorage.getItem('ds_chat_roles') || '[]'); } catch (e) { _chatRoles = []; }
@@ -154,40 +195,137 @@ function filterMessages(kw) {
     });
 }
 
-/* ========== 联系人页 ========== */
+/* ========== 联系人页 — 横向胶囊分组 Tab ========== */
 function renderContacts() {
-    var h = '<div class="chat-search-bar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg><input type="text" placeholder="搜索联系人..."></div>';
+    var h = '';
+
+    // 搜索栏
+    h += '<div class="chat-search-bar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg><input type="text" placeholder="搜索联系人..." oninput="filterContactsBySearch(this.value)"></div>';
+
     if (!_chatRoles.length) {
         h += '<div class="chat-empty-state"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>暂无联系人</p></div>';
         return h;
     }
-    var groups = {};
+
+    // ★ 收集所有有角色的分组
+    var groupSet = {};
     for (var i = 0; i < _chatRoles.length; i++) {
         var g = _chatRoles[i].group || '默认';
-        if (!groups[g]) groups[g] = [];
-        groups[g].push(_chatRoles[i]);
+        if (!groupSet[g]) groupSet[g] = [];
+        groupSet[g].push(_chatRoles[i]);
     }
-    var fix = ['置顶', '好友', '家人', '工作', '默认'], all = Object.keys(groups), ordered = [];
-    for (var fi = 0; fi < fix.length; fi++) if (groups[fix[fi]]) ordered.push(fix[fi]);
-    for (var ai = 0; ai < all.length; ai++) if (ordered.indexOf(all[ai]) === -1) ordered.push(all[ai]);
-    for (var gi = 0; gi < ordered.length; gi++) {
-        var gn = ordered[gi], list = groups[gn];
-        h += '<div class="chat-contact-group"><div class="chat-contact-group-title">' + gn + ' (' + list.length + ')</div><div class="chat-contact-list">';
-        for (var j = 0; j < list.length; j++) {
-            var c = list[j];
-            h += '<div class="chat-contact-item" onclick="openConversation(\'' + c.id + '\')">';
+
+    // 排序分组：固定分组优先，然后自定义分组，最后"默认"
+    var fixOrder = ['置顶', '好友', '家人', '工作'];
+    var allGroupKeys = Object.keys(groupSet);
+    var orderedGroups = [];
+    for (var fi = 0; fi < fixOrder.length; fi++) {
+        if (groupSet[fixOrder[fi]]) orderedGroups.push(fixOrder[fi]);
+    }
+    for (var ai = 0; ai < allGroupKeys.length; ai++) {
+        if (orderedGroups.indexOf(allGroupKeys[ai]) === -1 && allGroupKeys[ai] !== '默认') {
+            orderedGroups.push(allGroupKeys[ai]);
+        }
+    }
+    if (groupSet['默认']) orderedGroups.push('默认');
+
+    // ★ 横向胶囊分组 Tab 条
+    h += '<div class="contact-group-tabs" id="contactGroupTabs">';
+    // "全部" tab
+    h += '<div class="contact-group-tab' + (_contactActiveGroup === '全部' ? ' active' : '') + '" onclick="switchContactGroup(\'全部\')">全部</div>';
+    for (var ti = 0; ti < orderedGroups.length; ti++) {
+        var gn = orderedGroups[ti];
+        var cnt = groupSet[gn] ? groupSet[gn].length : 0;
+        h += '<div class="contact-group-tab' + (_contactActiveGroup === gn ? ' active' : '') + '" onclick="switchContactGroup(\'' + esc(gn).replace(/'/g, "\\'") + '\')">' + esc(gn) + ' <span class="contact-group-cnt">' + cnt + '</span></div>';
+    }
+    // ★ 小加号胶囊
+    h += '<div class="contact-group-tab contact-group-add" onclick="showAddContactGroupPrompt()">+</div>';
+    h += '<div class="contact-group-tab" onclick="openSocialSearch()">添加好友</div>';
+    h += '</div>';
+
+    // ★ 联系人列表（根据选中分组过滤）
+    h += '<div class="chat-contact-list-wrap" id="contactListWrap">';
+    var filtered = [];
+    if (_contactActiveGroup === '全部') {
+        filtered = _chatRoles.slice();
+    } else {
+        for (var ri = 0; ri < _chatRoles.length; ri++) {
+            var rg = _chatRoles[ri].group || '默认';
+            if (rg === _contactActiveGroup) filtered.push(_chatRoles[ri]);
+        }
+    }
+
+    if (!filtered.length) {
+        h += '<div class="chat-empty-state" style="padding:40px 0;"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>该分组暂无联系人</p></div>';
+    } else {
+        h += '<div class="chat-contact-list">';
+        for (var j = 0; j < filtered.length; j++) {
+            var c = filtered[j];
+            h += '<div class="chat-contact-item" onclick="openConversation(\'' + c.id + '\')" oncontextmenu="event.preventDefault();showRoleContextMenu(event,\'' + c.id + '\')">';
             h += '<div class="chat-contact-avatar">' + (c.avatar ? '<img src="' + c.avatar + '" alt="">' : SVG_USER) + '</div>';
+            h += '<div class="chat-contact-info">';
             h += '<div class="chat-contact-name">' + esc(c.nickname || c.name) + '</div>';
+            if (c.group && c.group !== '默认') h += '<div class="chat-contact-group-tag">' + esc(c.group) + '</div>';
+            h += '</div>';
             if (c.gender) h += '<div class="chat-contact-gender ' + c.gender + '">' + (c.gender === 'male' ? '男' : '女') + '</div>';
             h += '</div>';
         }
-        h += '</div></div>';
+        h += '</div>';
     }
+
+    // ★ 真人好友列表
+    if (typeof renderSocialFriendsList === 'function') {
+        h += renderSocialFriendsList();
+    }
+    h += '</div>';
+
     return h;
 }
 
-function renderMoments() {
-    return '<div class="chat-empty-state"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg><p>暂无动态</p></div>';
+// ★ 切换联系人分组 Tab
+function switchContactGroup(groupName) {
+    _contactActiveGroup = groupName;
+    renderChatTab('contacts');
+}
+
+// ★ 搜索联系人
+function filterContactsBySearch(keyword) {
+    var wrap = document.getElementById('contactListWrap');
+    if (!wrap) return;
+    var kw = keyword.trim().toLowerCase();
+    var items = wrap.querySelectorAll('.chat-contact-item');
+    for (var i = 0; i < items.length; i++) {
+        var nameEl = items[i].querySelector('.chat-contact-name');
+        if (!nameEl) continue;
+        var name = nameEl.textContent.toLowerCase();
+        items[i].style.display = (!kw || name.indexOf(kw) >= 0) ? '' : 'none';
+    }
+}
+
+// ★ 添加联系人分组（弹窗输入）
+function showAddContactGroupPrompt() {
+    var name = prompt('请输入新分组名称：');
+    if (!name || !name.trim()) return;
+    name = name.trim();
+    // 不能和固定分组重名
+    if (FIXED_CONTACT_GROUPS.indexOf(name) !== -1) {
+        showToast('"' + name + '"是系统分组，无需添加');
+        return;
+    }
+    if (name === '默认' || name === '全部') {
+        showToast('该名称为保留名');
+        return;
+    }
+    // 检查是否已存在
+    if (_contactGroups.indexOf(name) !== -1) {
+        showToast('分组"' + name + '"已存在');
+        return;
+    }
+    _contactGroups.push(name);
+    saveContactGroups();
+    _contactActiveGroup = name;
+    renderChatTab('contacts');
+    showToast('已添加分组：' + name);
 }
 
 /* ========== "我"页面 ========== */
@@ -206,6 +344,12 @@ function renderMe() {
     h += '</div>';
 
     h += '<div class="chat-me-menu">';
+
+    // ★ 社交 ID 卡片（在钱包上方）
+    if (typeof renderSocialIdCard === 'function') {
+        h += renderSocialIdCard();
+    }
+    
     h += '<div class="chat-me-menu-group">';
     h += '<div class="chat-me-menu-item" onclick="openWalletPage()"><div class="chat-me-menu-text">钱包</div><svg class="chat-me-menu-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
     h += '<div class="chat-me-menu-item" onclick="openFavoritePage()"><div class="chat-me-menu-text">收藏</div><svg class="chat-me-menu-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
@@ -214,7 +358,9 @@ function renderMe() {
     h += '<div class="chat-me-menu-item" onclick="openBeautifyPage()"><div class="chat-me-menu-text">聊天美化</div><svg class="chat-me-menu-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
     h += '<div class="chat-me-menu-item" onclick="openStickerManager()"><div class="chat-me-menu-text">表情包管理</div><svg class="chat-me-menu-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
     h += '</div></div>';
+
     return h;
+
 }
 function menuItem(text) {
     return '<div class="chat-me-menu-item" onclick="showToast(\'' + text + '\')"><div class="chat-me-menu-text">' + text + '</div><svg class="chat-me-menu-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
@@ -363,6 +509,16 @@ function openCreateRole(editId) {
     document.getElementById('crName').value = '';
     document.getElementById('crNickname').value = '';
     document.getElementById('crDetail').value = '';
+    // ★ 动态填充分组选项（排除固定分组）
+    var crGroupSel = document.getElementById('crGroup');
+    crGroupSel.innerHTML = ''; // 清空
+    var roleGroups = getRoleGroupOptions();
+    for (var rgi = 0; rgi < roleGroups.length; rgi++) {
+        var opt = document.createElement('option');
+        opt.value = roleGroups[rgi];
+        opt.textContent = roleGroups[rgi];
+        crGroupSel.appendChild(opt);
+    }
     document.getElementById('crGroup').value = '默认';
     document.getElementById('crCustomGroup').value = '';
     document.getElementById('crNotify').checked = true;
@@ -414,8 +570,16 @@ function updateMemoryDisplay() {
 function addCustomGroup() {
     var inp = document.getElementById('crCustomGroup'); var nm = inp.value.trim();
     if (!nm) { showToast('请输入分组名'); return; }
+    // 不允许使用固定分组名
+    if (FIXED_CONTACT_GROUPS.indexOf(nm) !== -1) {
+        showToast('"' + nm + '"是系统分组，不可在此选择');
+        return;
+    }
+    if (nm === '全部') { showToast('该名称为保留名'); return; }
     var sel = document.getElementById('crGroup');
-    for (var i = 0; i < sel.options.length; i++)if (sel.options[i].value === nm) { sel.value = nm; inp.value = ''; showToast('已选择: ' + nm); return; }
+    for (var i = 0; i < sel.options.length; i++) if (sel.options[i].value === nm) { sel.value = nm; inp.value = ''; showToast('已选择: ' + nm); return; }
+    // 同步到统一分组列表
+    if (_contactGroups.indexOf(nm) === -1) { _contactGroups.push(nm); saveContactGroups(); }
     var op = document.createElement('option'); op.value = nm; op.textContent = nm; sel.appendChild(op); sel.value = nm; inp.value = ''; showToast('已添加分组: ' + nm);
 }
 function triggerRoleAvatarUpload() { document.getElementById('crAvatarFile').click(); }
@@ -426,12 +590,287 @@ function handleRoleAvatarFile(e) {
     rd.readAsDataURL(f); e.target.value = '';
 }
 
+/* ========== 导入角色（JSON 角色卡） ========== */
+function triggerImportRole() {
+    closeChatMenu();
+    document.getElementById('importRoleFile').click();
+}
+
+function handleImportRoleFile(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    showToast('正在解析角色文件...');
+
+    var reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            var json = JSON.parse(e.target.result);
+            var parsed = parseCharacterCard(json);
+            if (!parsed.name) {
+                showToast('未能识别角色名，请检查文件格式');
+                return;
+            }
+            fillCreateRoleFromImport(parsed);
+            showToast('角色已导入，请检查并保存');
+        } catch (err) {
+            showToast('文件解析失败：' + err.message);
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+/* ---- 万能角色卡解析：兼容 SillyTavern V1/V2、TavernAI、CAI、Kobold 等 ---- */
+function parseCharacterCard(json) {
+    var result = { name: '', nickname: '', gender: '', detail: '', greeting: '', scenario: '', personality: '', avatar: '' };
+
+    // ★ SillyTavern V2 格式: { spec: "chara_card_v2", data: { ... } }
+    if (json.spec && json.data) {
+        json = json.data;
+    }
+
+    // ★ Character.AI 导出格式: { character: { ... } }
+    if (json.character && typeof json.character === 'object') {
+        json = json.character;
+    }
+
+    // ★ 包了一层 char 的格式
+    if (json.char && typeof json.char === 'object') {
+        json = json.char;
+    }
+
+    // ★ 某些导出会把角色放在数组里
+    if (Array.isArray(json) && json.length > 0) {
+        json = json[0];
+    }
+
+    // ★ 兼容 Backyard AI 等格式: { aiCharacter: { ... } }
+    if (json.aiCharacter && typeof json.aiCharacter === 'object') {
+        json = json.aiCharacter;
+    }
+
+    // ★ 兼容 Chub.ai 格式: { fullPath, ... node: { ... } }
+    if (json.node && typeof json.node === 'object' && json.node.definition) {
+        json = json.node;
+    }
+
+    // ---------- 提取字段 ----------
+
+    // 名字
+    result.name = json.name || json.char_name || json.character_name || '';
+
+    // 昵称（显示名）
+    result.nickname = json.nickname || json.display_name || '';
+
+    // 头像
+    result.avatar = json.avatar || '';
+    if (!result.avatar && json.image) {
+        // 有些格式用 image 字段（可能是 URL 或 base64）
+        result.avatar = json.image;
+    }
+
+    // 性格/人格
+    result.personality = json.personality || json.char_persona || '';
+
+    // 场景
+    result.scenario = json.scenario || '';
+
+    // 第一条消息（开场白）
+    result.greeting = json.first_mes || json.firstMes || json.first_message
+        || json.greeting || json.char_greeting || '';
+
+    // ★ 主描述/详细信息 — 这是最核心的字段，兼容多种命名
+    var desc = json.description || json.desc || json.char_description || '';
+    var definition = json.definition || json.definitions || '';
+    var mes_example = json.mes_example || json.example_dialogue
+        || json.mes_examples || json.sampleChat || '';
+    var system_prompt = json.system_prompt || json.systemPrompt || '';
+    var post_hist = json.post_history_instructions || '';
+    var creator_notes = json.creator_notes || json.creatorNotes || '';
+
+    // ★ V2 扩展字段
+    if (json.extensions && typeof json.extensions === 'object') {
+        // 有些 V2 卡把额外信息放在 extensions
+    }
+
+    // ★ 拼接为完整的详细信息
+    var detailParts = [];
+
+    if (desc) detailParts.push('【描述】\n' + desc);
+    if (result.personality) detailParts.push('【性格】\n' + result.personality);
+    if (result.scenario) detailParts.push('【场景】\n' + result.scenario);
+    if (definition) detailParts.push('【定义】\n' + definition);
+    if (system_prompt) detailParts.push('【系统提示】\n' + system_prompt);
+    if (post_hist) detailParts.push('【后续指令】\n' + post_hist);
+    if (mes_example) detailParts.push('【对话示例】\n' + mes_example);
+    if (result.greeting) detailParts.push('【开场白】\n' + result.greeting);
+    if (creator_notes) detailParts.push('【创作者备注】\n' + creator_notes);
+
+    // 如果只有一个字段（比如只有 description），就不加标签前缀
+    if (detailParts.length === 1) {
+        result.detail = (desc || definition || result.personality || result.greeting || '').trim();
+    } else {
+        result.detail = detailParts.join('\n\n');
+    }
+
+    // 如果完全没提取到 detail，试试看有没有 rawContent / content / bio 之类的兜底字段
+    if (!result.detail) {
+        result.detail = json.content || json.rawContent || json.bio || json.prompt || '';
+    }
+
+    // ★ 性别推断
+    result.gender = guessGender(json, result);
+
+    return result;
+}
+
+/* ---- 性别推断（尽量猜，猜不到默认 male） ---- */
+function guessGender(json, parsed) {
+    // 直接有 gender 字段
+    var g = json.gender || json.char_gender || '';
+    if (g) {
+        g = g.toLowerCase();
+        if (g.indexOf('female') !== -1 || g.indexOf('女') !== -1 || g === 'f') return 'female';
+        if (g.indexOf('male') !== -1 || g.indexOf('男') !== -1 || g === 'm') return 'male';
+        return 'other';
+    }
+    // 从描述中简单推断
+    var text = (parsed.detail + ' ' + parsed.name + ' ' + (parsed.personality || '')).toLowerCase();
+    if (text.indexOf('她') !== -1 || text.indexOf('女') !== -1 || text.indexOf(' she ') !== -1 || text.indexOf(' her ') !== -1) return 'female';
+    if (text.indexOf('他') !== -1 || text.indexOf('男') !== -1 || text.indexOf(' he ') !== -1 || text.indexOf(' him ') !== -1) return 'male';
+    return 'male';
+}
+
+/* ---- 将解析结果填入创建角色页面 ---- */
+function fillCreateRoleFromImport(parsed) {
+    // 打开创建角色页面（非编辑模式）
+    openCreateRole();
+
+    // 填入字段
+    var nameEl = document.getElementById('crName');
+    var nickEl = document.getElementById('crNickname');
+    var detailEl = document.getElementById('crDetail');
+
+    if (nameEl) nameEl.value = parsed.name || '';
+    if (nickEl) nickEl.value = parsed.nickname || parsed.name || '';
+    if (detailEl) detailEl.value = parsed.detail || '';
+
+    // 性别
+    selectRoleGender(parsed.gender || 'male');
+
+    // 头像（如果有 base64 或 URL）
+    if (parsed.avatar) {
+        var av = parsed.avatar;
+        // 如果是相对路径或不完整的 base64，忽略
+        if (av.startsWith('data:') || av.startsWith('http://') || av.startsWith('https://')) {
+            _crAvatarData = av;
+            var avEl = document.getElementById('crAvatarPreview');
+            if (avEl) avEl.innerHTML = '<img src="' + av + '" alt=""><div class="chat-cr-avatar-hint">更换头像</div>';
+        }
+    }
+}
+
 /* ========== 挂载 ========== */
 function updateMountDisplay(type, name) {
     var el = document.getElementById('crMount_' + type + '_val'); if (!el) return;
     if (name) { el.textContent = name; el.classList.add('active'); }
     else { el.textContent = '未选择'; el.classList.remove('active'); }
 }
+/* ========== 构建表情包挂载列表（紧凑模式，不显示缩略图） ========== */
+function buildStickerMountList(selectedIds) {
+    var selArr = Array.isArray(selectedIds) ? selectedIds : [];
+
+    // 从 ds_sticker_groups（表情包管理）读取
+    var stkGroups = [];
+    try { stkGroups = JSON.parse(localStorage.getItem('ds_sticker_groups') || '[]'); } catch (e) { stkGroups = []; }
+
+    // 兼容旧的 ds_chat_stickers
+    var oldPacks = [];
+    try { oldPacks = JSON.parse(localStorage.getItem('ds_chat_stickers') || '[]'); } catch (e) { oldPacks = []; }
+
+    var h = '';
+
+    // ★ 分组筛选条（2个以上分组时显示）
+    if (stkGroups.length >= 2) {
+        h += '<div class="chat-mount-group-filter" id="stkMountGroupFilter">';
+        h += '<div class="chat-mount-group-tag' + (_stkMountGroupFilter === '全部' ? ' active' : '') + '" onclick="filterStkMountGroup(\'全部\')">全部</div>';
+        for (var gi = 0; gi < stkGroups.length; gi++) {
+            var gn = stkGroups[gi].name || '未命名分组';
+            h += '<div class="chat-mount-group-tag' + (_stkMountGroupFilter === gn ? ' active' : '') + '" onclick="filterStkMountGroup(\'' + esc(gn).replace(/'/g, "\\'") + '\')">' + esc(gn) + '</div>';
+        }
+        h += '</div>';
+    }
+
+    // "不挂载" 选项
+    h += '<div class="chat-mount-option' + (!selArr.length ? ' selected' : '') + '" onclick="toggleStkMountOption(\'\')">';
+    h += '<div class="chat-mount-option-name" style="color:var(--chat-text-hint)">不挂载</div>';
+    h += '<div class="chat-mount-option-check">' + (!selArr.length ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>';
+
+    var currentFilter = _stkMountGroupFilter || '全部';
+    var hasItems = false;
+    var hasFiltered = false;
+
+    for (var gi = 0; gi < stkGroups.length; gi++) {
+        var grp = stkGroups[gi];
+        var gName = grp.name || '未命名分组';
+        var grpId = grp.id || ('sg_' + gi);
+        var stkCount = grp.stickers ? grp.stickers.length : 0;
+
+        hasItems = true;
+        if (currentFilter !== '全部' && gName !== currentFilter) continue;
+        if (stkCount === 0) continue;
+        hasFiltered = true;
+
+        var sel = selArr.indexOf(grpId) !== -1;
+
+        // 分组标题（多分组时显示）
+        if (stkGroups.length >= 2) {
+            h += '<div class="chat-mount-group-header">' + esc(gName) + '</div>';
+        }
+
+        // ★ 紧凑模式：只显示名称和数量，不显示缩略图
+        h += '<div class="chat-mount-option' + (sel ? ' selected' : '') + '" onclick="toggleStkMountOption(\'' + grpId + '\')">';
+        h += '<div class="chat-mount-option-name">' + esc(gName) + ' <span style="font-size:11px;color:#999;">(' + stkCount + '张)</span></div>';
+        h += '<div class="chat-mount-option-check">' + (sel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>';
+    }
+
+    // 兼容旧的 ds_chat_stickers
+    if (oldPacks.length) {
+        if (hasFiltered && stkGroups.length >= 2) {
+            h += '<div class="chat-mount-group-header">手动创建</div>';
+        }
+        for (var oi = 0; oi < oldPacks.length; oi++) {
+            var op = oldPacks[oi];
+            var opSel = selArr.indexOf(op.id) !== -1;
+            h += '<div class="chat-mount-option' + (opSel ? ' selected' : '') + '" onclick="toggleStkMountOption(\'' + op.id + '\')">';
+            h += '<div class="chat-mount-option-name">' + esc(op.name) + ' <span style="font-size:11px;color:#999;">(' + (op.urls ? op.urls.length : 0) + '张)</span></div>';
+            h += '<div class="chat-mount-option-check">' + (opSel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>';
+            hasItems = true;
+            hasFiltered = true;
+        }
+    }
+
+    // 空状态
+    if (!hasItems) {
+        h += '<div style="text-align:center;padding:30px 10px;font-size:12px;color:rgba(120,100,110,0.5);line-height:1.8;">暂无表情包<br>请先到「我」→「表情包管理」中上传表情</div>';
+    } else if (!hasFiltered) {
+        h += '<div style="text-align:center;padding:20px 10px;font-size:12px;color:rgba(120,100,110,0.5);">该分组下暂无表情</div>';
+    }
+
+    return h;
+}
+
+/* ★ 分组筛选切换 */
+function filterStkMountGroup(groupName) {
+    _stkMountGroupFilter = groupName;
+    // 重新渲染列表区域
+    var modal = document.getElementById('chatMountModal');
+    if (!modal) return;
+    var body = modal.querySelector('.chat-mount-panel-body');
+    if (!body) return;
+    body.innerHTML = buildStickerMountList(_crMountSticker);
+}
+
 function openMountSelector(type) {
     var overlay = document.getElementById('chatAppOverlay'); if (!overlay) return;
     closeMountModal();
@@ -454,31 +893,15 @@ function openMountSelector(type) {
         h += '</div>';
         h += '<div class="chat-mount-panel-footer"><div class="chat-mount-confirm-btn" onclick="confirmWbMount()">确定</div><div class="chat-mount-confirm-btn" onclick="openMountCreator(\'worldbook\')" style="margin-left:8px">+ 新建</div></div>';
     } else if (type === 'sticker') {
-        // ★ 表情包多选 — 分组折叠式
-        var selStkArr = Array.isArray(selectedId) ? selectedId : [];
-        h += '<div class="chat-mount-option' + (!selStkArr.length ? ' selected' : '') + '" onclick="toggleStkMountOption(\'\')"><div class="chat-mount-option-name" style="color:var(--chat-text-hint)">不挂载</div><div class="chat-mount-option-check">' + (!selStkArr.length ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>';
-        for (var i = 0; i < items.length; i++) {
-            var it = items[i], sel = selStkArr.indexOf(it.id) !== -1;
-            var previewHtml = '';
-            if (it.urls && it.urls.length > 0) {
-                previewHtml = '<div style="display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;">';
-                var showCount = Math.min(it.urls.length, 4);
-                for (var pi = 0; pi < showCount; pi++) {
-                    previewHtml += '<img src="' + esc(it.urls[pi]) + '" style="width:28px;height:28px;border-radius:4px;object-fit:cover;">';
-                }
-                if (it.urls.length > 4) previewHtml += '<span style="font-size:10px;color:#999;align-self:center;">+' + (it.urls.length - 4) + '</span>';
-                previewHtml += '</div>';
-            }
-            h += '<div class="chat-mount-option' + (sel ? ' selected' : '') + '" onclick="toggleStkMountOption(\'' + it.id + '\')">';
-            h += '<div style="flex:1"><div class="chat-mount-option-name">' + esc(it.name) + ' <span style="font-size:11px;color:#999;">(' + (it.urls ? it.urls.length : 0) + '张)</span></div>' + previewHtml + '</div>';
-            h += '<div class="chat-mount-option-check">' + (sel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>';
-        }
+        // ★ 表情包多选 — 支持分组筛选
+        _stkMountGroupFilter = '全部';
+        h += buildStickerMountList(selectedId);
         h += '</div>';
         h += '<div class="chat-mount-panel-footer"><div class="chat-mount-confirm-btn" onclick="confirmStkMount()">确定</div><div class="chat-mount-confirm-btn" onclick="openMountCreator(\'sticker\')" style="margin-left:8px">+ 新建</div></div>';
     } else {
-        h += '<div class="chat-mount-option' + (selectedId === '' ? ' selected' : '') + '" onclick="selectMountOption(\'' + type + '\',\'\')"><div class="chat-mount-option-name" style="color:var(--chat-text-hint)">不挂载</div><div class="chat-mount-option-check">' + (selectedId === '' ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>';
+        h += '<div class="chat-mount-option' + (selectedId === '' ? ' selected' : '') + '" onclick="selectMountOption(\'' + type + '\',\'\')">' + '<div class="chat-mount-option-name" style="color:var(--chat-text-hint)">不挂载</div>' + '<div class="chat-mount-option-check">' + (selectedId === '' ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>';
         if (!items.length) { h += '<div class="chat-mount-empty">暂无可选项</div>'; }
-        else { for (var i = 0; i < items.length; i++) { var it = items[i], sel = it.id === selectedId; h += '<div class="chat-mount-option' + (sel ? ' selected' : '') + '" onclick="selectMountOption(\'' + type + '\',\'' + it.id + '\')"><div class="chat-mount-option-name">' + esc(it.name) + '</div><div class="chat-mount-option-check">' + (sel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>'; } }
+        else { for (var i = 0; i < items.length; i++) { var it = items[i], sel = it.id === selectedId; h += '<div class="chat-mount-option' + (sel ? ' selected' : '') + '" onclick="selectMountOption(\'' + type + '\',\'' + it.id + '\')">' + '<div class="chat-mount-option-name">' + esc(it.name) + '</div>' + '<div class="chat-mount-option-check">' + (sel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div></div>'; } }
         h += '</div>';
         if (type !== 'persona') { h += '<div class="chat-mount-panel-footer"><div class="chat-mount-confirm-btn" onclick="openMountCreator(\'' + type + '\')">+ 新建</div></div>'; }
     }
@@ -487,12 +910,11 @@ function openMountSelector(type) {
 }
 function closeMountModal() { var m = document.getElementById('chatMountModal'); if (m) m.remove(); }
 
-// ★ 世界书多选切换
 function toggleWbMountOption(id) {
+    if (!Array.isArray(_crMountWorldBook)) _crMountWorldBook = [];
     if (!id) {
         _crMountWorldBook = [];
     } else {
-        if (!Array.isArray(_crMountWorldBook)) _crMountWorldBook = [];
         var idx = _crMountWorldBook.indexOf(id);
         if (idx !== -1) _crMountWorldBook.splice(idx, 1);
         else _crMountWorldBook.push(id);
@@ -502,16 +924,19 @@ function toggleWbMountOption(id) {
         var opts = modal.querySelectorAll('.chat-mount-option');
         opts.forEach(function (el) {
             var onc = el.getAttribute('onclick') || '';
-            var match = onc.match(/toggleWbMountOption\('([^']*)'\)/);
-            if (match) {
+            var match = onc.match(/toggleWbMountOption\(['"](.*?)['"]\)/);
+            if (match !== null) {
                 var optId = match[1];
+                var checkEl = el.querySelector('.chat-mount-option-check');
+                if (!checkEl) return;
                 if (!optId) {
-                    el.classList.toggle('selected', !_crMountWorldBook.length);
-                    el.querySelector('.chat-mount-option-check').innerHTML = !_crMountWorldBook.length ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '';
+                    var noneSelected = !_crMountWorldBook.length;
+                    el.classList.toggle('selected', noneSelected);
+                    checkEl.innerHTML = noneSelected ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '';
                 } else {
                     var isSel = _crMountWorldBook.indexOf(optId) !== -1;
                     el.classList.toggle('selected', isSel);
-                    el.querySelector('.chat-mount-option-check').innerHTML = isSel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '';
+                    checkEl.innerHTML = isSel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '';
                 }
             }
         });
@@ -539,12 +964,11 @@ function confirmWbMount() {
         openChatSettings();
     }
 }
-// ★ 表情包多选切换
 function toggleStkMountOption(id) {
+    if (!Array.isArray(_crMountSticker)) _crMountSticker = [];
     if (!id) {
         _crMountSticker = [];
     } else {
-        if (!Array.isArray(_crMountSticker)) _crMountSticker = [];
         var idx = _crMountSticker.indexOf(id);
         if (idx !== -1) _crMountSticker.splice(idx, 1);
         else _crMountSticker.push(id);
@@ -554,29 +978,50 @@ function toggleStkMountOption(id) {
         var opts = modal.querySelectorAll('.chat-mount-option');
         opts.forEach(function (el) {
             var onc = el.getAttribute('onclick') || '';
-            var match = onc.match(/toggleStkMountOption\('([^']*)'\)/);
-            if (match) {
+            // ★ 用更宽松的方式提取 id，兼容各种 id 格式
+            var match = onc.match(/toggleStkMountOption\(['"](.*?)['"]\)/);
+            if (match !== null) {
                 var optId = match[1];
+                var checkEl = el.querySelector('.chat-mount-option-check');
+                if (!checkEl) return;
                 if (!optId) {
-                    el.classList.toggle('selected', !_crMountSticker.length);
-                    el.querySelector('.chat-mount-option-check').innerHTML = !_crMountSticker.length ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '';
+                    // "不挂载" 选项
+                    var noneSelected = !_crMountSticker.length;
+                    el.classList.toggle('selected', noneSelected);
+                    checkEl.innerHTML = noneSelected ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '';
                 } else {
                     var isSel = _crMountSticker.indexOf(optId) !== -1;
                     el.classList.toggle('selected', isSel);
-                    el.querySelector('.chat-mount-option-check').innerHTML = isSel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '';
+                    checkEl.innerHTML = isSel ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '';
                 }
             }
         });
     }
 }
 function confirmStkMount() {
+    // ★ 从两个数据源查找名称
+    var stkGroups = [];
+    try { stkGroups = JSON.parse(localStorage.getItem('ds_sticker_groups') || '[]'); } catch (e) { stkGroups = []; }
+
     var names = [];
-    for (var i = 0; i < _crMountSticker.length; i++) {
-        var sp = findStickerPack(_crMountSticker[i]);
-        if (sp) names.push(sp.name);
+    if (Array.isArray(_crMountSticker)) {
+        for (var i = 0; i < _crMountSticker.length; i++) {
+            var gId = _crMountSticker[i];
+            var found = false;
+            // 先从 ds_sticker_groups 找
+            for (var g = 0; g < stkGroups.length; g++) {
+                if (stkGroups[g].id === gId) { names.push(stkGroups[g].name); found = true; break; }
+            }
+            // 兼容旧的 _chatStickerLib
+            if (!found) {
+                var pack = findStickerPack(gId);
+                if (pack) names.push(pack.name);
+            }
+        }
     }
     updateMountDisplay('sticker', names.length ? names.join(', ') : '');
     closeMountModal();
+
     if (window._mountFromSettings) {
         var role = findRole(_chatCurrentConv);
         if (role) {
@@ -593,7 +1038,27 @@ function confirmStkMount() {
 }
 
 function selectMountOption(type, id) {
-    if (type === 'persona') _crMountPersona = id; else if (type === 'worldbook') _crMountWorldBook = id; else if (type === 'sticker') _crMountSticker = id;
+    if (type === 'persona') {
+        _crMountPersona = id;
+    } else if (type === 'worldbook') {
+        // 世界书是多选数组
+        if (!Array.isArray(_crMountWorldBook)) _crMountWorldBook = [];
+        if (!id) { _crMountWorldBook = []; }
+        else {
+            var wIdx = _crMountWorldBook.indexOf(id);
+            if (wIdx !== -1) _crMountWorldBook.splice(wIdx, 1);
+            else _crMountWorldBook.push(id);
+        }
+    } else if (type === 'sticker') {
+        // 表情包是多选数组
+        if (!Array.isArray(_crMountSticker)) _crMountSticker = [];
+        if (!id) { _crMountSticker = []; }
+        else {
+            var sIdx = _crMountSticker.indexOf(id);
+            if (sIdx !== -1) _crMountSticker.splice(sIdx, 1);
+            else _crMountSticker.push(id);
+        }
+    }
     var name = '', item;
     if (id) { if (type === 'persona') item = findPersona(id); else if (type === 'worldbook') item = findWorldBook(id); else if (type === 'sticker') item = findStickerPack(id); if (item) name = item.name; }
     updateMountDisplay(type, name); closeMountModal();
@@ -603,16 +1068,78 @@ function openMountCreator(type) {
     if (type === 'worldbook') { title = '新建世界书'; p1 = '世界书名称'; p2 = '世界观设定、背景故事...'; }
     else if (type === 'sticker') { title = '新建表情包'; p1 = '表情包名称'; p2 = '每行一个表情包图片URL'; }
     var overlay = document.getElementById('chatAppOverlay');
-    var h = '<div class="chat-mount-modal show" id="chatMountModal" onclick="if(event.target===this)closeMountModal()"><div class="chat-mount-panel"><div class="chat-mount-panel-header"><div class="chat-mount-panel-title">' + title + '</div><div class="chat-mount-panel-close" onclick="closeMountModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div><div class="chat-mount-panel-body" style="padding:14px"><div class="chat-cr-field"><label>名称</label><input type="text" id="mountNewName" class="chat-cr-input" placeholder="' + p1 + '"></div><div class="chat-cr-field"><label>内容</label><textarea id="mountNewContent" class="chat-cr-textarea" rows="5" placeholder="' + p2 + '"></textarea></div></div><div class="chat-mount-panel-footer"><div class="chat-mount-confirm-btn" onclick="saveMountNew(\'' + type + '\')">保存</div></div></div></div>';
+
+    // ★ 表情包额外加一个分组选择
+    var groupField = '';
+    if (type === 'sticker') {
+        // 收集已有分组名
+        var existingGroups = {};
+        for (var i = 0; i < _chatStickerLib.length; i++) {
+            var g = _chatStickerLib[i].group;
+            if (g) existingGroups[g] = true;
+        }
+        var groupOptions = '<option value="">未分组</option>';
+        var gKeys = Object.keys(existingGroups);
+        for (var i = 0; i < gKeys.length; i++) {
+            groupOptions += '<option value="' + esc(gKeys[i]) + '">' + esc(gKeys[i]) + '</option>';
+        }
+        groupField = '<div class="chat-cr-field"><label>分组</label>'
+            + '<select id="mountNewGroup" class="chat-cr-input" style="padding:8px;border-radius:10px;">' + groupOptions + '</select>'
+            + '<div style="display:flex;gap:6px;margin-top:6px;">'
+            + '<input type="text" id="mountNewGroupCustom" class="chat-cr-input" placeholder="或输入新分组名" style="flex:1">'
+            + '<div class="chat-mount-confirm-btn" onclick="addMountNewGroupOption()" style="white-space:nowrap;padding:6px 12px;font-size:12px;">添加</div>'
+            + '</div></div>';
+    }
+
+    var h = '<div class="chat-mount-modal show" id="chatMountModal" onclick="if(event.target===this)closeMountModal()">'
+        + '<div class="chat-mount-panel"><div class="chat-mount-panel-header"><div class="chat-mount-panel-title">' + title + '</div>'
+        + '<div class="chat-mount-panel-close" onclick="closeMountModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>'
+        + '<div class="chat-mount-panel-body" style="padding:14px">'
+        + '<div class="chat-cr-field"><label>名称</label><input type="text" id="mountNewName" class="chat-cr-input" placeholder="' + p1 + '"></div>'
+        + groupField
+        + '<div class="chat-cr-field"><label>内容</label><textarea id="mountNewContent" class="chat-cr-textarea" rows="5" placeholder="' + p2 + '"></textarea></div>'
+        + '</div>'
+        + '<div class="chat-mount-panel-footer"><div class="chat-mount-confirm-btn" onclick="saveMountNew(\'' + type + '\')">保存</div></div>'
+        + '</div></div>';
     overlay.insertAdjacentHTML('beforeend', h);
 }
+
+// ★ 新分组名添加到下拉框
+function addMountNewGroupOption() {
+    var inp = document.getElementById('mountNewGroupCustom');
+    var sel = document.getElementById('mountNewGroup');
+    if (!inp || !sel) return;
+    var nm = inp.value.trim();
+    if (!nm) { showToast('请输入分组名'); return; }
+    // 检查是否已存在
+    for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === nm) { sel.value = nm; inp.value = ''; showToast('已选择: ' + nm); return; }
+    }
+    var op = document.createElement('option'); op.value = nm; op.textContent = nm;
+    sel.appendChild(op); sel.value = nm; inp.value = '';
+    showToast('已添加分组: ' + nm);
+}
+
 function saveMountNew(type) {
     var name = document.getElementById('mountNewName').value.trim();
     var content = document.getElementById('mountNewContent').value.trim();
     if (!name) { showToast('请输入名称'); return; }
     var id = genId();
-    if (type === 'worldbook') { _chatWorldBookLib.push({ id: id, name: name, content: content }); saveWorldBookLib(); if (!Array.isArray(_crMountWorldBook)) _crMountWorldBook = []; _crMountWorldBook.push(id); }
-    else if (type === 'sticker') { var urls = content ? content.split('\n').map(function (s) { return s.trim(); }).filter(Boolean) : []; _chatStickerLib.push({ id: id, name: name, urls: urls }); saveStickerLib(); if (!Array.isArray(_crMountSticker)) _crMountSticker = []; _crMountSticker.push(id); }
+    if (type === 'worldbook') {
+        _chatWorldBookLib.push({ id: id, name: name, content: content });
+        saveWorldBookLib();
+        if (!Array.isArray(_crMountWorldBook)) _crMountWorldBook = [];
+        _crMountWorldBook.push(id);
+    } else if (type === 'sticker') {
+        var urls = content ? content.split('\n').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+        // ★ 读取分组
+        var groupSel = document.getElementById('mountNewGroup');
+        var group = groupSel ? groupSel.value : '';
+        _chatStickerLib.push({ id: id, name: name, urls: urls, group: group });
+        saveStickerLib();
+        if (!Array.isArray(_crMountSticker)) _crMountSticker = [];
+        _crMountSticker.push(id);
+    }
     if (type === 'sticker') {
         var _skn = []; for (var _si = 0; _si < _crMountSticker.length; _si++) { var _skp = findStickerPack(_crMountSticker[_si]); if (_skp) _skn.push(_skp.name); }
         updateMountDisplay('sticker', _skn.length ? _skn.join(', ') : '');
@@ -626,8 +1153,8 @@ function saveMountNew(type) {
 function saveRole() {
     var name = document.getElementById('crName').value.trim(); if (!name) { showToast('请输入角色名字'); return; }
     var nickname = document.getElementById('crNickname').value.trim(), gender = getSelectedGender(), detail = document.getElementById('crDetail').value.trim(), group = document.getElementById('crGroup').value, notify = document.getElementById('crNotify').checked, bgMsg = document.getElementById('crBgMsg').checked, memory = parseInt(document.getElementById('crMemory').value) || 20;
-    if (_chatEditingRoleId) { var r = findRole(_chatEditingRoleId); if (r) { r.name = name; r.nickname = nickname; r.gender = gender; r.detail = detail; r.group = group; r.personaId = _crMountPersona; r.worldBookIds = Array.isArray(_crMountWorldBook) ? _crMountWorldBook.slice() : []; r.worldBookId = r.worldBookIds[0] || ''; r.stickerIds = Array.isArray(_crMountSticker) ? _crMountSticker.slice() : []; r.stickerId = r.stickerIds[0] || ''; r.notify = notify; r.bgMsg = bgMsg; r.memory = memory; if (_crAvatarData) r.avatar = _crAvatarData; } showToast('角色已更新'); }
-    else { var _wbIds = Array.isArray(_crMountWorldBook) ? _crMountWorldBook.slice() : []; var _skIds = Array.isArray(_crMountSticker) ? _crMountSticker.slice() : []; _chatRoles.push({ id: genId(), name: name, nickname: nickname, gender: gender, detail: detail, group: group, personaId: _crMountPersona, worldBookIds: _wbIds, worldBookId: _wbIds[0] || '', stickerIds: _skIds, stickerId: _skIds[0] || '', notify: notify, bgMsg: bgMsg, memory: memory, avatar: _crAvatarData, msgs: [], lastMsg: '', lastTime: 0, lastTimeStr: '', unread: 0 }); showToast('角色创建成功'); }
+    if (_chatEditingRoleId) { var r = findRole(_chatEditingRoleId); if (r) { r.name = name; r.nickname = nickname; r.gender = gender; r.detail = detail; r.group = group; r.personaId = _crMountPersona; r.boundPersonaId = _crMountPersona; r.worldBookIds = Array.isArray(_crMountWorldBook) ? _crMountWorldBook.slice() : []; r.worldBookId = r.worldBookIds[0] || ''; r.stickerIds = Array.isArray(_crMountSticker) ? _crMountSticker.slice() : []; r.stickerId = r.stickerIds[0] || ''; r.notify = notify; r.bgMsg = bgMsg; r.memory = memory; if (_crAvatarData) r.avatar = _crAvatarData; } showToast('角色已更新'); }
+    else { var _wbIds = Array.isArray(_crMountWorldBook) ? _crMountWorldBook.slice() : []; var _skIds = Array.isArray(_crMountSticker) ? _crMountSticker.slice() : []; _chatRoles.push({ id: genId(), name: name, nickname: nickname, gender: gender, detail: detail, group: group, personaId: _crMountPersona, boundPersonaId: _crMountPersona, worldBookIds: _wbIds, worldBookId: _wbIds[0] || '', stickerIds: _skIds, stickerId: _skIds[0] || '', notify: notify, bgMsg: bgMsg, memory: memory, avatar: _crAvatarData, msgs: [], lastMsg: '', lastTime: 0, lastTimeStr: '', unread: 0 }); showToast('角色创建成功'); }
     saveChatRoles(); closeCreateRole(); renderChatTab(_chatCurrentTab);
 }
 
@@ -688,7 +1215,7 @@ function openConversation(rid) {
     h += '</div></div>';
 
     // 消息体
-    h += '<div class="chat-conv-body" id="chatConvBody"' + (role.chatWallpaper ? ' style="background-image:url(' + role.chatWallpaper + ');background-size:cover;background-position:center;"' : '') + '>';
+    h += '<div class="chat-conv-body" id="chatConvBody">';
     var msgs = role.msgs || [];
     for (var i = 0; i < msgs.length; i++) {
         var m = msgs[i];
@@ -714,8 +1241,8 @@ function openConversation(rid) {
     h += '<div class="chat-conv-bottombar">';
     // 工具栏
     h += '<div class="chat-conv-toolbar">';
-    // 语音（真实录音）
-    h += '<div class="chat-conv-tool" onclick="openVoiceRecorder()">';
+    // 语音（文字转语音条）
+    h += '<div class="chat-conv-tool" onclick="openVoiceInput()">';
     h += '<svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
     h += '<span>语音</span></div>';
     // 相机 — 真实拍照
@@ -758,9 +1285,20 @@ function openConversation(rid) {
 
     conv.innerHTML = h;
     conv.classList.add('show');
+    // ★ 壁纸：先立即应用一次，再在 setTimeout 里补一次（双保险）
+    var _wpData = loadWallpaper(rid);
+    if (_wpData) {
+        var _b = document.getElementById('chatConvBody');
+        if (_b) applyConvWallpaper(_wpData);
+    }
     setTimeout(function () {
         var b = document.getElementById('chatConvBody');
-        if (b) b.scrollTop = b.scrollHeight;
+        if (b) {
+            b.scrollTop = b.scrollHeight;
+            // ★ 再次应用壁纸（确保 DOM 完全渲染后生效）
+            var wp = loadWallpaper(rid);
+            if (wp) applyConvWallpaper(wp);
+        }
         if (typeof applyPendantToChat === 'function') {
             var pid = localStorage.getItem('ds_bf_pendant_active');
             if (pid) {
@@ -1097,15 +1635,18 @@ function openChatSettings() {
     h += '<input type="text" class="chat-settings-input" id="csCustomLabel" value="' + esc(customLabel) + '" placeholder="顶栏名称下方的小字描述">';
     h += '</div>';
 
-    // 修改分组
+    // 修改分组 — ★ 使用统一分组系统，排除固定分组
     h += '<div class="chat-settings-section">';
     h += '<div class="chat-settings-label">修改分组</div>';
     h += '<select class="chat-settings-select" id="csGroup">';
-    var groups = ['默认', '置顶', '好友', '家人', '工作'];
-    for (var gi = 0; gi < groups.length; gi++) {
-        h += '<option value="' + groups[gi] + '"' + (curGroup === groups[gi] ? ' selected' : '') + '>' + groups[gi] + '</option>';
+    var csGroups = getRoleGroupOptions();
+    for (var gi = 0; gi < csGroups.length; gi++) {
+        h += '<option value="' + esc(csGroups[gi]) + '"' + (curGroup === csGroups[gi] ? ' selected' : '') + '>' + esc(csGroups[gi]) + '</option>';
     }
-    if (groups.indexOf(curGroup) === -1) {
+    // 如果当前分组是固定分组或不在列表中，也要加上
+    var csGroupInList = false;
+    for (var cgi = 0; cgi < csGroups.length; cgi++) { if (csGroups[cgi] === curGroup) { csGroupInList = true; break; } }
+    if (!csGroupInList && curGroup) {
         h += '<option value="' + esc(curGroup) + '" selected>' + esc(curGroup) + '</option>';
     }
     h += '</select>';
@@ -1143,12 +1684,19 @@ function openChatSettings() {
     h += '<svg class="chat-settings-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
 
     // 聊天壁纸
-    h += '<div class="chat-settings-item" onclick="triggerWallpaperUpload()">';
+    var _hasWp = !!loadWallpaper(role.id);
+    h += '<div class="chat-settings-item" onclick="triggerChatWallpaperUpload()">';
     h += '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
     h += '<span>当前窗口聊天壁纸</span>';
-    h += '<div class="chat-settings-item-value">' + (role.chatWallpaper ? '已设置' : '未设置') + '</div>';
+    h += '<div class="chat-settings-item-value">' + (_hasWp ? '已设置' : '未设置') + '</div>';
     h += '<svg class="chat-settings-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
-    h += '<input type="file" id="csWallpaperFile" style="display:none" accept="image/*" onchange="handleWallpaperFile(event)">';
+    if (_hasWp) {
+        h += '<div class="chat-settings-item" onclick="removeChatWallpaper()" style="color:#e57373;">';
+        h += '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+        h += '<span>移除聊天壁纸</span>';
+        h += '<svg class="chat-settings-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
+    }
+    h += '<input type="file" id="csWallpaperFile" style="display:none" accept="image/*" onchange="handleChatWallpaperFile(event)">';
 
     // 开关：线下模式
     h += '<div class="chat-settings-toggle-row">';
@@ -1232,33 +1780,139 @@ function handleSettingsAvatar(e) {
 function addSettingsGroup() {
     var inp = document.getElementById('csCustomGroup');
     var nm = inp.value.trim(); if (!nm) { showToast('请输入分组名'); return; }
+    if (FIXED_CONTACT_GROUPS.indexOf(nm) !== -1) { showToast('"' + nm + '"是系统分组，不可在此选择'); return; }
+    if (nm === '全部') { showToast('该名称为保留名'); return; }
     var sel = document.getElementById('csGroup');
     for (var i = 0; i < sel.options.length; i++) if (sel.options[i].value === nm) { sel.value = nm; inp.value = ''; showToast('已选择: ' + nm); return; }
+    // 同步到统一分组列表
+    if (_contactGroups.indexOf(nm) === -1) { _contactGroups.push(nm); saveContactGroups(); }
     var op = document.createElement('option'); op.value = nm; op.textContent = nm; sel.appendChild(op); sel.value = nm; inp.value = ''; showToast('已添加: ' + nm);
 }
 
-function triggerWallpaperUpload() {
+function triggerChatWallpaperUpload() {
     var f = document.getElementById('csWallpaperFile'); if (f) f.click();
 }
 
-function handleWallpaperFile(e) {
+// ===== 修改前（第 1262~1278 行）：=====
+function handleChatWallpaperFile(e) {
     var f = e.target.files[0]; if (!f) return;
     showToast('处理中...');
     var rd = new FileReader();
     rd.onload = function (ev) {
-        smartCompress(ev.target.result, 30, function (c) {
+        smartCompress(ev.target.result, 20, function (c) {
             var role = findRole(_chatCurrentConv); if (!role) return;
-            role.chatWallpaper = c; saveChatRoles();
-            var body = document.getElementById('chatConvBody');
-            if (body) {
-                body.style.backgroundImage = 'url(' + c + ')';
-                body.style.backgroundSize = 'cover';
-                body.style.backgroundPosition = 'center';
-            }
+            role.chatWallpaper = c;
+            // ★ 壁纸单独存储，避免撑爆角色数据的 localStorage 配额
+            saveWallpaper(role.id, c);
+            saveChatRoles();
+            applyConvWallpaper(c);
             showToast('壁纸已设置');
         });
     };
     rd.readAsDataURL(f); e.target.value = '';
+}
+
+// ===== 修改后：=====
+function handleChatWallpaperFile(e) {
+    var f = e.target.files[0]; if (!f) return;
+    showToast('处理中...');
+    var rd = new FileReader();
+    rd.onload = function (ev) {
+        compressWallpaper(ev.target.result, function (c) {
+            var role = findRole(_chatCurrentConv); if (!role) return;
+            role.chatWallpaper = c;
+            saveWallpaper(role.id, c);
+            saveChatRoles();
+            applyConvWallpaper(c);
+            showToast('壁纸已设置 (' + Math.round(c.length / 1024) + 'KB)');
+        });
+    };
+    rd.readAsDataURL(f); e.target.value = '';
+}
+/* ---- 壁纸专用压缩：保持清晰度，只控制文件大小 ---- */
+function compressWallpaper(dataUrl, callback) {
+    var img = new Image();
+    img.onload = function () {
+        var maxW = 960;    // 壁纸最大宽度（手机屏幕够用）
+        var maxH = 1600;   // 壁纸最大高度
+        var w = img.width;
+        var h = img.height;
+
+        // 等比缩放：只在超过上限时才缩小
+        if (w > maxW || h > maxH) {
+            var ratio = Math.min(maxW / w, maxH / h);
+            w = Math.round(w * ratio);
+            h = Math.round(h * ratio);
+        }
+
+        var canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // JPEG 质量从 0.85 开始，逐步降低直到 < 500KB
+        var quality = 0.85;
+        var result = canvas.toDataURL('image/jpeg', quality);
+
+        while (result.length > 500 * 1024 && quality > 0.3) {
+            quality -= 0.1;
+            result = canvas.toDataURL('image/jpeg', quality);
+        }
+
+        callback(result);
+    };
+    img.onerror = function () {
+        showToast('图片加载失败');
+        callback(dataUrl);
+    };
+    img.src = dataUrl;
+}
+
+function removeChatWallpaper() {
+    var role = findRole(_chatCurrentConv); if (!role) return;
+    role.chatWallpaper = '';
+    saveWallpaper(role.id, '');
+    saveChatRoles();
+    applyConvWallpaper('');
+    showToast('壁纸已移除');
+    // 刷新设置面板
+    closeChatSettingsPanel();
+    openChatSettings();
+}
+
+/* ---- 壁纸独立存储 ---- */
+function saveWallpaper(roleId, dataUrl) {
+    try {
+        if (dataUrl) {
+            localStorage.setItem('ds_wp_' + roleId, dataUrl);
+        } else {
+            localStorage.removeItem('ds_wp_' + roleId);
+        }
+    } catch (e) {
+        showToast('壁纸太大，存储失败，请选择更小的图片');
+    }
+}
+
+function loadWallpaper(roleId) {
+    // 优先从独立存储读取，兜底读角色数据里的
+    var wp = localStorage.getItem('ds_wp_' + roleId);
+    if (wp) return wp;
+    var role = findRole(roleId);
+    return (role && role.chatWallpaper) ? role.chatWallpaper : '';
+}
+
+/* ---- 强制应用壁纸到聊天体 ---- */
+function applyConvWallpaper(dataUrl) {
+    var body = document.getElementById('chatConvBody');
+    if (!body) return;
+    if (dataUrl) {
+        body.style.cssText += '; background-image: url("' + dataUrl + '") !important; background-size: cover !important; background-position: center !important;';
+    } else {
+        body.style.backgroundImage = '';
+        body.style.backgroundSize = '';
+        body.style.backgroundPosition = '';
+    }
 }
 
 /* 设置里挂载选择器 — 复用已有的 mount 系统 */
@@ -1739,6 +2393,17 @@ function continueChat() {
                     }
                 }
 
+                // ★ 检测AI发的语音消息意图 [voice:内容]
+                var voiceMatch = txt.match(/^\[voice:(.+?)\]$/i);
+                if (voiceMatch) {
+                    var voiceText = voiceMatch[1].trim();
+                    msgObj.voice = true;
+                    msgObj.voiceText = voiceText;
+                    msgObj.voiceDuration = Math.max(1, Math.ceil(voiceText.length / 4));
+                    msgObj.text = '[语音消息]';
+                    delete msgObj.translation;
+                }
+
                 // ★ 检测AI对转账的决策标记 [accept_transfer:txId] 或 [refuse_transfer:txId]
                 var acceptMatch = txt.match(/\[accept_transfer:([^\]]+)\]/);
                 var refuseMatch = txt.match(/\[refuse_transfer:([^\]]+)\]/);
@@ -2041,6 +2706,7 @@ function buildChatMessages(role) {
 
     sp += '11. 回复长度应根据话题自然调节：闲聊可以简短（1-3句），深入话题可以稍长（3-8句），但避免过长的独白。\n';
     sp += '12. 要有真实的情感波动，不要每句话都很积极或中性，应根据话题内容表现出相应的情绪。\n';
+    sp += '13. 你可以发送语音消息。当你觉得说话比打字更自然时（比如撒娇、叹气、激动、生气等），可以在单独一个段落中使用 [voice:内容] 格式发送语音消息。内容就是你"说"的话。例如：[voice:哎呀你怎么才回我消息啊]。这会显示为一条语音消息气泡。注意：[voice:...] 必须单独占一个段落，不要和文字混在一起。\n';
 
     // ★ 内嵌翻译指令：翻译开关打开时，让AI回复自带翻译
     if (role.translateOn) {
@@ -2114,16 +2780,12 @@ function buildChatMessages(role) {
         var content = m.text;
 
         // 语音消息
-        // 原来的：
-        // content = '【对方发送了一条语音消息（时长' + (m.voiceDuration || '?') + '秒），但语音内容未能识别。
-        //            你可以回复"没听清，可以再说一遍吗？"或类似的自然回应。】';
-
-        // ★ 修改为更自然的处理：
         if (m.voice) {
-            if (m.voiceTranscript) {
-                content = '【对方发送了一条语音消息（时长' + (m.voiceDuration || '?') + '秒），语音转文字内容："' + m.voiceTranscript + '"。请当作语音来理解和回复，不要提"转文字"这个过程，直接当作对方说的话来回应。】';
+            var vText = m.voiceText || m.voiceTranscript || '';
+            if (vText) {
+                content = '【对方发送了一条语音消息（时长' + (m.voiceDuration || '?') + '秒），语音内容："' + vText + '"。请当作对方用语音说的话来理解和回复，不要提"语音转文字"这个过程，直接当作对方说的话来回应。你也可以用 [voice:内容] 来回复语音消息。】';
             } else {
-                content = '【对方发送了一条语音消息（时长' + (m.voiceDuration || '?') + '秒），语音内容未能转为文字（可能是环境音、叹息、笑声、或者设备不支持语音识别）。请根据对话上下文自然回应，可以回复类似"嗯嗯""怎么了？""在听呢"等简短自然的回应。】';
+                content = '【对方发送了一条语音消息（时长' + (m.voiceDuration || '?') + '秒），内容未知。请根据对话上下文自然回应。】';
             }
         }
 
@@ -2262,57 +2924,30 @@ function loadWallet() {
 function saveWallet() { safeSetItem('ds_chat_wallet', JSON.stringify(_chatWallet)); }
 
 /* ================================================================
-   语音录音 — 完整系统
-   录音 → 生成可播放音频气泡 → Web Speech API 识别转文字 →
-   发送给 AI（认知为语音消息 + 转文字内容）
+   语音消息 — 文字转语音条系统
+   用户输入文字 → 以语音条样式发送 → AI认知为语音消息
+   AI也可以主动发语音 [voice:内容]
    ================================================================ */
 
-var _voiceRecorder = null;
-var _voiceChunks = [];
-var _voiceStream = null;
-var _voiceStartTime = 0;
-var _voiceTimerInterval = null;
-var _voiceRecognition = null;
-var _voiceTranscript = '';
-var _voiceIsRecording = false;
-
-function openVoiceRecorder() {
-    if (_voiceIsRecording) return;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showToast('您的浏览器不支持录音功能');
-        return;
-    }
+function openVoiceInput() {
     var conv = document.getElementById('chatConversation');
     if (!conv) return;
-    closeVoiceRecorder(true);
+    closeVoiceInput(true);
 
     var h = '<div class="voice-recorder-overlay" id="voiceRecorderOverlay">';
     h += '<div class="voice-recorder-panel" id="voiceRecorderPanel">';
     h += '<div class="voice-recorder-title">语音消息</div>';
-    h += '<div class="voice-recorder-wave-area" id="voiceWaveArea">';
-    h += '<div class="voice-recorder-idle-icon">';
-    h += '<svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+    h += '<div class="voice-input-area">';
+    h += '<div class="voice-input-hint">输入你想"说"的内容，将以语音条形式发送</div>';
+    h += '<textarea class="voice-input-textarea" id="voiceInputText" placeholder="在这里输入语音内容..." rows="3"></textarea>';
     h += '</div>';
-    h += '<div class="voice-recorder-waves" id="voiceWaves" style="display:none">';
-    for (var i = 0; i < 20; i++) {
-        h += '<div class="voice-wave-bar" style="animation-delay:' + (i * 0.05) + 's"></div>';
-    }
-    h += '</div>';
-    h += '</div>';
-    h += '<div class="voice-recorder-timer" id="voiceTimer">00:00</div>';
-    h += '<div class="voice-recorder-transcript" id="voiceTranscriptPreview">点击下方按钮开始录音</div>';
     h += '<div class="voice-recorder-buttons">';
-    h += '<div class="voice-recorder-btn cancel" id="voiceBtnCancel" onclick="closeVoiceRecorder()" style="display:none">';
+    h += '<div class="voice-recorder-btn cancel" onclick="closeVoiceInput()">';
     h += '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
     h += '<span>取消</span></div>';
-    h += '<div class="voice-recorder-btn record" id="voiceBtnRecord" onclick="toggleVoiceRecord()">';
-    h += '<div class="voice-recorder-btn-inner" id="voiceBtnInner">';
-    h += '<svg viewBox="0 0 24 24" id="voiceBtnIcon"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
-    h += '</div>';
-    h += '<span id="voiceBtnLabel">开始录音</span></div>';
-    h += '<div class="voice-recorder-btn send" id="voiceBtnSend" onclick="sendVoiceMessage()" style="display:none">';
+    h += '<div class="voice-recorder-btn send" onclick="sendVoiceTextMessage()">';
     h += '<svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
-    h += '<span>发送</span></div>';
+    h += '<span>发送语音</span></div>';
     h += '</div>';
     h += '</div>';
     h += '</div>';
@@ -2321,340 +2956,66 @@ function openVoiceRecorder() {
     setTimeout(function () {
         var ov = document.getElementById('voiceRecorderOverlay');
         if (ov) ov.classList.add('show');
+        var ta = document.getElementById('voiceInputText');
+        if (ta) ta.focus();
     }, 10);
 }
 
-function closeVoiceRecorder(silent) {
-    stopVoiceRecord(true);
-
+function closeVoiceInput(silent) {
     var ov = document.getElementById('voiceRecorderOverlay');
     if (ov) {
         ov.classList.remove('show');
         setTimeout(function () { if (ov.parentNode) ov.remove(); }, 200);
     }
-    _voiceTranscript = '';
-    _voiceChunks = [];
     if (!silent) showToast('已取消');
 }
 
-function toggleVoiceRecord() {
-    if (_voiceIsRecording) {
-        stopVoiceRecord(false);
-    } else {
-        startVoiceRecord();
-    }
-}
+function sendVoiceTextMessage() {
+    var ta = document.getElementById('voiceInputText');
+    if (!ta) return;
+    var text = ta.value.trim();
+    if (!text) { showToast('请输入语音内容'); return; }
 
-function startVoiceRecord() {
-    _voiceTranscript = '';
-    _voiceChunks = [];
-
-    navigator.mediaDevices.getUserMedia({
-        audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: 44100,
-            channelCount: 1
-        }
-    })
-        .then(function (stream) {
-            _voiceStream = stream;
-            _voiceIsRecording = true;
-
-            // ★ 移动端兼容：iOS Safari 只支持 audio/mp4，安卓支持 webm
-            var mimeType = '';
-            var tryTypes = [
-                'audio/webm;codecs=opus',
-                'audio/webm',
-                'audio/mp4',
-                'audio/aac',
-                'audio/ogg;codecs=opus',
-                ''  // 留空让浏览器自动选择
-            ];
-            for (var mt = 0; mt < tryTypes.length; mt++) {
-                if (!tryTypes[mt]) { mimeType = ''; break; }
-                try {
-                    if (MediaRecorder.isTypeSupported(tryTypes[mt])) {
-                        mimeType = tryTypes[mt];
-                        break;
-                    }
-                } catch (e) { continue; }
-            }
-
-            var options = mimeType ? { mimeType: mimeType } : {};
-            _voiceRecorder = new MediaRecorder(stream, options);
-
-            _voiceRecorder.ondataavailable = function (e) {
-                if (e.data && e.data.size > 0) _voiceChunks.push(e.data);
-            };
-
-            _voiceRecorder.onstop = function () { };
-
-            _voiceRecorder.start(250);
-            _voiceStartTime = Date.now();
-
-            updateVoiceTimer();
-            _voiceTimerInterval = setInterval(updateVoiceTimer, 1000);
-
-            startSpeechRecognition();
-
-            var waves = document.getElementById('voiceWaves');
-            var idle = document.querySelector('.voice-recorder-idle-icon');
-            var btnLabel = document.getElementById('voiceBtnLabel');
-            var btnInner = document.getElementById('voiceBtnInner');
-            var btnCancel = document.getElementById('voiceBtnCancel');
-            var preview = document.getElementById('voiceTranscriptPreview');
-
-            if (waves) waves.style.display = 'flex';
-            if (idle) idle.style.display = 'none';
-            if (btnLabel) btnLabel.textContent = '停止录音';
-            if (btnInner) btnInner.classList.add('recording');
-            if (btnCancel) btnCancel.style.display = 'flex';
-            if (preview) preview.textContent = '🎙️ 录音中…';
-
-            startWaveAnimation(stream);
-        })
-        .catch(function (err) {
-            var errMsg = err.message || '';
-            // 安卓叠加层导致的权限拦截
-            if (errMsg.indexOf('dismissed') > -1 || errMsg.indexOf('not allowed') > -1 || errMsg.indexOf('NotAllowedError') > -1 || err.name === 'NotAllowedError') {
-                showToast('麦克风权限被拒绝。如果弹出"无法请求授权"，请关闭手机上的悬浮窗/叠加层应用后重试', 5000);
-            } else {
-                showToast('无法访问麦克风：' + errMsg);
-            }
-            console.error('Microphone error:', err);
-        });
-}
-
-function stopVoiceRecord(isCancel) {
-    _voiceIsRecording = false;
-
-    if (_voiceTimerInterval) {
-        clearInterval(_voiceTimerInterval);
-        _voiceTimerInterval = null;
-    }
-
-    if (_voiceRecognition) {
-        try { _voiceRecognition.stop(); } catch (e) { }
-        _voiceRecognition = null;
-    }
-
-    if (_voiceRecorder && _voiceRecorder.state !== 'inactive') {
-        _voiceRecorder.stop();
-    }
-
-    if (_voiceStream) {
-        _voiceStream.getTracks().forEach(function (t) { t.stop(); });
-        _voiceStream = null;
-    }
-
-    stopWaveAnimation();
-
-    if (!isCancel) {
-        var waves = document.getElementById('voiceWaves');
-        var idle = document.querySelector('.voice-recorder-idle-icon');
-        var btnLabel = document.getElementById('voiceBtnLabel');
-        var btnInner = document.getElementById('voiceBtnInner');
-        var btnSend = document.getElementById('voiceBtnSend');
-        var btnRecord = document.getElementById('voiceBtnRecord');
-        var preview = document.getElementById('voiceTranscriptPreview');
-
-        if (waves) waves.style.display = 'none';
-        if (idle) { idle.style.display = 'flex'; idle.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>'; }
-        if (btnLabel) btnLabel.textContent = '重新录音';
-        if (btnInner) btnInner.classList.remove('recording');
-        if (btnSend) btnSend.style.display = 'flex';
-        if (preview) {
-            if (_voiceTranscript) {
-                preview.textContent = _voiceTranscript;
-            } else {
-                preview.textContent = '✅ 录音完成，点击发送';
-            }
-        }
-    }
-}
-
-function updateVoiceTimer() {
-    var el = document.getElementById('voiceTimer');
-    if (!el) return;
-    var elapsed = Math.floor((Date.now() - _voiceStartTime) / 1000);
-    var m = Math.floor(elapsed / 60);
-    var s = elapsed % 60;
-    el.textContent = pad(m) + ':' + pad(s);
-}
-
-// ============================================
-// 替换第 2403~2498 行
-// ============================================
-function startSpeechRecognition() {
-    // ★ 国内环境 SpeechRecognition 不可用（Google语音服务被墙、iOS不支持）
-    // ★ 直接跳过，录音本身(MediaRecorder)完全正常
-    var preview = document.getElementById('voiceTranscriptPreview');
-    if (preview) preview.textContent = '🎙️ 录音中…';
-
-    // ★ 如果用户配置了支持 Whisper 的 API，录音结束后自动转写
-    // 否则就是纯语音消息，不做转文字
-    console.log('[Voice] SpeechRecognition skipped (not available in China), using pure voice mode');
-}
-
-var _voiceAnalyser = null;
-var _voiceAnimFrame = null;
-var _voiceAudioCtx = null;
-
-function startWaveAnimation(stream) {
-    try {
-        _voiceAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        var source = _voiceAudioCtx.createMediaStreamSource(stream);
-        _voiceAnalyser = _voiceAudioCtx.createAnalyser();
-        _voiceAnalyser.fftSize = 64;
-        source.connect(_voiceAnalyser);
-        animateWaveBars();
-    } catch (e) {
-        console.warn('Wave animation error:', e);
-    }
-}
-
-function animateWaveBars() {
-    if (!_voiceAnalyser || !_voiceIsRecording) return;
-
-    var data = new Uint8Array(_voiceAnalyser.frequencyBinCount);
-    _voiceAnalyser.getByteFrequencyData(data);
-
-    var bars = document.querySelectorAll('.voice-wave-bar');
-    var count = bars.length;
-    for (var i = 0; i < count; i++) {
-        var dataIdx = Math.floor(i * data.length / count);
-        var val = data[dataIdx] || 0;
-        var height = Math.max(4, (val / 255) * 50);
-        bars[i].style.height = height + 'px';
-    }
-
-    _voiceAnimFrame = requestAnimationFrame(animateWaveBars);
-}
-
-function stopWaveAnimation() {
-    if (_voiceAnimFrame) {
-        cancelAnimationFrame(_voiceAnimFrame);
-        _voiceAnimFrame = null;
-    }
-    if (_voiceAudioCtx) {
-        try { _voiceAudioCtx.close(); } catch (e) { }
-        _voiceAudioCtx = null;
-    }
-    _voiceAnalyser = null;
-}
-
-/* ---- Whisper API 语音转文字 ---- */
-function whisperTranscribe(audioBlob, callback) {
-    if (typeof getActiveApiConfig !== 'function') { callback(''); return; }
-    var apiConfig = getActiveApiConfig();
-    if (!apiConfig || !apiConfig.url || !apiConfig.key) { callback(''); return; }
-
-    var baseUrl = apiConfig.url.replace(/\/+$/, '').replace(/\/chat\/completions\s*$/, '').replace(/\/v1\s*$/, '');
-    var whisperUrl = baseUrl + '/v1/audio/transcriptions';
-
-    var formData = new FormData();
-    var ext = audioBlob.type.indexOf('mp4') > -1 ? 'mp4' : audioBlob.type.indexOf('ogg') > -1 ? 'ogg' : 'webm';
-    formData.append('file', audioBlob, 'voice.' + ext);
-    formData.append('model', 'whisper-1');
-    formData.append('language', 'zh');
-
-    fetch(whisperUrl, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + apiConfig.key },
-        body: formData
-    })
-        .then(function (res) {
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            return res.json();
-        })
-        .then(function (json) {
-            var text = (json.text || '').trim();
-            console.log('[Whisper] 转写结果：', text);
-            callback(text);
-        })
-        .catch(function (err) {
-            console.log('[Whisper] 转写失败（API可能不支持），使用纯语音模式：', err.message);
-            callback('');
-        });
-}
-
-function sendVoiceMessage() {
     var role = findRole(_chatCurrentConv);
     if (!role) { showToast('角色不存在'); return; }
-
-    if (_voiceChunks.length === 0) {
-        showToast('没有录到音频');
-        return;
-    }
-
-    var mimeType = _voiceRecorder && _voiceRecorder.mimeType ? _voiceRecorder.mimeType : 'audio/webm';
-    var blob = new Blob(_voiceChunks, { type: mimeType });
-    var audioUrl = URL.createObjectURL(blob);
-
-    var duration = Math.floor((Date.now() - _voiceStartTime) / 1000);
-    if (duration < 1) duration = 1;
+    if (!role.msgs) role.msgs = [];
 
     var now = new Date();
     var ts = pad(now.getHours()) + ':' + pad(now.getMinutes());
+    var duration = Math.max(1, Math.ceil(text.length / 4));
 
-    // ★ 显示转写中提示
-    showToast('正在识别语音内容…');
+    var msgObj = {
+        from: 'self',
+        text: '[语音消息]',
+        time: ts,
+        voice: true,
+        voiceText: text,
+        voiceDuration: duration
+    };
 
-    // ★ 先尝试 Whisper 转写，完成后再发送消息
-    whisperTranscribe(blob, function (whisperText) {
-        var transcript = whisperText || _voiceTranscript.trim() || '';
+    if (_chatQuoteData) {
+        msgObj.quoteText = _chatQuoteData.text;
+        msgObj.quoteName = _chatQuoteData.name;
+    }
 
-        var reader = new FileReader();
-        reader.onloadend = function () {
-            var audioBase64 = reader.result;
+    role.msgs.push(msgObj);
+    role.lastMsg = '[语音消息]';
+    role.lastTime = now.getTime();
+    role.lastTimeStr = ts;
+    saveChatRoles();
 
-            if (!role.msgs) role.msgs = [];
+    var body = document.getElementById('chatConvBody');
+    if (body) {
+        var ap = getActivePersona();
+        var myAv = ap && ap.avatar ? ap.avatar : '';
+        var idx = role.msgs.length - 1;
+        body.insertAdjacentHTML('beforeend', renderVoiceBubbleRow(msgObj, idx, myAv, role.avatar || ''));
+        body.scrollTop = body.scrollHeight;
+    }
 
-            var msgObj = {
-                from: 'self',
-                text: transcript ? '[语音消息] ' + transcript : '[语音消息]',
-                time: ts,
-                voice: true,
-                voiceData: audioBase64,
-                voiceDuration: duration,
-                voiceTranscript: transcript
-            };
-
-            if (_chatQuoteData) {
-                msgObj.quoteText = _chatQuoteData.text;
-                msgObj.quoteName = _chatQuoteData.name;
-            }
-
-            role.msgs.push(msgObj);
-            role.lastMsg = '[语音消息] ' + (transcript || '');
-            role.lastTime = now.getTime();
-            role.lastTimeStr = ts;
-            saveChatRoles();
-
-            var body = document.getElementById('chatConvBody');
-            if (body) {
-                var ap = getActivePersona();
-                var myAv = ap && ap.avatar ? ap.avatar : '';
-                var idx = role.msgs.length - 1;
-                body.insertAdjacentHTML('beforeend', renderVoiceBubbleRow(msgObj, idx, myAv, role.avatar || ''));
-                body.scrollTop = body.scrollHeight;
-            }
-
-            clearQuote();
-            closeVoiceRecorder(true);
-            if (transcript) {
-                showToast('语音已发送（已识别：' + transcript.substring(0, 20) + (transcript.length > 20 ? '…' : '') + '）');
-            } else {
-                showToast('语音已发送（未识别到文字）');
-            }
-
-            // 不自动续写，等用户手动点续写按钮
-        };
-
-        reader.readAsDataURL(blob);
-    });
+    clearQuote();
+    closeVoiceInput(true);
+    showToast('语音已发送');
 }
 
 function renderVoiceBubbleRow(m, idx, myAv, roleAv) {
@@ -2672,10 +3033,9 @@ function renderVoiceBubbleRow(m, idx, myAv, roleAv) {
 
     var dur = m.voiceDuration || 1;
     var barWidth = Math.min(70, Math.max(30, dur * 3));
-    h += '<div class="chat-bubble voice-bubble" style="min-width:' + barWidth + '%">';
-    h += '<div class="voice-bubble-play" onclick="event.stopPropagation();playVoiceBubble(this,\'' + idx + '\')">';
-    h += '<svg viewBox="0 0 24 24" class="voice-play-icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
-    h += '<svg viewBox="0 0 24 24" class="voice-pause-icon" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+    h += '<div class="chat-bubble voice-bubble" style="min-width:' + barWidth + '%" onclick="event.stopPropagation();toggleVoiceText(' + idx + ')">';
+    h += '<div class="voice-bubble-play-icon">';
+    h += '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>';
     h += '</div>';
 
     h += '<div class="voice-bubble-waveform">';
@@ -2688,8 +3048,12 @@ function renderVoiceBubbleRow(m, idx, myAv, roleAv) {
     h += '<div class="voice-bubble-duration">' + formatVoiceDuration(dur) + '</div>';
     h += '</div>';
 
-    if (m.voiceTranscript) {
-        h += '<div class="voice-bubble-transcript">' + esc(m.voiceTranscript) + '</div>';
+    // 语音文字内容（默认隐藏，点击展开）
+    var voiceContent = m.voiceText || m.voiceTranscript || '';
+    if (voiceContent) {
+        h += '<div class="voice-bubble-text-content" id="voiceText_' + idx + '" style="display:none">';
+        h += '<div class="voice-bubble-text-inner">' + esc(voiceContent) + '</div>';
+        h += '</div>';
     }
 
     h += '<div class="chat-bubble-ts">' + (m.time || '') + '</div>';
@@ -2697,62 +3061,19 @@ function renderVoiceBubbleRow(m, idx, myAv, roleAv) {
     return h;
 }
 
+function toggleVoiceText(idx) {
+    var el = document.getElementById('voiceText_' + idx);
+    if (!el) return;
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+    } else {
+        el.style.display = 'none';
+    }
+}
+
 function formatVoiceDuration(sec) {
     if (sec < 60) return sec + '"';
     return Math.floor(sec / 60) + '\'' + (sec % 60) + '"';
-}
-
-var _currentPlayingAudio = null;
-var _currentPlayingBtn = null;
-
-function playVoiceBubble(btnEl, idx) {
-    var role = findRole(_chatCurrentConv);
-    if (!role) return;
-    var m = role.msgs[parseInt(idx)];
-    if (!m || !m.voiceData) { showToast('音频数据不存在'); return; }
-
-    if (_currentPlayingAudio && _currentPlayingBtn === btnEl) {
-        _currentPlayingAudio.pause();
-        resetPlayBtn(_currentPlayingBtn);
-        _currentPlayingAudio = null;
-        _currentPlayingBtn = null;
-        return;
-    }
-
-    if (_currentPlayingAudio) {
-        _currentPlayingAudio.pause();
-        resetPlayBtn(_currentPlayingBtn);
-    }
-
-    var audio = new Audio(m.voiceData);
-    _currentPlayingAudio = audio;
-    _currentPlayingBtn = btnEl;
-
-    var playIcon = btnEl.querySelector('.voice-play-icon');
-    var pauseIcon = btnEl.querySelector('.voice-pause-icon');
-    if (playIcon) playIcon.style.display = 'none';
-    if (pauseIcon) pauseIcon.style.display = 'block';
-    btnEl.classList.add('playing');
-
-    audio.play().catch(function (e) {
-        showToast('播放失败: ' + e.message);
-        resetPlayBtn(btnEl);
-    });
-
-    audio.onended = function () {
-        resetPlayBtn(btnEl);
-        _currentPlayingAudio = null;
-        _currentPlayingBtn = null;
-    };
-}
-
-function resetPlayBtn(btnEl) {
-    if (!btnEl) return;
-    var playIcon = btnEl.querySelector('.voice-play-icon');
-    var pauseIcon = btnEl.querySelector('.voice-pause-icon');
-    if (playIcon) playIcon.style.display = 'block';
-    if (pauseIcon) pauseIcon.style.display = 'none';
-    btnEl.classList.remove('playing');
 }
 
 function renderChatPage() { openChatApp(); }
@@ -3333,30 +3654,47 @@ function injectImageButtons() {
 /* ========== 表情包匹配 ========== */
 function findMatchingSticker(desc) {
     try {
-        var groups = JSON.parse(localStorage.getItem('ds_sticker_groups') || '[]');
+        var allGroups = JSON.parse(localStorage.getItem('ds_sticker_groups') || '[]');
         var allStickers = [];
-        for (var i = 0; i < groups.length; i++) {
-            for (var j = 0; j < groups[i].stickers.length; j++) {
-                allStickers.push(groups[i].stickers[j]);
-            }
-        }
-        // 也读取角色挂载的多个表情包
+
+        // ★ 只从当前角色挂载的分组中取表情
+        var mountedIds = [];
         if (_chatCurrentConv) {
             var role = findRole(_chatCurrentConv);
             if (role) {
-                var mountedIds = role.stickerIds || (role.stickerId ? [role.stickerId] : []);
-                for (var mi = 0; mi < mountedIds.length; mi++) {
-                    var pack = findStickerPack(mountedIds[mi]);
-                    if (pack && pack.urls) {
-                        for (var u = 0; u < pack.urls.length; u++) {
-                            allStickers.push({ url: pack.urls[u], desc: '' });
-                        }
+                mountedIds = role.stickerIds || (role.stickerId ? [role.stickerId] : []);
+            }
+        }
+
+        // 没挂载就没有表情可用
+        if (!mountedIds.length) return '';
+
+        for (var mi = 0; mi < mountedIds.length; mi++) {
+            var mId = mountedIds[mi];
+
+            // 从 ds_sticker_groups 找
+            for (var gi = 0; gi < allGroups.length; gi++) {
+                if (allGroups[gi].id === mId) {
+                    var stks = allGroups[gi].stickers || [];
+                    for (var j = 0; j < stks.length; j++) {
+                        allStickers.push(stks[j]);
                     }
+                    break;
+                }
+            }
+
+            // 兼容旧的 ds_chat_stickers
+            var pack = findStickerPack(mId);
+            if (pack && pack.urls) {
+                for (var u = 0; u < pack.urls.length; u++) {
+                    allStickers.push({ url: pack.urls[u], desc: '' });
                 }
             }
         }
+
         if (!allStickers.length) return '';
-        // 先尝试desc关键词匹配
+
+        // 先尝试 desc 关键词匹配
         if (desc) {
             var descLower = desc.toLowerCase();
             for (var k = 0; k < allStickers.length; k++) {
@@ -3369,7 +3707,6 @@ function findMatchingSticker(desc) {
         return allStickers[Math.floor(Math.random() * allStickers.length)].url;
     } catch (e) { return ''; }
 }
-
 /* ========== 表情包：缺失的函数补全 ========== */
 
 // 渲染表情包气泡
@@ -3405,57 +3742,110 @@ function closeStickerPanel() {
     if (panel) panel.classList.remove('show');
 }
 
-// 渲染表情包面板内容
+// 渲染表情包面板内容 — ★ 只显示当前角色挂载的表情包
 function renderStickerPanel() {
     var panel = document.getElementById('chatStickerPanel');
     if (!panel) return;
 
-    var groups = [];
-    try { groups = JSON.parse(localStorage.getItem('ds_sticker_groups') || '[]'); } catch (e) { groups = []; }
+    // 读取全部分组数据源
+    var allGroups = [];
+    try { allGroups = JSON.parse(localStorage.getItem('ds_sticker_groups') || '[]'); } catch (e) { allGroups = []; }
 
-    // 也从角色挂载的表情包里读（支持多选）
+    // ★ 核心：只取当前角色挂载的分组
+    var mountedIds = [];
     if (_chatCurrentConv) {
         var role = findRole(_chatCurrentConv);
         if (role) {
-            var mountedIds = role.stickerIds || (role.stickerId ? [role.stickerId] : []);
-            for (var mi = 0; mi < mountedIds.length; mi++) {
-                var pack = findStickerPack(mountedIds[mi]);
-                if (pack && pack.urls && pack.urls.length) {
-                    var already = false;
-                    for (var g = 0; g < groups.length; g++) {
-                        if (groups[g].name === pack.name) { already = true; break; }
-                    }
-                    if (!already) {
-                        var stickers = [];
-                        for (var u = 0; u < pack.urls.length; u++) {
-                            stickers.push({ url: pack.urls[u], desc: '' });
-                        }
-                        groups.push({ name: pack.name, stickers: stickers });
-                    }
+            mountedIds = role.stickerIds || (role.stickerId ? [role.stickerId] : []);
+        }
+    }
+
+    // 如果没有挂载任何表情包
+    if (!mountedIds.length) {
+        panel.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px;line-height:1.8;">该角色未挂载表情包<br>请在角色设置中挂载</div>';
+        return;
+    }
+
+    // ★ 只收集挂载了的分组
+    var groups = [];
+    for (var mi = 0; mi < mountedIds.length; mi++) {
+        var mId = mountedIds[mi];
+        var found = false;
+
+        // 从 ds_sticker_groups 找
+        for (var gi = 0; gi < allGroups.length; gi++) {
+            if (allGroups[gi].id === mId) {
+                groups.push(allGroups[gi]);
+                found = true;
+                break;
+            }
+        }
+
+        // 兼容旧的 ds_chat_stickers 数据
+        if (!found) {
+            var pack = findStickerPack(mId);
+            if (pack && pack.urls && pack.urls.length) {
+                var stickers = [];
+                for (var u = 0; u < pack.urls.length; u++) {
+                    stickers.push({ url: pack.urls[u], desc: '' });
                 }
+                groups.push({ name: pack.name, stickers: stickers });
             }
         }
     }
 
     if (!groups.length) {
-        panel.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px;">暂无表情包<br>请在「我」→「表情包管理」中添加</div>';
+        panel.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px;line-height:1.8;">挂载的表情包已被删除<br>请重新挂载</div>';
         return;
     }
 
-    var h = '<div style="height:100%;overflow-y:auto;padding:8px;">';
-    for (var i = 0; i < groups.length; i++) {
-        var grp = groups[i];
-        h += '<div style="font-size:12px;color:#999;padding:4px 0;">' + esc(grp.name || '表情包') + '</div>';
-        h += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
-        var stickers = grp.stickers || [];
-        for (var j = 0; j < stickers.length; j++) {
-            var s = stickers[j];
-            h += '<img src="' + esc(s.url || '') + '" style="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="sendStickerMsg(\'' + esc(s.url || '') + '\',\'' + esc(s.desc || '') + '\')">';
+    // 渲染面板
+    var h = '';
+
+    // 分组 tabs（多组时显示）
+    if (groups.length > 1) {
+        h += '<div class="stk-panel-tabs">';
+        for (var i = 0; i < groups.length; i++) {
+            h += '<div class="stk-panel-tab' + (i === 0 ? ' active' : '') + '" onclick="switchStkPanelTab(' + i + ')" data-stk-tab="' + i + '">' + esc(groups[i].name || '表情包') + '</div>';
         }
         h += '</div>';
     }
-    h += '</div>';
+
+    // 表情网格（分组内容）
+    for (var i = 0; i < groups.length; i++) {
+        var grp = groups[i];
+        var stickers = grp.stickers || [];
+        h += '<div class="stk-panel-grid" data-stk-grid="' + i + '"' + (i > 0 ? ' style="display:none;"' : '') + '>';
+        if (!stickers.length) {
+            h += '<div class="stk-panel-empty">该分组暂无表情</div>';
+        } else {
+            for (var j = 0; j < stickers.length; j++) {
+                var s = stickers[j];
+                h += '<div class="stk-panel-item" onclick="sendStickerMsg(\'' + esc(s.url || '').replace(/'/g, "\\'") + '\',\'' + esc(s.desc || '').replace(/'/g, "\\'") + '\')">';
+                h += '<img src="' + esc(s.url || '') + '" alt="' + esc(s.desc || '') + '">';
+                h += '</div>';
+            }
+        }
+        h += '</div>';
+    }
+
     panel.innerHTML = h;
+}
+
+// ★ 表情面板分组 tab 切换
+function switchStkPanelTab(idx) {
+    var panel = document.getElementById('chatStickerPanel');
+    if (!panel) return;
+    // 切 tab 高亮
+    var tabs = panel.querySelectorAll('.stk-panel-tab');
+    for (var i = 0; i < tabs.length; i++) {
+        tabs[i].classList.toggle('active', i === idx);
+    }
+    // 切内容
+    var grids = panel.querySelectorAll('.stk-panel-grid');
+    for (var i = 0; i < grids.length; i++) {
+        grids[i].style.display = (i === idx) ? '' : 'none';
+    }
 }
 
 // 发送表情包消息
