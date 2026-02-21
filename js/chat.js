@@ -1582,6 +1582,36 @@ function sendChatMessage() {
         return;
     }
 
+    /* ---- 检测对话中角色主要使用的语言 ---- */
+    function detectConvLanguage(role) {
+        if (!role || !role.msgs || role.msgs.length === 0) return 'zh';
+        // 从最近的 char 消息中取样
+        var samples = '';
+        for (var i = role.msgs.length - 1; i >= 0 && samples.length < 500; i--) {
+            var m = role.msgs[i];
+            if (m.from === 'other' && m.text && !m.transfer && !m.transferIsNotice && !m.redPacket) {
+                samples += m.text + ' ';
+            }
+        }
+        if (!samples) return 'zh';
+
+        // 日文检测：含有平假名或片假名
+        var jaCount = (samples.match(/[\u3040-\u309F\u30A0-\u30FF]/g) || []).length;
+        // 韩文检测：含有韩文字母
+        var koCount = (samples.match(/[\uAC00-\uD7AF\u1100-\u11FF]/g) || []).length;
+        // 中文检测：含有汉字（排除日文中也有的汉字，用假名作为区分）
+        var zhCount = (samples.match(/[\u4E00-\u9FFF]/g) || []).length;
+        // 英文检测
+        var enCount = (samples.match(/[a-zA-Z]{2,}/g) || []).length;
+
+        // 如果有日文假名，优先判定日语（因为日语也包含汉字）
+        if (jaCount > 5) return 'ja';
+        if (koCount > 5) return 'ko';
+        // 英文单词多且汉字少
+        if (enCount > 10 && zhCount < 5) return 'en';
+        return 'zh';
+    }
+
     // 普通文字消息
     if (!text) return;
 
@@ -1709,6 +1739,39 @@ function continueChat() {
                     }
                 }
 
+                // ★ 检测AI对转账的决策标记 [accept_transfer:txId] 或 [refuse_transfer:txId]
+                var acceptMatch = txt.match(/\[accept_transfer:([^\]]+)\]/);
+                var refuseMatch = txt.match(/\[refuse_transfer:([^\]]+)\]/);
+                if (acceptMatch) {
+                    var aTxId = acceptMatch[1].trim();
+                    // 从文本中移除标记
+                    msgObj.text = txt.replace(/\[accept_transfer:[^\]]+\]/g, '').trim();
+                    // ★ 不再写死中文 fallback，让文本为空时根据聊天记录推断语言
+                    if (!msgObj.text) {
+                        var lastLang = detectConvLanguage(role);
+                        if (lastLang === 'ja') msgObj.text = 'ありがとう、受け取るね～';
+                        else if (lastLang === 'en') msgObj.text = 'Thanks, I\'ll accept it~';
+                        else if (lastLang === 'ko') msgObj.text = '고마워, 받을게~';
+                        else msgObj.text = '已收下，谢谢～';
+                    }
+                    // 延迟执行收款操作（等气泡渲染后）
+                    (function (txIdCopy, roleCopy) {
+                        setTimeout(function () { executeTransferAccept(roleCopy, txIdCopy); }, 500);
+                    })(aTxId, role);
+                } else if (refuseMatch) {
+                    var rTxId = refuseMatch[1].trim();
+                    msgObj.text = txt.replace(/\[refuse_transfer:[^\]]+\]/g, '').trim();
+                    if (!msgObj.text) {
+                        var lastLang2 = detectConvLanguage(role);
+                        if (lastLang2 === 'ja') msgObj.text = 'このお金は受け取れない…';
+                        else if (lastLang2 === 'en') msgObj.text = 'I can\'t accept this...';
+                        else if (lastLang2 === 'ko') msgObj.text = '이 돈은 받을 수 없어…';
+                        else msgObj.text = '这钱我不能收…';
+                    }
+                    (function (txIdCopy, roleCopy) {
+                        setTimeout(function () { executeTransferRefuse(roleCopy, txIdCopy); }, 500);
+                    })(rTxId, role);
+                }
                 interceptTransferIntent(role, msgObj);
 
                 role.msgs.push(msgObj);
@@ -2066,11 +2129,18 @@ function buildChatMessages(role) {
 
         // 转账消息
         if (m.transfer) {
-            if (m.from === 'self') {
-                content = '【用户给你发了一笔转账 ¥' + (m.transferAmount || 0).toFixed(2) + '，备注："' + (m.transferRemark || '转账') + '"。状态：' + (m.transferStatus === 'accepted' ? '你已收下' : m.transferStatus === 'refunded' ? '你退回了' : '待确认') + '。请根据角色性格自然回应。】';
-            } else if (m.transferFromChar) {
+            if (m.from === 'self' && m.transferDirection === 'user_to_char') {
+                if (m.transferStatus === 'pending') {
+                    content = '【SYSTEM: The user sent you a transfer of ¥' + (m.transferAmount || 0).toFixed(2) + ', note: "' + (m.transferRemark || 'transfer') + '". This transfer has NOT been processed yet — you must decide whether to accept or refuse it. Judge based on your character personality, your relationship with the user, and the conversation context. If you accept, put the tag [accept_transfer:' + (m.transferId || '') + '] on the very last line of your reply. If you refuse, put [refuse_transfer:' + (m.transferId || '') + '] on the very last line instead. IMPORTANT: The tag must be on its own final line. Your spoken reply text MUST stay in the same language you have been using in this conversation — do NOT switch languages.】';
+
+                } else {
+                    content = '【SYSTEM: A previous transfer of ¥' + (m.transferAmount || 0).toFixed(2) + ' (note: "' + (m.transferRemark || 'transfer') + '") — status: ' + (m.transferStatus === 'accepted' ? 'you accepted it' : 'you refused and returned it') + '. Already handled, no further response needed.】';
+                }
+            } else if (m.transferFromChar || (m.from === 'other' && m.transferDirection === 'char_to_user')) {
                 content = '【你给用户发了一笔转账 ¥' + (m.transferAmount || 0).toFixed(2) + '，备注："' + (m.transferRemark || '转账') + '"。状态：' + (m.transferStatus === 'accepted' ? '对方已收' : m.transferStatus === 'refunded' ? '对方退回了' : '待确认') + '。】';
             } else if (m.transferIsNotice) {
+                content = m.text;
+            } else if (m.transferDirection === 'receipt' || m.transferDirection === 'refund') {
                 content = m.text;
             }
         }
@@ -2793,9 +2863,10 @@ function sendTransfer() {
 
     appendBubbleToBody(role, msgObj);
     closeTransferPanel();
-    showToast('转账已发送');
+    showToast('转账已发送，点续写让对方回应');
 
-    setTimeout(function () { charRespondTransfer(role, txId, amountVal, remark); }, 1500 + Math.random() * 2000);
+    // ★ 不再自动调用 charRespondTransfer，转账保持 pending 状态
+    // 等用户点续写时，AI 根据上下文决定是否收下
 }
 /* ================================================================
    拦截AI回复中的转账意图 → 自动触发转账卡片
@@ -2858,53 +2929,83 @@ function appendBubbleToBody(role, msgObj) {
     }
 }
 
-/* ========== char对user转账的响应 ========== */
-function charRespondTransfer(role, txId, amount, remark) {
-    if (_chatCurrentConv !== role.id) return;
+/* ========== AI决定收下转账后执行 ========== */
+function executeTransferAccept(role, txId) {
+    // 找到对应的转账消息
+    var transferMsg = null;
+    var amount = 0;
+    var remark = '转账';
+    for (var i = 0; i < role.msgs.length; i++) {
+        if (role.msgs[i].transferId === txId) {
+            transferMsg = role.msgs[i];
+            amount = transferMsg.transferAmount || 0;
+            remark = transferMsg.transferRemark || '转账';
+            break;
+        }
+    }
+    if (!transferMsg || transferMsg.transferStatus !== 'pending') return;
+
     var now = new Date(), ts = pad(now.getHours()) + ':' + pad(now.getMinutes());
     var charName = role.nickname || role.name;
 
-    var accept = Math.random() < 0.8;
+    // 更新状态为已收下
+    setTransferStatusEverywhere(role, txId, 'accepted');
 
-    if (accept) {
-        // char收下
-        setTransferStatusEverywhere(role, txId, 'accepted');
-
-        // char发一条收款确认卡片
-        var receiptMsg = {
-            from: 'other', text: '已收款 ¥' + amount.toFixed(2), time: ts,
-            transfer: true, transferId: txId + '_receipt',
-            transferAmount: amount, transferRemark: remark || '转账',
-            transferStatus: 'accepted', transferDirection: 'receipt'
-        };
-        role.msgs.push(receiptMsg);
-        role.lastMsg = charName + ' 已收款';
-        role.lastTime = Date.now(); role.lastTimeStr = ts;
-        saveChatRoles();
-        appendBubbleToBody(role, receiptMsg);
-
-        // 30%概率char也给user回一笔
-        if (Math.random() < 0.3) {
-            setTimeout(function () { charSendTransfer(role); }, 2000 + Math.random() * 3000);
-        }
-    } else {
-        // char退回
-        _chatWallet.balance += amount;
-        setTransferStatusEverywhere(role, txId, 'refunded');
-
-        var refundMsg = {
-            from: 'other', text: '已退还 ¥' + amount.toFixed(2), time: ts,
-            transfer: true, transferId: txId + '_refund',
-            transferAmount: amount, transferRemark: '对方已退还',
-            transferStatus: 'refunded', transferDirection: 'refund'
-        };
-        role.msgs.push(refundMsg);
-        role.lastMsg = charName + ' 退还了转账';
-        role.lastTime = Date.now(); role.lastTimeStr = ts;
-        saveChatRoles();
-        appendBubbleToBody(role, refundMsg);
-    }
+    // 插入收款确认卡片
+    var receiptMsg = {
+        from: 'other', text: '已收款 ¥' + amount.toFixed(2), time: ts,
+        transfer: true, transferId: txId + '_receipt',
+        transferAmount: amount, transferRemark: remark,
+        transferStatus: 'accepted', transferDirection: 'receipt'
+    };
+    role.msgs.push(receiptMsg);
+    role.lastMsg = charName + ' 已收款';
+    role.lastTime = Date.now(); role.lastTimeStr = ts;
+    saveChatRoles();
+    appendBubbleToBody(role, receiptMsg);
     refreshTransferCards(role);
+}
+
+/* ========== AI决定退回转账后执行 ========== */
+function executeTransferRefuse(role, txId) {
+    var transferMsg = null;
+    var amount = 0;
+    for (var i = 0; i < role.msgs.length; i++) {
+        if (role.msgs[i].transferId === txId) {
+            transferMsg = role.msgs[i];
+            amount = transferMsg.transferAmount || 0;
+            break;
+        }
+    }
+    if (!transferMsg || transferMsg.transferStatus !== 'pending') return;
+
+    var now = new Date(), ts = pad(now.getHours()) + ':' + pad(now.getMinutes());
+    var charName = role.nickname || role.name;
+
+    // 退回金额到钱包
+    _chatWallet.balance += amount;
+    setTransferStatusEverywhere(role, txId, 'refunded');
+
+    // 插入退还确认卡片
+    var refundMsg = {
+        from: 'other', text: '已退还 ¥' + amount.toFixed(2), time: ts,
+        transfer: true, transferId: txId + '_refund',
+        transferAmount: amount, transferRemark: '对方已退还',
+        transferStatus: 'refunded', transferDirection: 'refund'
+    };
+    role.msgs.push(refundMsg);
+    role.lastMsg = charName + ' 退还了转账';
+    role.lastTime = Date.now(); role.lastTimeStr = ts;
+    saveChatRoles();
+    appendBubbleToBody(role, refundMsg);
+    refreshTransferCards(role);
+}
+
+/* ========== 保留旧函数名兼容（但不再被自动调用）========== */
+function charRespondTransfer(role, txId, amount, remark) {
+    // 已废弃：转账决策现在由AI在续写时做出
+    // 如需手动触发，走AI流程
+    return;
 }
 
 /* ========== char主动给user发转账 ========== */
