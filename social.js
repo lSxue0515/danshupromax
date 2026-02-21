@@ -517,6 +517,9 @@ function doSocialSearch() {
         return;
     }
 
+    // 搜索前确保自己已注册
+    if (!_socialRegistered) { socialDoRegister(); }
+
     socialSearchUser(targetId, function (res) {
         var result = document.getElementById('socialSearchResult');
         if (!result) return;
