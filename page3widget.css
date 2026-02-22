@@ -506,7 +506,7 @@
 
 .p3-bottom-row {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     align-items: flex-start;
 }
 
@@ -515,10 +515,10 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
-    gap: 14px 6px;
+    gap: 14px 18px;
     flex-shrink: 0;
-    width: 148px;
-    margin-right: -2px;
+    width: 160px;
+    margin-right: 0px;
 }
 
 /* =============================================
@@ -538,7 +538,7 @@
     transform: rotate(2deg);
     transition: transform 0.3s ease;
     position: relative;
-    margin-left: -4px;
+    margin-left: 0;
 }
 
 .p3-polaroid:hover {
