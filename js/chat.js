@@ -83,6 +83,7 @@ function loadChatRoles() {
     try { _chatWorldBookLib = JSON.parse(localStorage.getItem('ds_chat_worldbooks') || '[]'); } catch (e) { _chatWorldBookLib = []; }
     try { _chatStickerLib = JSON.parse(localStorage.getItem('ds_chat_stickers') || '[]'); } catch (e) { _chatStickerLib = []; }
     loadWallet();
+    syncChatWorldBookFromApp();
 }
 function saveChatRoles() { safeSetItem('ds_chat_roles', JSON.stringify(_chatRoles)); }
 function savePersonas() { safeSetItem('ds_chat_personas', JSON.stringify(_chatPersonas)); }
@@ -103,6 +104,23 @@ function getActivePersona(roleId) {
         }
     }
     return findPersona(_chatActivePersonaId);
+}
+/* ★ 从世界书 App 同步数据到消息 App */
+function syncChatWorldBookFromApp() {
+    try {
+        var appData = JSON.parse(localStorage.getItem('ds_worldbook_data') || '[]');
+        _chatWorldBookLib = [];
+        for (var i = 0; i < appData.length; i++) {
+            var e = appData[i];
+            _chatWorldBookLib.push({
+                id: e.id, name: e.name || '', content: e.content || '',
+                inject: e.inject || 'before', group: e.group || '默认',
+                keywords: e.keywords || '', type: e.type || 'global',
+                enabled: e.enabled !== false
+            });
+        }
+        saveWorldBookLib();
+    } catch (ex) { }
 }
 function findWorldBook(id) { for (var i = 0; i < _chatWorldBookLib.length; i++) if (_chatWorldBookLib[i].id === id) return _chatWorldBookLib[i]; return null; }
 function findStickerPack(id) { for (var i = 0; i < _chatStickerLib.length; i++) if (_chatStickerLib[i].id === id) return _chatStickerLib[i]; return null; }
@@ -146,14 +164,23 @@ function renderChatTab(tab) {
     switch (tab) {
         case 'messages': b.innerHTML = renderMessages(); break;
         case 'contacts': b.innerHTML = renderContacts(); break;
-        case 'moments': b.innerHTML = renderMoments(); break;
+        case 'moments': b.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;color:rgba(50,40,55,0.3);font-size:13px;gap:12px"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="rgba(255,180,200,0.5)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p style="text-align:center">动态功能搭建中<br>敬请期待 ✨</p></div>'; break;
         case 'me': b.innerHTML = renderMe(); break;
     }
 }
 
 function toggleChatMenu() {
     var m = document.getElementById('chatPlusMenu');
-    if (m) m.classList.toggle('show');
+    if (!m) return;
+
+    if (_chatCurrentTab === 'moments') {
+        m.innerHTML = '';
+    } else {
+        m.innerHTML = '<div class="chat-plus-menu-item" onclick="closeChatMenu();openCreateRole()"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg><span>创建角色</span></div>'
+            + '<div class="chat-plus-menu-item" onclick="triggerImportRole()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>导入角色卡</span></div>';
+    }
+
+    m.classList.toggle('show');
 }
 function closeChatMenu() {
     var m = document.getElementById('chatPlusMenu');
@@ -240,7 +267,6 @@ function renderContacts() {
     }
     // ★ 小加号胶囊
     h += '<div class="contact-group-tab contact-group-add" onclick="showAddContactGroupPrompt()">+</div>';
-    h += '<div class="contact-group-tab" onclick="openSocialSearch()">添加好友</div>';
     h += '</div>';
 
     // ★ 联系人列表（根据选中分组过滤）
@@ -271,11 +297,6 @@ function renderContacts() {
             h += '</div>';
         }
         h += '</div>';
-    }
-
-    // ★ 真人好友列表
-    if (typeof renderSocialFriendsList === 'function') {
-        h += renderSocialFriendsList();
     }
     h += '</div>';
 
@@ -345,11 +366,6 @@ function renderMe() {
 
     h += '<div class="chat-me-menu">';
 
-    // ★ 社交 ID 卡片（在钱包上方）
-    if (typeof renderSocialIdCard === 'function') {
-        h += renderSocialIdCard();
-    }
-    
     h += '<div class="chat-me-menu-group">';
     h += '<div class="chat-me-menu-item" onclick="openWalletPage()"><div class="chat-me-menu-text">钱包</div><svg class="chat-me-menu-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
     h += '<div class="chat-me-menu-item" onclick="openFavoritePage()"><div class="chat-me-menu-text">收藏</div><svg class="chat-me-menu-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
@@ -360,8 +376,8 @@ function renderMe() {
     h += '</div></div>';
 
     return h;
-
 }
+
 function menuItem(text) {
     return '<div class="chat-me-menu-item" onclick="showToast(\'' + text + '\')"><div class="chat-me-menu-text">' + text + '</div><svg class="chat-me-menu-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
 }
@@ -1126,7 +1142,13 @@ function saveMountNew(type) {
     if (!name) { showToast('请输入名称'); return; }
     var id = genId();
     if (type === 'worldbook') {
-        _chatWorldBookLib.push({ id: id, name: name, content: content });
+        _chatWorldBookLib.push({ id: id, name: name, content: content, inject: 'before' });
+        // ★ 同步回世界书 App
+        try {
+            var appData = JSON.parse(localStorage.getItem('ds_worldbook_data') || '[]');
+            appData.push({ id: id, name: name, content: content, inject: 'before', group: '默认', keywords: '', type: 'global', enabled: true });
+            localStorage.setItem('ds_worldbook_data', JSON.stringify(appData));
+        } catch (ex) { }
         saveWorldBookLib();
         if (!Array.isArray(_crMountWorldBook)) _crMountWorldBook = [];
         _crMountWorldBook.push(id);
@@ -1250,7 +1272,7 @@ function openConversation(rid) {
     // 相册 — 真实选图
     h += '<div class="chat-conv-tool" onclick="chatPickAlbum()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>相册</span></div>';
     h += '<div class="chat-conv-tool" onclick="openTransferPanel()"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>转账</span></div>';
-    h += '<div class="chat-conv-tool" onclick="showToast(\'礼物\')"><svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg><span>礼物</span></div>';
+    h += '<div class="chat-conv-tool" onclick="openGiftShop()"><svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg><span>礼物</span></div>';
     h += '<div class="chat-conv-tool" onclick="showToast(\'定位\')"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>定位</span></div>';
     h += '</div>';
 

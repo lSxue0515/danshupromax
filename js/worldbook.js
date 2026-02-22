@@ -1,189 +1,265 @@
 /* ============================================
    蛋薯机 DanShu Pro v2 — worldbook.js
-   世界书独立 App
+   世界书模块（独立文件）
+   统一存储 key = ds_worldbook_data
    ============================================ */
 
+var WB_KEY = 'ds_worldbook_data';
+var _wbData = [];
 var _wbCurrentTab = 'global';
-var _wbCurrentGroup = '全部';
 var _wbEditingId = null;
-var _wbGroups = [];
+var _wbSelectedInject = 'before';   // 当前编辑器选中的注入位置
 
-var WB_GROUPS_KEY = 'ds_wb_groups';
-
-/* ========== 分组管理 ========== */
-function loadWbGroups() {
-    try { _wbGroups = JSON.parse(localStorage.getItem(WB_GROUPS_KEY) || '["默认"]'); }
-    catch (e) { _wbGroups = ['默认']; }
-    if (_wbGroups.indexOf('默认') === -1) _wbGroups.unshift('默认');
+/* ========== 加载 & 保存 ========== */
+function loadWbData() {
+    try { _wbData = JSON.parse(localStorage.getItem(WB_KEY) || '[]'); } catch (e) { _wbData = []; }
 }
-function saveWbGroups() { safeSetItem(WB_GROUPS_KEY, JSON.stringify(_wbGroups)); }
+function saveWbData() {
+    try { localStorage.setItem(WB_KEY, JSON.stringify(_wbData)); } catch (e) { }
+    // ★ 同步到消息 App 的 _chatWorldBookLib
+    syncWbToChat();
+}
+loadWbData();
 
-/* ========== 打开 / 关闭 ========== */
+/* ★ 同步：worldbook app 数据 → 消息 app 可读取 */
+function syncWbToChat() {
+    // 把 _wbData 中已启用的条目同步到 _chatWorldBookLib
+    if (typeof _chatWorldBookLib === 'undefined') return;
+    _chatWorldBookLib.length = 0;
+    for (var i = 0; i < _wbData.length; i++) {
+        var e = _wbData[i];
+        _chatWorldBookLib.push({
+            id: e.id,
+            name: e.name || '',
+            content: e.content || '',
+            inject: e.inject || 'before',
+            group: e.group || '默认',
+            keywords: e.keywords || '',
+            type: e.type || 'global',
+            enabled: e.enabled !== false
+        });
+    }
+    if (typeof saveWorldBookLib === 'function') saveWorldBookLib();
+}
+
+/* ========== 打开 / 关闭世界书 App ========== */
 function openWorldBookApp() {
-    var o = document.getElementById('wbAppOverlay');
-    if (!o) return;
-    loadChatRoles(); // 加载世界书数据
-    loadWbGroups();
-    _wbCurrentTab = 'global';
-    _wbCurrentGroup = '全部';
-    renderWbGroupBar();
-    updateWbTabBar();
+    var el = document.getElementById('wbAppOverlay');
+    if (!el) return;
+    el.classList.add('show');
     renderWbList();
-    o.classList.add('show');
+    renderWbGroupBar();
 }
 function closeWorldBookApp() {
-    var o = document.getElementById('wbAppOverlay');
-    if (o) o.classList.remove('show');
-    closeWbEditor();
+    var el = document.getElementById('wbAppOverlay');
+    if (el) el.classList.remove('show');
 }
 
 /* ========== Tab 切换 ========== */
 function switchWbTab(tab) {
     _wbCurrentTab = tab;
-    _wbCurrentGroup = '全部';
-    updateWbTabBar();
-    renderWbGroupBar();
+    var tabs = document.querySelectorAll('#wbTabBar .wb-tab');
+    for (var i = 0; i < tabs.length; i++) {
+        tabs[i].classList.toggle('active', tabs[i].getAttribute('data-tab') === tab);
+    }
     renderWbList();
 }
-function updateWbTabBar() {
-    document.querySelectorAll('#wbTabBar .wb-tab').forEach(function (el) {
-        el.classList.toggle('active', el.getAttribute('data-tab') === _wbCurrentTab);
-    });
-}
 
-/* ========== 分组栏 ========== */
+/* ========== 分组栏渲染 ========== */
 function renderWbGroupBar() {
     var bar = document.getElementById('wbGroupBar');
     if (!bar) return;
-    loadWbGroups();
-
-    // 收集当前 tab 下实际用到的分组
-    var usedGroups = {};
-    for (var i = 0; i < _chatWorldBookLib.length; i++) {
-        var wb = _chatWorldBookLib[i];
-        var wbType = wb.wbType || 'global';
-        if (wbType === _wbCurrentTab) {
-            var g = wb.group || '默认';
-            usedGroups[g] = true;
-        }
+    loadWbData();
+    var groups = {};
+    for (var i = 0; i < _wbData.length; i++) {
+        var g = _wbData[i].group || '默认';
+        if (!groups[g]) groups[g] = 0;
+        groups[g]++;
     }
-
-    var h = '';
-    // "全部"胶囊
-    h += '<div class="wb-group-pill' + (_wbCurrentGroup === '全部' ? ' active' : '') + '" onclick="selectWbGroup(\'全部\')">全部</div>';
-
-    for (var j = 0; j < _wbGroups.length; j++) {
-        var gn = _wbGroups[j];
-        h += '<div class="wb-group-pill' + (_wbCurrentGroup === gn ? ' active' : '') + '" onclick="selectWbGroup(\'' + esc(gn).replace(/'/g, "\\'") + '\')">' + esc(gn) + '</div>';
+    var h = '<div class="wb-group-chip active" onclick="filterWbGroup(\'all\')">全部</div>';
+    for (var name in groups) {
+        h += '<div class="wb-group-chip" onclick="filterWbGroup(\'' + esc(name) + '\')">' + esc(name) + ' (' + groups[name] + ')</div>';
     }
-
-    // 添加分组的小加号
-    h += '<div class="wb-group-add" onclick="addWbGroup()">+</div>';
     bar.innerHTML = h;
 }
 
-function selectWbGroup(g) {
-    _wbCurrentGroup = g;
-    renderWbGroupBar();
+var _wbFilterGroup = 'all';
+function filterWbGroup(group) {
+    _wbFilterGroup = group;
+    var chips = document.querySelectorAll('#wbGroupBar .wb-group-chip');
+    for (var i = 0; i < chips.length; i++) chips[i].classList.remove('active');
+    if (event && event.target) event.target.classList.add('active');
     renderWbList();
 }
 
-function addWbGroup() {
-    var name = prompt('请输入新分组名称：');
-    if (!name || !name.trim()) return;
-    name = name.trim();
-    if (_wbGroups.indexOf(name) !== -1) { showToast('分组已存在'); return; }
-    _wbGroups.push(name);
-    saveWbGroups();
-    _wbCurrentGroup = name;
-    renderWbGroupBar();
-    renderWbList();
-    // 同步到编辑器分组下拉
-    refreshEditorGroupSelect();
-    showToast('分组已添加: ' + name);
+/* ========== 注入位置标签映射 ========== */
+function injectLabel(pos) {
+    if (pos === 'after') return '后';
+    if (pos === 'middle') return '中';
+    return '前';
+}
+function injectClass(pos) {
+    if (pos === 'after') return 'pos-after';
+    if (pos === 'middle') return 'pos-middle';
+    return 'pos-before';
 }
 
 /* ========== 列表渲染 ========== */
 function renderWbList() {
     var body = document.getElementById('wbAppBody');
     if (!body) return;
+    loadWbData();
 
     var filtered = [];
-    for (var i = 0; i < _chatWorldBookLib.length; i++) {
-        var wb = _chatWorldBookLib[i];
-        var wbType = wb.wbType || 'global';
-        if (wbType !== _wbCurrentTab) continue;
-        if (_wbCurrentGroup !== '全部' && (wb.group || '默认') !== _wbCurrentGroup) continue;
-        filtered.push(wb);
+    for (var i = 0; i < _wbData.length; i++) {
+        var entry = _wbData[i];
+        if (_wbCurrentTab === 'global' && entry.type === 'role') continue;
+        if (_wbCurrentTab === 'role' && entry.type !== 'role') continue;
+        if (_wbFilterGroup !== 'all') {
+            var g = entry.group || '默认';
+            if (g !== _wbFilterGroup) continue;
+        }
+        filtered.push(entry);
     }
 
-    if (filtered.length === 0) {
-        var tabName = _wbCurrentTab === 'global' ? '全局' : '角色';
-        body.innerHTML = '<div class="wb-empty"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>暂无' + tabName + '世界书<br>点击右上角 + 创建</div>';
+    if (!filtered.length) {
+        body.innerHTML = '<div class="wb-empty">'
+            + '<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#999" stroke-width="1.5">'
+            + '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>'
+            + '<path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
+            + '<p style="color:rgba(0,0,0,0.35);font-size:13px;margin-top:12px;">暂无世界书条目</p>'
+            + '<p style="color:rgba(0,0,0,0.25);font-size:11px;">点击右上角 + 添加</p>'
+            + '</div>';
         return;
     }
 
     var h = '';
     for (var j = 0; j < filtered.length; j++) {
-        var item = filtered[j];
-        var preview = (item.content || '').substring(0, 80);
-        var injectLabel = { before: '前置注入', middle: '中间注入', after: '后置注入' };
-        var injectText = injectLabel[item.inject || 'before'] || '前置注入';
+        var e = filtered[j];
+        var preview = (e.content || '').substring(0, 60);
+        if ((e.content || '').length > 60) preview += '...';
+        var pos = e.inject || 'before';
 
-        h += '<div class="wb-card" onclick="openWbEditor(\'' + item.id + '\')">';
-        h += '<div class="wb-card-header">';
-        h += '<div class="wb-card-name">' + esc(item.name || '未命名') + '</div>';
-        h += '<span class="wb-card-group-tag">' + esc(item.group || '默认') + '</span>';
-        h += '<span class="wb-card-inject-tag">' + injectText + '</span>';
+        h += '<div class="wb-entry-card" onclick="editWbEntry(\'' + e.id + '\')">';
+        h += '<div class="wb-entry-header">';
+        h += '<div class="wb-entry-name">' + esc(e.name || '未命名') + '</div>';
+        h += '<div class="wb-entry-toggle ' + (e.enabled !== false ? 'on' : '') + '" onclick="event.stopPropagation();toggleWbEntry(\'' + e.id + '\')">';
+        h += '<div class="wb-toggle-dot"></div></div>';
         h += '</div>';
-        if (preview) {
-            h += '<div class="wb-card-preview">' + esc(preview) + '</div>';
+        if (e.group) {
+            h += '<div class="wb-entry-group">' + esc(e.group) + '</div>';
         }
-        h += '<div class="wb-card-actions">';
-        h += '<div class="wb-card-btn edit" onclick="event.stopPropagation();openWbEditor(\'' + item.id + '\')">编辑</div>';
-        h += '<div class="wb-card-btn delete" onclick="event.stopPropagation();deleteWbEntry(\'' + item.id + '\')">删除</div>';
+        // 注入位置标签
+        h += '<div class="wb-entry-inject-tag">注入：' + injectLabel(pos) + '</div>';
+        if (e.keywords) {
+            h += '<div class="wb-entry-keywords">关键词: ' + esc(e.keywords) + '</div>';
+        }
+        h += '<div class="wb-entry-preview">' + esc(preview) + '</div>';
+        h += '<div class="wb-entry-actions">';
+        h += '<div class="wb-entry-delete" onclick="event.stopPropagation();deleteWbEntry(\'' + e.id + '\')">删除</div>';
         h += '</div>';
         h += '</div>';
     }
     body.innerHTML = h;
 }
 
-/* ========== 编辑器 ========== */
-function openWbEditor(editId) {
-    _wbEditingId = editId || null;
+/* ========== 开关条目 ========== */
+function toggleWbEntry(id) {
+    loadWbData();
+    for (var i = 0; i < _wbData.length; i++) {
+        if (_wbData[i].id === id) {
+            _wbData[i].enabled = !(_wbData[i].enabled !== false);
+            break;
+        }
+    }
+    saveWbData();
+    renderWbList();
+}
+
+/* ========== 删除条目 ========== */
+function deleteWbEntry(id) {
+    if (!confirm('确定删除这条世界书？')) return;
+    loadWbData();
+    _wbData = _wbData.filter(function (e) { return e.id !== id; });
+    saveWbData();
+    renderWbList();
+    renderWbGroupBar();
+    if (typeof showToast === 'function') showToast('已删除');
+}
+
+/* ========== 注入位置 · 折叠选择器 ========== */
+function toggleWbInjectDropdown() {
+    var section = document.getElementById('wbInjectSection');
+    if (section) section.classList.toggle('open');
+}
+
+function selectWbInject(pos) {
+    _wbSelectedInject = pos;
+
+    // 更新选项高亮
+    var opts = document.querySelectorAll('#wbInjectSection .wb-inject-opt');
+    for (var i = 0; i < opts.length; i++) {
+        opts[i].classList.toggle('active', opts[i].getAttribute('data-pos') === pos);
+    }
+
+    // 更新触发器显示
+    var display = document.getElementById('wbInjectDisplay');
+    if (display) {
+        var labels = { before: '前', middle: '中', after: '后' };
+        display.textContent = labels[pos] || '前';
+        display.setAttribute('data-pos', pos);
+    }
+
+    // 选完自动收起
+    setTimeout(function () {
+        var section = document.getElementById('wbInjectSection');
+        if (section) section.classList.remove('open');
+    }, 180);
+}
+
+/* ========== 打开编辑器（新建 / 编辑） ========== */
+function openWbEditor(id) {
+    _wbEditingId = id || null;
     var overlay = document.getElementById('wbEditorOverlay');
     if (!overlay) return;
-
-    // 刷新分组下拉
-    refreshEditorGroupSelect();
+    overlay.classList.add('show');
 
     var titleEl = document.getElementById('wbEditorTitle');
-    document.getElementById('wbEdName').value = '';
-    document.getElementById('wbEdContent').value = '';
-    document.getElementById('wbEdGroup').value = '默认';
-    selectWbType('global');
-    selectWbInject('before');
+    var nameInput = document.getElementById('wbEdName');
+    var groupSelect = document.getElementById('wbEdGroup');
+    var contentArea = document.getElementById('wbEdContent');
+    var kwInput = document.getElementById('wbEdKeywords');
 
-    if (editId) {
-        var wb = findWorldBook(editId);
-        if (wb) {
-            titleEl.textContent = '编辑世界书';
-            document.getElementById('wbEdName').value = wb.name || '';
-            document.getElementById('wbEdContent').value = wb.content || '';
-            document.getElementById('wbEdGroup').value = wb.group || '默认';
-            selectWbType(wb.wbType || 'global');
-            selectWbInject(wb.inject || 'before');
+    if (_wbEditingId) {
+        loadWbData();
+        var entry = null;
+        for (var i = 0; i < _wbData.length; i++) {
+            if (_wbData[i].id === _wbEditingId) { entry = _wbData[i]; break; }
         }
-    } else {
-        titleEl.textContent = '新建世界书';
-        // 默认当前 tab 的类型
-        selectWbType(_wbCurrentTab);
-        if (_wbCurrentGroup !== '全部') {
-            document.getElementById('wbEdGroup').value = _wbCurrentGroup;
+        if (entry) {
+            if (titleEl) titleEl.textContent = '编辑世界书';
+            if (nameInput) nameInput.value = entry.name || '';
+            if (groupSelect) groupSelect.value = entry.group || '默认';
+            if (contentArea) contentArea.value = entry.content || '';
+            if (kwInput) kwInput.value = entry.keywords || '';
+            _wbSelectedInject = entry.inject || 'before';
+            selectWbInject(_wbSelectedInject);
+            selectWbInject(_wbSelectedInject);
+            // 确保折叠关闭
+            var sec = document.getElementById('wbInjectSection');
+            if (sec) sec.classList.remove('open');
+            return;
         }
     }
 
-    overlay.classList.add('show');
+    // 新建
+    if (titleEl) titleEl.textContent = '新建世界书';
+    if (nameInput) nameInput.value = '';
+    if (groupSelect) groupSelect.value = '默认';
+    if (contentArea) contentArea.value = '';
+    if (kwInput) kwInput.value = '';
+    _wbSelectedInject = 'before';
+    selectWbInject('before');
 }
 
 function closeWbEditor() {
@@ -192,155 +268,62 @@ function closeWbEditor() {
     _wbEditingId = null;
 }
 
-function refreshEditorGroupSelect() {
-    loadWbGroups();
-    var sel = document.getElementById('wbEdGroup');
-    if (!sel) return;
-    var curVal = sel.value;
-    sel.innerHTML = '';
-    for (var i = 0; i < _wbGroups.length; i++) {
-        var opt = document.createElement('option');
-        opt.value = _wbGroups[i];
-        opt.textContent = _wbGroups[i];
-        sel.appendChild(opt);
-    }
-    // 恢复选择
-    var found = false;
-    for (var j = 0; j < sel.options.length; j++) {
-        if (sel.options[j].value === curVal) { found = true; break; }
-    }
-    if (found) sel.value = curVal;
-}
-
-function selectWbType(type) {
-    document.querySelectorAll('.wb-type-btn').forEach(function (el) {
-        el.classList.toggle('active', el.getAttribute('data-type') === type);
-    });
-}
-function getSelectedWbType() {
-    var el = document.querySelector('.wb-type-btn.active');
-    return el ? el.getAttribute('data-type') : 'global';
-}
-
-function selectWbInject(pos) {
-    document.querySelectorAll('.wb-inject-btn').forEach(function (el) {
-        el.classList.toggle('active', el.getAttribute('data-pos') === pos);
-    });
-}
-function getSelectedWbInject() {
-    var el = document.querySelector('.wb-inject-btn.active');
-    return el ? el.getAttribute('data-pos') : 'before';
-}
-
+/* ========== 保存条目 ========== */
 function saveWbEntry() {
-    var name = document.getElementById('wbEdName').value.trim();
-    if (!name) { showToast('请输入世界书名称'); return; }
-    var group = document.getElementById('wbEdGroup').value;
-    var content = document.getElementById('wbEdContent').value.trim();
-    var wbType = getSelectedWbType();
-    var inject = getSelectedWbInject();
+    var nameInput = document.getElementById('wbEdName');
+    var groupSelect = document.getElementById('wbEdGroup');
+    var contentArea = document.getElementById('wbEdContent');
+    var kwInput = document.getElementById('wbEdKeywords');
+
+    var name = nameInput ? nameInput.value.trim() : '';
+    var group = groupSelect ? groupSelect.value : '默认';
+    var content = contentArea ? contentArea.value.trim() : '';
+    var keywords = kwInput ? kwInput.value.trim() : '';
+    var inject = _wbSelectedInject || 'before';
+
+    if (!name) { if (typeof showToast === 'function') showToast('请输入名称'); return; }
+    if (!content) { if (typeof showToast === 'function') showToast('请输入内容'); return; }
+
+    loadWbData();
 
     if (_wbEditingId) {
-        var wb = findWorldBook(_wbEditingId);
-        if (wb) {
-            wb.name = name;
-            wb.group = group;
-            wb.content = content;
-            wb.wbType = wbType;
-            wb.inject = inject;
+        for (var i = 0; i < _wbData.length; i++) {
+            if (_wbData[i].id === _wbEditingId) {
+                _wbData[i].name = name;
+                _wbData[i].group = group;
+                _wbData[i].content = content;
+                _wbData[i].keywords = keywords;
+                _wbData[i].inject = inject;
+                break;
+            }
         }
-        showToast('世界书已更新');
     } else {
-        var id = genId();
-        _chatWorldBookLib.push({
-            id: id,
+        _wbData.push({
+            id: 'wb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
             name: name,
             group: group,
             content: content,
-            wbType: wbType,
-            inject: inject
+            keywords: keywords,
+            inject: inject,
+            type: _wbCurrentTab === 'role' ? 'role' : 'global',
+            enabled: true
         });
-        showToast('世界书已创建');
     }
 
-    saveWorldBookLib();
+    saveWbData();
     closeWbEditor();
     renderWbList();
+    renderWbGroupBar();
+    if (typeof showToast === 'function') showToast(_wbEditingId ? '已保存 ✨' : '已创建 ✨');
 }
 
-function deleteWbEntry(id) {
-    if (!confirm('确认删除这个世界书？')) return;
-    for (var i = 0; i < _chatWorldBookLib.length; i++) {
-        if (_chatWorldBookLib[i].id === id) {
-            _chatWorldBookLib.splice(i, 1);
-            break;
-        }
-    }
-    saveWorldBookLib();
-    renderWbList();
-    showToast('已删除');
-}
+/* ========== 编辑已有条目 ========== */
+function editWbEntry(id) { openWbEditor(id); }
 
-/* ==========================================================
-   挂载选择器 — 分组折叠版（替换 chat.js 中的平铺列表）
-   在 chat.js 的 openMountSelector 中对 worldbook 类型特殊处理
-   ========================================================== */
-
-/**
- * 构建按分组折叠的世界书挂载列表 HTML
- * @param {string} selectedId - 当前已选中的世界书ID
- * @returns {string} HTML
- */
-function buildWorldBookMountList(selectedIds) {
-    loadWbGroups();
-    var selArr = Array.isArray(selectedIds) ? selectedIds : (selectedIds ? [selectedIds] : []);
-
-    // 按分组归类
-    var grouped = {};
-    for (var i = 0; i < _chatWorldBookLib.length; i++) {
-        var wb = _chatWorldBookLib[i];
-        var g = wb.group || '默认';
-        if (!grouped[g]) grouped[g] = [];
-        grouped[g].push(wb);
-    }
-
-    var h = '';
-
-    // 按分组渲染
-    var allGroups = Object.keys(grouped);
-    for (var j = 0; j < allGroups.length; j++) {
-        var gName = allGroups[j];
-        var items = grouped[gName];
-        var hasSelected = false;
-        for (var k = 0; k < items.length; k++) {
-            if (selArr.indexOf(items[k].id) !== -1) { hasSelected = true; break; }
-        }
-
-        h += '<div class="wb-mount-group">';
-        h += '<div class="wb-mount-group-header' + (hasSelected ? ' open' : '') + '" onclick="toggleWbMountGroup(this)">';
-        h += '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
-        h += '<span>' + esc(gName) + '</span>';
-        h += '<span class="wb-mount-group-count">' + items.length + '个</span>';
-        h += '</div>';
-        h += '<div class="wb-mount-group-items' + (hasSelected ? ' open' : '') + '">';
-
-        for (var m = 0; m < items.length; m++) {
-            var item = items[m];
-            var isActive = selArr.indexOf(item.id) !== -1;
-            h += '<div class="chat-mount-option' + (isActive ? ' selected' : '') + '" onclick="toggleWbMountOption(\'' + item.id + '\')">';
-            h += '<div class="chat-mount-option-name">' + esc(item.name) + '</div>';
-            h += '<div class="chat-mount-option-check">' + (isActive ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
-            h += '</div>';
-        }
-
-        h += '</div></div>';
-    }
-
-    return h;
-}
-
-function toggleWbMountGroup(headerEl) {
-    headerEl.classList.toggle('open');
-    var items = headerEl.nextElementSibling;
-    if (items) items.classList.toggle('open');
+/* ========== 辅助：HTML 转义 ========== */
+function esc(str) {
+    if (typeof str !== 'string') return '';
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
 }

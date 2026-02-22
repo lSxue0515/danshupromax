@@ -1,431 +1,622 @@
 /* ============================================
    蛋薯机 DanShu Pro v2 — worldbook.css
-   世界书 App 样式
+   世界书模块样式 · 与 moments.css 统一设计语言
+   淡紫粉白底 + 白色毛玻璃卡片 + 白光边框
    ============================================ */
 
-/* ===== 全屏遮罩 ===== */
+/* ===== 世界书 Overlay ===== */
 .wb-app-overlay {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    inset: 0;
     z-index: 100;
-    background: rgba(0,0,0,0.35);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.35s ease, visibility 0.35s ease;
-}
-.wb-app-overlay.show {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* ===== 面板 ===== */
-.wb-app-panel {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(248, 242, 250, 0.95);
     display: flex;
     flex-direction: column;
-    transform: translateY(100%);
-    transition: transform 0.45s cubic-bezier(0.32,0.72,0,1);
-    background: rgba(245,235,240,0.65);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-}
-.wb-app-overlay.show .wb-app-panel {
-    transform: translateY(0);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    border-radius: 44px;
+    overflow: hidden;
 }
 
-/* ===== 顶栏 ===== */
-.wb-app-header,
-.wb-editor-header {
-    height: 56px;
-    padding: 0 18px;
+.wb-app-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+/* ===== 面板主体 ===== */
+.wb-app-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ===== 顶部导航栏 ===== */
+.wb-app-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    padding: 52px 18px 14px 18px;
+    gap: 10px;
     flex-shrink: 0;
-    background: rgba(255,255,255,0.35);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-bottom: 1px solid rgba(255,255,255,0.2);
 }
+
 .wb-app-back {
-    width: 36px; height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.25);
-    border: 1px solid rgba(255,255,255,0.3);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: rgba(80,60,70,0.8);
-}
-.wb-app-back:active { transform: scale(0.9); }
-.wb-app-back svg {
-    fill: none; stroke: currentColor;
-    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-}
-.wb-app-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: rgba(80,60,70,0.9);
-    letter-spacing: 0.5px;
-}
-.wb-app-header-add {
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    background: rgba(248,164,184,0.2);
-    border: 1px solid rgba(248,164,184,0.3);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: rgba(220,100,130,0.8);
-}
-.wb-app-header-add:active { transform: scale(0.9); }
-.wb-app-header-add svg {
-    fill: none; stroke: currentColor;
-    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-}
-
-/* ===== 分组胶囊横向栏 ===== */
-.wb-group-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    overflow-x: auto;
-    flex-shrink: 0;
-    -webkit-overflow-scrolling: touch;
-}
-.wb-group-bar::-webkit-scrollbar { display: none; }
-
-.wb-group-pill {
-    flex-shrink: 0;
-    padding: 5px 14px;
-    border-radius: 20px;
-    font-size: 12px;
-    background: rgba(255,255,255,0.45);
-    border: 1px solid rgba(255,255,255,0.4);
-    color: rgba(80,60,70,0.7);
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.55);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-}
-.wb-group-pill.active {
-    background: rgba(248,164,184,0.3);
-    border-color: rgba(248,164,184,0.5);
-    color: rgba(200,80,120,0.9);
-    font-weight: 600;
-}
-.wb-group-pill:active { transform: scale(0.95); }
-
-.wb-group-add {
-    flex-shrink: 0;
-    width: 28px; height: 28px;
-    border-radius: 14px;
-    background: rgba(255,255,255,0.35);
-    border: 1px solid rgba(255,255,255,0.4);
-    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    color: rgba(80,60,70,0.5);
-    font-size: 16px;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
-.wb-group-add:active { transform: scale(0.9); }
 
-/* ===== Tab 栏 ===== */
+.wb-app-back:active {
+    background: rgba(255, 180, 200, 0.2);
+    transform: scale(0.93);
+}
+
+.wb-app-back svg {
+    width: 16px;
+    height: 16px;
+    stroke: rgba(50, 40, 55, 0.5);
+    stroke-width: 2;
+    fill: none;
+}
+
+.wb-app-title {
+    flex: 1;
+    font-size: 17px;
+    font-weight: 700;
+    color: rgba(50, 40, 55, 0.85);
+    text-align: center;
+}
+
+.wb-app-header-add {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.wb-app-header-add:active {
+    background: rgba(255, 180, 200, 0.2);
+    transform: scale(0.93);
+}
+
+.wb-app-header-add svg {
+    width: 16px;
+    height: 16px;
+    stroke: rgba(50, 40, 55, 0.5);
+    stroke-width: 2;
+    fill: none;
+}
+
+/* ===== 分组筛选栏 ===== */
+.wb-group-bar {
+    display: flex;
+    gap: 8px;
+    padding: 6px 18px 10px;
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+
+.wb-group-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.wb-group-chip {
+    padding: 5px 14px;
+    border-radius: 14px;
+    font-size: 12px;
+    color: rgba(50, 40, 55, 0.45);
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    font-weight: 500;
+}
+
+.wb-group-chip.active {
+    background: rgba(255, 180, 200, 0.25);
+    color: rgba(50, 40, 55, 0.85);
+    font-weight: 600;
+    border-color: rgba(255, 180, 200, 0.4);
+}
+
+.wb-group-chip:active {
+    transform: scale(0.95);
+}
+
+/* ===== Tab 切换栏 ===== */
 .wb-tab-bar {
     display: flex;
-    gap: 0;
     padding: 0 18px;
+    gap: 0;
     flex-shrink: 0;
-    border-bottom: 1px solid rgba(255,255,255,0.15);
 }
+
 .wb-tab {
     flex: 1;
     text-align: center;
     padding: 10px 0;
     font-size: 13px;
-    color: rgba(80,60,70,0.5);
+    color: rgba(50, 40, 55, 0.38);
     cursor: pointer;
-    border-bottom: 2px solid transparent;
+    border-bottom: 2.5px solid transparent;
     transition: all 0.2s;
-}
-.wb-tab.active {
-    color: rgba(200,80,120,0.9);
-    border-bottom-color: rgba(248,164,184,0.8);
-    font-weight: 600;
+    font-weight: 500;
 }
 
-/* ===== 内容区 ===== */
+.wb-tab.active {
+    color: rgba(50, 40, 55, 0.85);
+    font-weight: 700;
+    border-bottom-color: rgba(255, 160, 190, 0.7);
+}
+
+/* ===== 列表主体 ===== */
 .wb-app-body {
     flex: 1;
     overflow-y: auto;
-    padding: 14px 16px;
+    padding: 10px 14px 28px;
     -webkit-overflow-scrolling: touch;
 }
 
-/* ===== 世界书卡片 ===== */
-.wb-card {
-    background: rgba(255,255,255,0.55);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.5);
-    border-radius: 16px;
+/* ===== 空状态 ===== */
+.wb-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 70px 20px;
+    text-align: center;
+}
+
+.wb-empty svg {
+    opacity: 0.2;
+    stroke: rgba(50, 40, 55, 0.35);
+}
+
+.wb-empty p {
+    color: rgba(50, 40, 55, 0.35);
+    font-size: 13px;
+    margin-top: 12px;
+    line-height: 1.6;
+}
+
+/* ===== 条目卡片 — 白色毛玻璃悬浮 ===== */
+.wb-entry-card {
     padding: 14px 16px;
     margin-bottom: 10px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-    transition: all 0.2s;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
     cursor: pointer;
+    transition: all 0.2s;
 }
-.wb-card:active {
+
+.wb-entry-card:active {
+    background: rgba(255, 255, 255, 0.65);
     transform: scale(0.98);
-    background: rgba(255,255,255,0.7);
 }
-.wb-card-header {
+
+.wb-entry-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 6px;
 }
-.wb-card-name {
-    font-size: 14px;
+
+.wb-entry-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: rgba(50, 40, 55, 0.85);
+}
+
+/* ===== 开关 ===== */
+.wb-entry-toggle {
+    width: 42px;
+    height: 24px;
+    border-radius: 12px;
+    background: rgba(50, 40, 55, 0.12);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.25s;
+    flex-shrink: 0;
+}
+
+.wb-entry-toggle.on {
+    background: rgba(255, 160, 190, 0.65);
+}
+
+.wb-toggle-dot {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.25s;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.wb-entry-toggle.on .wb-toggle-dot {
+    transform: translateX(18px);
+}
+
+.wb-entry-group {
+    font-size: 11px;
+    color: rgba(50, 40, 55, 0.35);
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+/* ===== 注入位置标签（列表卡片中） ===== */
+.wb-entry-inject-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 10px;
     font-weight: 600;
-    color: rgba(80,60,70,0.9);
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    margin-bottom: 5px;
+    letter-spacing: 0.3px;
+    background: rgba(50, 40, 55, 0.05);
+    color: rgba(50, 40, 55, 0.45);
 }
-.wb-card-group-tag {
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: rgba(248,164,184,0.15);
-    color: rgba(200,80,120,0.7);
-    border: 1px solid rgba(248,164,184,0.2);
-    flex-shrink: 0;
-    margin-left: 8px;
+
+.wb-entry-keywords {
+    font-size: 11px;
+    color: rgba(160, 130, 200, 0.7);
+    margin-bottom: 5px;
+    font-weight: 500;
 }
-.wb-card-inject-tag {
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: rgba(120,160,220,0.12);
-    color: rgba(80,120,180,0.7);
-    border: 1px solid rgba(120,160,220,0.2);
-    flex-shrink: 0;
-    margin-left: 6px;
-}
-.wb-card-preview {
+
+.wb-entry-preview {
     font-size: 12px;
-    color: rgba(80,60,70,0.5);
-    line-height: 1.5;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    color: rgba(50, 40, 55, 0.4);
+    line-height: 1.55;
+    margin-bottom: 8px;
 }
-.wb-card-actions {
+
+.wb-entry-actions {
     display: flex;
-    gap: 8px;
-    margin-top: 8px;
     justify-content: flex-end;
 }
-.wb-card-btn {
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 11px;
+
+.wb-entry-delete {
+    font-size: 12px;
+    color: rgba(220, 100, 100, 0.55);
     cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 10px;
     transition: all 0.2s;
-    border: 1px solid rgba(255,255,255,0.3);
-}
-.wb-card-btn.edit {
-    background: rgba(248,164,184,0.15);
-    color: rgba(200,80,120,0.8);
-    border-color: rgba(248,164,184,0.3);
-}
-.wb-card-btn.delete {
-    background: rgba(220,80,80,0.08);
-    color: rgba(200,80,80,0.6);
-    border-color: rgba(220,80,80,0.15);
-}
-.wb-card-btn:active { transform: scale(0.92); }
-
-.wb-empty {
-    text-align: center;
-    padding: 60px 20px;
-    color: rgba(80,60,70,0.35);
-    font-size: 13px;
-}
-.wb-empty svg {
-    display: block;
-    margin: 0 auto 12px;
-    width: 40px; height: 40px;
-    fill: none;
-    stroke: rgba(80,60,70,0.2);
-    stroke-width: 1.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+    font-weight: 500;
 }
 
-/* ===== 编辑器覆层 ===== */
+.wb-entry-delete:active {
+    background: rgba(220, 100, 100, 0.08);
+    color: rgba(220, 80, 80, 0.9);
+}
+
+/* ===== 编辑器 Overlay ===== */
 .wb-editor-overlay {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    z-index: 10;
-    background: rgba(245,235,240,0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    transform: translateX(100%);
-    transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+    inset: 0;
+    z-index: 110;
+    background: rgba(248, 242, 250, 0.97);
     display: flex;
     flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    border-radius: 44px;
+    overflow: hidden;
 }
+
 .wb-editor-overlay.show {
-    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
 }
+
+.wb-editor-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.wb-editor-header {
+    display: flex;
+    align-items: center;
+    padding: 52px 18px 14px 18px;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.wb-editor-back {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.wb-editor-back:active {
+    background: rgba(255, 180, 200, 0.2);
+    transform: scale(0.93);
+}
+
+.wb-editor-back svg {
+    width: 16px;
+    height: 16px;
+    stroke: rgba(50, 40, 55, 0.5);
+    stroke-width: 2;
+    fill: none;
+}
+
+.wb-editor-title {
+    flex: 1;
+    font-size: 17px;
+    font-weight: 700;
+    color: rgba(50, 40, 55, 0.85);
+    text-align: center;
+}
+
 .wb-editor-save {
     padding: 6px 16px;
-    border-radius: 18px;
-    background: rgba(248,164,184,0.25);
-    border: 1px solid rgba(248,164,184,0.4);
-    color: rgba(200,80,120,0.9);
+    border-radius: 14px;
+    background: rgba(255, 180, 200, 0.3);
+    border: 1px solid rgba(255, 180, 200, 0.4);
+    color: rgba(50, 40, 55, 0.75);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
 }
-.wb-editor-save:active { transform: scale(0.92); }
+
+.wb-editor-save:active {
+    background: rgba(255, 160, 190, 0.5);
+    transform: scale(0.95);
+}
+
 .wb-editor-body {
     flex: 1;
     overflow-y: auto;
-    padding: 18px;
+    padding: 10px 18px 30px;
+    -webkit-overflow-scrolling: touch;
 }
+
 .wb-editor-field {
-    margin-bottom: 16px;
+    margin-bottom: 18px;
 }
-.wb-editor-field label {
-    display: block;
+
+.wb-editor-label {
     font-size: 12px;
-    color: rgba(80,60,70,0.6);
+    font-weight: 600;
+    color: rgba(50, 40, 55, 0.45);
     margin-bottom: 6px;
-    font-weight: 500;
+    letter-spacing: 0.3px;
 }
+
 .wb-editor-input {
     width: 100%;
     padding: 10px 14px;
     border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.4);
-    background: rgba(255,255,255,0.5);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    font-size: 13px;
-    color: rgba(80,60,70,0.9);
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    color: rgba(50, 40, 55, 0.85);
     outline: none;
-    box-sizing: border-box;
     transition: all 0.2s;
+    box-sizing: border-box;
+    font-family: inherit;
+    -webkit-appearance: none;
+    appearance: none;
 }
+
 .wb-editor-input:focus {
-    border-color: rgba(248,164,184,0.5);
-    background: rgba(255,255,255,0.7);
+    border-color: rgba(255, 180, 200, 0.5);
+    background: rgba(255, 255, 255, 0.65);
 }
+
+.wb-editor-input::placeholder {
+    color: rgba(50, 40, 55, 0.25);
+}
+
+.wb-editor-input option {
+    background: #fff;
+    color: rgba(50, 40, 55, 0.85);
+}
+
 .wb-editor-textarea {
     width: 100%;
-    padding: 10px 14px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.4);
-    background: rgba(255,255,255,0.5);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    font-size: 13px;
-    color: rgba(80,60,70,0.9);
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    color: rgba(50, 40, 55, 0.85);
     outline: none;
     resize: vertical;
     min-height: 120px;
+    line-height: 1.6;
     box-sizing: border-box;
     font-family: inherit;
-    line-height: 1.6;
     transition: all 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
 }
+
 .wb-editor-textarea:focus {
-    border-color: rgba(248,164,184,0.5);
-    background: rgba(255,255,255,0.7);
+    border-color: rgba(255, 180, 200, 0.5);
+    background: rgba(255, 255, 255, 0.65);
 }
 
-/* 类型选择 */
-.wb-type-row,
-.wb-inject-row {
-    display: flex;
-    gap: 8px;
-}
-.wb-type-btn,
-.wb-inject-btn {
-    flex: 1;
-    text-align: center;
-    padding: 8px 0;
-    border-radius: 12px;
-    font-size: 12px;
-    background: rgba(255,255,255,0.4);
-    border: 1px solid rgba(255,255,255,0.4);
-    color: rgba(80,60,70,0.6);
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.wb-type-btn.active,
-.wb-inject-btn.active {
-    background: rgba(248,164,184,0.25);
-    border-color: rgba(248,164,184,0.5);
-    color: rgba(200,80,120,0.9);
-    font-weight: 600;
-}
-.wb-type-btn:active,
-.wb-inject-btn:active {
-    transform: scale(0.95);
+.wb-editor-textarea::placeholder {
+    color: rgba(50, 40, 55, 0.25);
 }
 
-/* ===== 挂载选择器 — 分组折叠 ===== */
-.wb-mount-group {
-    margin-bottom: 8px;
+/* ===== 注入位置 · 折叠选择器 ===== */
+.wb-inject-section {
+    margin-top: 6px;
 }
-.wb-mount-group-header {
+
+.wb-inject-trigger {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    background: rgba(248,164,184,0.08);
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
     cursor: pointer;
     transition: all 0.2s;
-    font-size: 12px;
-    color: rgba(80,60,70,0.6);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+}
+
+.wb-inject-trigger:active {
+    background: rgba(255, 255, 255, 0.6);
+    transform: scale(0.98);
+}
+
+.wb-inject-trigger-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wb-inject-trigger-label {
+    font-size: 13px;
     font-weight: 500;
+    color: rgba(50, 40, 55, 0.45);
 }
-.wb-mount-group-header:active { background: rgba(248,164,184,0.15); }
-.wb-mount-group-header svg {
-    width: 14px; height: 14px;
-    fill: none;
-    stroke: rgba(80,60,70,0.4);
+
+.wb-inject-trigger-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(50, 40, 55, 0.7);
+}
+
+.wb-inject-arrow {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.25s;
+}
+
+.wb-inject-arrow svg {
+    width: 16px;
+    height: 16px;
+    stroke: rgba(50, 40, 55, 0.25);
     stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    transition: transform 0.2s;
+    fill: none;
 }
-.wb-mount-group-header.open svg {
-    transform: rotate(90deg);
+
+.wb-inject-section.open .wb-inject-arrow {
+    transform: rotate(180deg);
 }
-.wb-mount-group-header .wb-mount-group-count {
-    font-size: 10px;
-    color: rgba(80,60,70,0.35);
-    margin-left: auto;
+
+/* 折叠内容 */
+.wb-inject-dropdown {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.28s cubic-bezier(0.32, 0.72, 0, 1),
+        opacity 0.2s;
+    opacity: 0;
 }
-.wb-mount-group-items {
-    display: none;
-    padding-left: 8px;
+
+.wb-inject-section.open .wb-inject-dropdown {
+    max-height: 200px;
+    opacity: 1;
 }
-.wb-mount-group-items.open {
-    display: block;
+
+.wb-inject-options {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 0 2px;
+}
+
+.wb-inject-opt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+
+.wb-inject-opt:active {
+    transform: scale(0.97);
+}
+
+.wb-inject-opt .wb-io-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(50, 40, 55, 0.15);
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.wb-inject-opt .wb-io-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(50, 40, 55, 0.4);
+    transition: all 0.2s;
+}
+
+.wb-inject-opt.active {
+    background: rgba(255, 255, 255, 0.45);
+}
+
+.wb-inject-opt.active .wb-io-dot {
+    background: rgba(50, 40, 55, 0.6);
+    box-shadow: 0 0 0 2.5px rgba(50, 40, 55, 0.1);
+}
+
+.wb-inject-opt.active .wb-io-text {
+    color: rgba(50, 40, 55, 0.75);
+    font-weight: 600;
 }
