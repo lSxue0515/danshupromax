@@ -375,6 +375,11 @@ function renderMe() {
     h += '<div class="chat-me-menu-item" onclick="openStickerManager()"><div class="chat-me-menu-text">表情包管理</div><svg class="chat-me-menu-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>';
     h += '</div></div>';
 
+    // 在 renderMe 函数体内，适当位置添加订单入口
+    if (typeof renderMeOrdersSection === 'function') {
+        h += renderMeOrdersSection();
+    }
+
     return h;
 }
 
@@ -1342,6 +1347,7 @@ function renderBubbleRow(m, idx, myAv, roleAv) {
     if (m.image) return renderImageBubbleRow(m, idx, myAv, roleAv);
     if (m.sticker) return renderStickerBubbleRow(m, idx, myAv, roleAv);
     if (m.transfer) return renderTransferBubbleRow(m, idx, myAv, roleAv);
+    if (m.giftCard) return renderGiftCardBubbleRow(m, idx, myAv, roleAv);
 
     var h = '';
     h += '<div class="chat-bubble-row ' + (m.from === 'self' ? 'self' : '') + '" data-msg-idx="' + idx + '" onclick="showBubbleMenu(event,' + idx + ')">';
@@ -3967,3 +3973,104 @@ function deleteStickerGroup(idx) {
     style.textContent = '.chat-bubble-translate-divider{border-top:1px dashed rgba(0,0,0,0.2);margin:8px 0 6px 0}.chat-bubble-translate{font-size:12px;color:#666;line-height:1.5;white-space:pre-wrap;word-break:break-word}.chat-bubble-row.self .chat-bubble-translate-divider{border-top-color:rgba(255,255,255,0.3)}.chat-bubble-row.self .chat-bubble-translate{color:rgba(255,255,255,0.7)}.chat-bubble-translating{font-size:11px;color:#999;padding:2px 0;font-style:italic}';
     document.head.appendChild(style);
 })();
+
+/* ========== 礼物卡片气泡渲染 ========== */
+function renderGiftCardBubbleRow(m, idx, myAv, roleAv) {
+    var isSelf = m.from === 'self';
+    var av = isSelf ? myAv : roleAv;
+    var h = '';
+    h += '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-msg-idx="' + idx + '" onclick="showBubbleMenu(event,' + idx + ')">';
+    h += '<div class="chat-bubble-avatar">';
+    if (av) h += '<img src="' + av + '" alt="">';
+    else h += SVG_USER;
+    h += '</div>';
+    h += '<div class="chat-bubble-content-wrap">';
+    h += '<div class="chat-bubble" style="background:transparent;padding:0;border:none;box-shadow:none;max-width:240px;">';
+
+    // 礼物盒卡片
+    var gd = m.giftData || {};
+    var imgPart = gd.img
+        ? '<img src="' + gd.img + '" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:10px;">'
+        : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,220,230,0.3);border-radius:10px;"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="rgba(255,160,180,0.5)" stroke-width="1.5"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8V21"/><path d="M3 12h18"/><path d="M12 8c-1-3-5-4-5-1s4 1 5 1"/><path d="M12 8c1-3 5-4 5-1s-4 1-5 1"/></svg></div>';
+
+    var titleText = m.giftCardType === 'request' ? '请帮我付款' : '快来拆封我送你的礼物吧';
+    if (m.giftCardType === 'charGift') titleText = '送你一份礼物';
+
+    h += '<div style="width:220px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:16px;border:1px solid rgba(255,255,255,0.7);box-shadow:0 4px 24px rgba(0,0,0,0.06);overflow:hidden;cursor:pointer;" onclick="event.stopPropagation();showGiftCardDetail(\'' + (gd.orderNo || '') + '\')">';
+    h += '<div style="padding:12px 14px 8px;font-size:13px;font-weight:700;color:rgba(50,40,55,0.8);text-align:center;">' + esc(titleText) + '</div>';
+    h += '<div style="width:100%;height:110px;padding:0 14px;box-sizing:border-box;"><div style="width:100%;height:100%;border-radius:10px;overflow:hidden;background:rgba(248,242,250,0.5);">' + imgPart + '</div></div>';
+    h += '<div style="padding:8px 14px 10px;text-align:center;">';
+    h += '<div style="font-size:12px;font-weight:600;color:rgba(50,40,55,0.7);margin-bottom:2px;">' + esc(gd.name || '') + '</div>';
+    h += '<div style="font-size:14px;font-weight:800;color:rgba(255,110,140,0.9);">' + esc(gd.price || '0.00') + '</div>';
+    h += '</div>';
+
+    // 底部按钮区
+    if (m.giftCardType === 'request' && !isSelf) {
+        h += '<div style="display:flex;border-top:1px solid rgba(0,0,0,0.04);">';
+        h += '<div style="flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:rgba(255,130,160,0.9);cursor:pointer;" onclick="event.stopPropagation();charConfirmPay(\'' + esc(gd.orderNo || '') + '\')">帮TA付款</div>';
+        h += '</div>';
+    } else if (m.giftCardType === 'charGift' && isSelf === false) {
+        h += '<div style="display:flex;border-top:1px solid rgba(0,0,0,0.04);">';
+        h += '<div style="flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:rgba(80,160,100,0.85);cursor:pointer;border-right:1px solid rgba(0,0,0,0.04);" onclick="event.stopPropagation();acceptCharGift(\'' + esc(gd.orderNo || '') + '\')">收下</div>';
+        h += '<div style="flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:rgba(255,130,160,0.9);cursor:pointer;" onclick="event.stopPropagation();userPayForCharGift(\'' + esc(gd.orderNo || '') + '\')">我来付</div>';
+        h += '</div>';
+    }
+
+    h += '</div>';  // card end
+    h += '</div>';  // bubble end
+    h += '</div>';  // content-wrap end
+    h += '</div>';  // row end
+    return h;
+}
+
+/* ========== 礼物卡片详情弹窗 ========== */
+function showGiftCardDetail(orderNo) {
+    if (typeof initGiftData === 'function') initGiftData();
+    var order = null;
+    for (var i = 0; i < giftOrders.length; i++) {
+        if (giftOrders[i].orderNo === orderNo) { order = giftOrders[i]; break; }
+    }
+    if (!order) { if (typeof showToast === 'function') showToast('订单未找到'); return; }
+
+    var ov = document.getElementById('giftCardDetailPopup');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'giftCardDetailPopup';
+        document.querySelector('.phone-frame').appendChild(ov);
+    }
+
+    var imgPart = order.giftImg
+        ? '<img src="' + order.giftImg + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
+        : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(150,140,155,0.5);">无图</div>';
+
+    var statusColor = order.status === '已发货' ? 'rgba(80,160,100,0.85)' : (order.status === '待代付' ? 'rgba(255,160,80,0.85)' : 'rgba(50,40,55,0.5)');
+
+    ov.style.cssText = 'position:absolute;inset:0;z-index:999;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;border-radius:44px;animation:fadeIn 0.2s;';
+    ov.innerHTML = '<div style="width:280px;background:rgba(255,255,255,0.92);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border-radius:20px;border:1px solid rgba(255,255,255,0.7);box-shadow:0 8px 40px rgba(0,0,0,0.1);overflow:hidden;" onclick="event.stopPropagation()">'
+        + '<div style="width:100%;height:160px;overflow:hidden;background:rgba(248,242,250,0.5);">' + imgPart + '</div>'
+        + '<div style="padding:14px 18px;">'
+        + '<div style="font-size:16px;font-weight:700;color:rgba(50,40,55,0.85);margin-bottom:4px;">' + escGift(order.giftName) + '</div>'
+        + '<div style="font-size:12px;color:rgba(50,40,55,0.35);margin-bottom:8px;">' + escGift(order.giftDesc || '') + '</div>'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+        + '<span style="font-size:18px;font-weight:800;color:rgba(255,110,140,0.9);">' + order.price + '</span>'
+        + '<span style="font-size:11px;font-weight:600;color:' + statusColor + ';padding:2px 8px;border-radius:8px;background:rgba(0,0,0,0.03);">' + escGift(order.status) + '</span>'
+        + '</div>'
+        + '<div style="font-size:11px;color:rgba(50,40,55,0.3);line-height:1.8;">'
+        + '订单号: ' + order.orderNo + '<br>'
+        + '时间: ' + formatOrderDate(order.createdAt) + '<br>'
+        + '付款: ' + escGift(order.payType || '')
+        + (order.address ? '<br>地址: ' + escGift(order.address) : '')
+        + '</div>'
+        + '</div>'
+        + '<div style="padding:10px 18px 14px;border-top:1px solid rgba(0,0,0,0.04);text-align:center;">'
+        + '<div style="display:inline-block;padding:8px 28px;border-radius:20px;background:rgba(255,140,170,0.15);color:rgba(255,100,140,0.85);font-size:13px;font-weight:600;cursor:pointer;" onclick="closeGiftCardDetail()">关闭</div>'
+        + '</div>'
+        + '</div>';
+
+    ov.onclick = function (e) { if (e.target === ov) closeGiftCardDetail(); };
+}
+
+function closeGiftCardDetail() {
+    var ov = document.getElementById('giftCardDetailPopup');
+    if (ov) ov.remove();
+}

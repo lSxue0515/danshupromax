@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="css/gift.css">
     <link rel="stylesheet" href="css/page2widget.css">
     <link rel="stylesheet" href="css/dock.css">
+    <link rel="stylesheet" href="css/page3widget.css">
 
 
 
@@ -456,8 +457,244 @@
                             </div> <!-- /p2-note-card -->
                         </div> <!-- /p2-bottom-row -->
 
+                        <!-- ★ 拍立得轮播组件 ★ -->
+                        <div class="p2-carousel-widget">
+                            <div class="p2-carousel-inner" id="p2CarouselInner">
+                                <!-- 左 -->
+                                <div class="p2-carousel-card p2-cc-left" data-slot="0" onclick="p2PickCarousel(0)">
+                                    <div class="p2-carousel-frame">
+                                        <img src="" id="p2CarImg0" alt="">
+                                        <div class="p2-carousel-hint">
+                                            <svg viewBox="0 0 24 24" width="22" height="22">
+                                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                                <polyline points="21 15 16 10 5 21" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 中 -->
+                                <div class="p2-carousel-card p2-cc-center" data-slot="1" onclick="p2PickCarousel(1)">
+                                    <div class="p2-carousel-frame">
+                                        <img src="" id="p2CarImg1" alt="">
+                                        <div class="p2-carousel-hint">
+                                            <svg viewBox="0 0 24 24" width="22" height="22">
+                                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                                <polyline points="21 15 16 10 5 21" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 右 -->
+                                <div class="p2-carousel-card p2-cc-right" data-slot="2" onclick="p2PickCarousel(2)">
+                                    <div class="p2-carousel-frame">
+                                        <img src="" id="p2CarImg2" alt="">
+                                        <div class="p2-carousel-hint">
+                                            <svg viewBox="0 0 24 24" width="22" height="22">
+                                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                                <polyline points="21 15 16 10 5 21" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div> <!-- /p2-page-wrap -->
                 </div> <!-- /page page-2 -->
+
+
+                <!-- ====== 第3页：联系卡片 ====== -->
+                <div class="page page-3">
+
+                    <!-- ★ 新增：个人资料卡片组件 ★ -->
+                    <div class="p3-profile-widget">
+                        <!-- 封面图 -->
+                        <div class="p3-profile-banner" onclick="p3PickProfileBanner()">
+                            <img src="" id="p3ProfileBanner" alt="">
+                            <div class="p3-profile-banner-hint">
+                                <svg viewBox="0 0 24 24" width="28" height="28">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                    <polyline points="21 15 16 10 5 21" />
+                                </svg>
+                            </div>
+                        </div>
+                        <!-- 头像（悬浮在封面底部） -->
+                        <div class="p3-profile-avatar-wrap">
+                            <div class="p3-profile-avatar" onclick="p3PickProfileAvatar()">
+                                <img src="" id="p3ProfileAvatar" alt="">
+                                <div class="p3-profile-avatar-hint">
+                                    <svg viewBox="0 0 24 24">
+                                        <circle cx="12" cy="8" r="4" />
+                                        <path d="M20 21a8 8 0 1 0-16 0" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 文字信息区 -->
+                        <div class="p3-profile-info">
+                            <div class="p3-profile-name" id="p3ProfileName" contenteditable="true">蛋蛋</div>
+                            <div class="p3-profile-handle" id="p3ProfileHandle" contenteditable="true">@Broken
+                                Memory</div>
+                            <div class="p3-profile-bio" id="p3ProfileBio" contenteditable="true">˚.⊹ 𖦆
+                                𝒪𝒷𝓈𝒸𝓊𝓇𝑒 𝓅𝑜𝑒𝓉𝓇𝓎 𓈒𓏸˚₊</div>
+                            <div class="p3-profile-location">
+                                <svg viewBox="0 0 24 24" width="13" height="13">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                    <circle cx="12" cy="10" r="3" />
+                                </svg>
+                                <span class="p3-profile-loc-text" id="p3ProfileLoc" contenteditable="true">日本
+                                    东京</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p3-contact-widget" id="p3ContactWidget">
+
+                        <!-- 顶部：头像 + 气泡文字 + 爪印 -->
+                        <div class="p3-contact-top">
+                            <div class="p3-contact-avatar" onclick="p3PickAvatar()">
+                                <img src="" id="p3ContactAvatar" alt="">
+                                <div class="p3-contact-avatar-hint">
+                                    <svg viewBox="0 0 24 24">
+                                        <circle cx="12" cy="8" r="4" />
+                                        <path d="M20 21a8 8 0 1 0-16 0" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="p3-contact-bubble">
+                                <span class="p3-contact-bubble-text" id="p3ContactBubble"
+                                    contenteditable="true">幸好爱是小小的奇迹</span>
+                                <div class="p3-contact-paw">
+                                    <svg viewBox="0 0 24 24" width="22" height="22">
+                                        <ellipse cx="12" cy="16" rx="5" ry="4.5" />
+                                        <circle cx="6" cy="10" r="2.2" />
+                                        <circle cx="10" cy="7.5" r="2" />
+                                        <circle cx="14" cy="7.5" r="2" />
+                                        <circle cx="18" cy="10" r="2.2" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 下方信息卡片（整体圆角毛玻璃） -->
+                        <div class="p3-contact-card">
+                            <!-- 左侧：标签 + 输入 -->
+                            <div class="p3-contact-info">
+                                <!-- Baby行 -->
+                                <div class="p3-contact-row">
+                                    <div class="p3-contact-label">Baby</div>
+                                    <div class="p3-contact-input-wrap">
+                                        <span class="p3-contact-value" id="p3ContactName" contenteditable="true">call
+                                            Aero</span>
+                                        <span class="p3-contact-edit" onclick="p3FocusField('p3ContactName')">修改</span>
+                                    </div>
+                                </div>
+                                <!-- Contact行 -->
+                                <div class="p3-contact-row">
+                                    <div class="p3-contact-label">Contact</div>
+                                    <div class="p3-contact-input-wrap">
+                                        <span class="p3-contact-value" id="p3ContactLink"
+                                            contenteditable="true">http//>Aero's love.com</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 右侧：小圆角图片 -->
+                            <div class="p3-contact-photo" onclick="p3PickPhoto()">
+                                <img src="" id="p3ContactPhoto" alt="">
+                                <div class="p3-contact-photo-hint">
+                                    <svg viewBox="0 0 24 24" width="16" height="16">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                        <circle cx="8.5" cy="8.5" r="1.5" />
+                                        <polyline points="21 15 16 10 5 21" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- ★ 第三页下半区：左侧4App + 右侧拍立得 ★ -->
+                        <div class="p3-bottom-row">
+
+                            <!-- 左侧：2×2 App -->
+                            <div class="p3-apps-left">
+                                <div class="app-cell" data-icon-id="icon_game">
+                                    <div class="app-icon glass-icon" id="icon_game">
+                                        <svg viewBox="0 0 24 24">
+                                            <line x1="6" y1="11" x2="10" y2="11" />
+                                            <line x1="8" y1="9" x2="8" y2="13" />
+                                            <line x1="15" y1="12" x2="15.01" y2="12" />
+                                            <line x1="18" y1="10" x2="18.01" y2="10" />
+                                            <path
+                                                d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.544-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z" />
+                                        </svg>
+                                    </div>
+                                    <div class="app-name">游戏</div>
+                                </div>
+                                <div class="app-cell" data-icon-id="icon_catnip">
+                                    <div class="app-icon glass-icon" id="icon_catnip">
+                                        <svg viewBox="0 0 24 24">
+                                            <path
+                                                d="M12 3c-1.5 0-2.5 1.5-2.5 3C9.5 7.5 10.5 9 12 9s2.5-1.5 2.5-3C14.5 4.5 13.5 3 12 3z" />
+                                            <path
+                                                d="M7 7c-1.3.7-1.8 2.4-1 3.7.7 1.3 2.4 1.8 3.7 1C10.9 11 11.4 9.3 10.7 8 10 6.8 8.3 6.3 7 7z" />
+                                            <path
+                                                d="M17 7c1.3.7 1.8 2.4 1 3.7-.7 1.3-2.4 1.8-3.7 1-1.2-.7-1.7-2.4-1-3.7C14 6.8 15.7 6.3 17 7z" />
+                                            <path d="M12 9v12" />
+                                            <path d="M9 15c-2 0-4 1-4 3" />
+                                            <path d="M15 15c2 0 4 1 4 3" />
+                                        </svg>
+                                    </div>
+                                    <div class="app-name">猫尾薄荷</div>
+                                </div>
+                                <div class="app-cell" data-icon-id="icon_mood">
+                                    <div class="app-icon glass-icon" id="icon_mood">
+                                        <svg viewBox="0 0 24 24">
+                                            <path d="M19.07 4.93A10 10 0 0 0 2 12c0 2.76 1.12 5.26 2.93 7.07" />
+                                            <path d="M4.93 19.07A10 10 0 0 0 22 12c0-2.76-1.12-5.26-2.93-7.07" />
+                                            <circle cx="12" cy="12" r="3" />
+                                            <path d="M12 2v2" />
+                                            <path d="M12 20v2" />
+                                            <path d="M2 12h2" />
+                                            <path d="M20 12h2" />
+                                        </svg>
+                                    </div>
+                                    <div class="app-name">心绪回响</div>
+                                </div>
+                                <div class="app-cell" data-icon-id="icon_video">
+                                    <div class="app-icon glass-icon" id="icon_video">
+                                        <svg viewBox="0 0 24 24">
+                                            <rect x="2" y="4" width="15" height="16" rx="2" />
+                                            <path d="M17 8l5-3v14l-5-3" />
+                                        </svg>
+                                    </div>
+                                    <div class="app-name">视频</div>
+                                </div>
+                            </div>
+
+                            <!-- 右侧：拍立得小组件 -->
+                            <div class="p3-polaroid" id="p3Polaroid">
+                                <div class="p3-polaroid-photo" onclick="p3PickTicketImg()">
+                                    <img src="" id="p3TicketImg" alt="">
+                                    <div class="p3-polaroid-photo-hint" id="p3TicketImgHint">
+                                        <svg viewBox="0 0 24 24" width="26" height="26">
+                                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                                            <circle cx="8.5" cy="8.5" r="1.5" />
+                                            <polyline points="21 15 16 10 5 21" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="p3-polaroid-caption" id="p3TicketText" contenteditable="true">💭₊˚🤍₊⁺
+                                    딩동
+                                    ㅎㅇ…🩶
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div> <!-- /page page-3 -->
 
             </div> <!-- ★ /pages-track ★ -->
         </div> <!-- ★★★ /pages-viewport ★★★ 这行之前一直缺！ -->
@@ -466,6 +703,7 @@
         <div class="page-dots">
             <div class="dot active" data-page="0"></div>
             <div class="dot" data-page="1"></div>
+            <div class="dot" data-page="2"></div>
         </div>
 
         <!-- ====== Dock 栏 ====== -->
@@ -1463,12 +1701,13 @@
                                         <line x1="19" y1="5" x2="19" y2="9" />
                                     </svg><span>男</span></div>
                                 <div class="chat-cr-gender-btn" data-gender="female"
-                                    onclick="selectRoleGender('female')"><svg viewBox="0 0 24 24" width="16"
-                                        height="16">
+                                    onclick="selectRoleGender('female')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16">
                                         <circle cx="12" cy="10" r="5" />
                                         <line x1="12" y1="15" x2="12" y2="22" />
                                         <line x1="9" y1="19" x2="15" y2="19" />
-                                    </svg><span>女</span></div>
+                                    </svg><span>女</span>
+                                </div>
                             </div>
                         </div>
                         <div class="chat-cr-field"><label>详细信息</label><textarea id="crDetail" class="chat-cr-textarea"
@@ -1611,7 +1850,7 @@
                                 <line x1="16.5" y1="16.5" x2="21" y2="21" />
                             </svg>
                         </div>
-                        <div class="gift-header-btn" onclick="openGiftWall()">
+                        <div class="gift-header-btn" onclick="openMyOrders()">
                             <svg viewBox="0 0 24 24">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                                 <circle cx="12" cy="7" r="4" />
@@ -1625,6 +1864,7 @@
                 <div class="gift-search-overlay" id="giftSearchOverlay"></div>
                 <!-- 详情 -->
                 <div class="gift-detail-overlay" id="giftDetailOverlay"></div>
+                <div class="gift-order-overlay" id="giftOrderOverlay"></div>
                 <!-- 礼物墙 -->
                 <div class="gift-wall-overlay" id="giftWallOverlay">
                     <div class="gift-wall-header">
@@ -1637,20 +1877,6 @@
                         <div style="width:32px"></div>
                     </div>
                     <div class="gift-wall-body" id="giftWallBody"></div>
-                </div>
-                <!-- 分类管理 -->
-                <div class="gift-manage-cats-overlay" id="giftManageCatsOverlay">
-                    <div class="gift-manage-cats-panel">
-                        <div class="gift-manage-cats-header">
-                            <div class="gift-manage-cats-title">管理分类</div>
-                            <div class="gift-manage-cats-close" onclick="closeGiftCategoryManager()">完成</div>
-                        </div>
-                        <div class="gift-manage-cats-body" id="giftManageCatsBody"></div>
-                        <div class="gift-manage-cats-add">
-                            <input type="text" id="giftNewCatInput" placeholder="新分类名称...">
-                            <button onclick="addGiftCategory()">添加</button>
-                        </div>
-                    </div>
                 </div>
             </div><!-- /gift-shop-overlay -->
 
@@ -1681,6 +1907,7 @@
     <script src="js/gift.js"></script>
     <script src="js/app.js"></script>
     <script src="js/page2widget.js"></script>
+    <script src="js/page3widget.js"></script>
 
 
 </body>

@@ -1,86 +1,107 @@
 /* ============================================
    蛋薯机 DanShu Pro v2 — gift.js
-   礼物商城 · 实时编辑 · 动态分组 · 纯白色块
+   礼物商城 · 订单 · 钱包扣款 · 聊天消息集成
    ============================================ */
 
-/* ===== 数据 ===== */
 let giftCategories = ['全部'];
 const GIFT_COUNT = 12;
-
 let giftItems = [];
 let giftWallItems = [];
+let giftOrders = [];
 let giftCurrentCat = '全部';
 let giftDetailIdx = -1;
+let giftOrderCount = 0;
 
+/* ===== 钱包系统 ===== */
+function getWalletBalance() {
+    const b = localStorage.getItem('ds_wallet_balance');
+    return b ? parseFloat(b) : 9999.00;
+}
+function setWalletBalance(val) {
+    localStorage.setItem('ds_wallet_balance', val.toFixed(2));
+}
+function getWalletBills() {
+    const s = localStorage.getItem('ds_wallet_bills');
+    try { return s ? JSON.parse(s) : []; } catch (e) { return []; }
+}
+function saveWalletBills(bills) {
+    localStorage.setItem('ds_wallet_bills', JSON.stringify(bills));
+}
+function addWalletBill(type, desc, amount, orderNo) {
+    const bills = getWalletBills();
+    bills.unshift({
+        type: type,
+        desc: desc,
+        amount: amount,
+        orderNo: orderNo || '',
+        time: Date.now()
+    });
+    saveWalletBills(bills);
+}
+
+/* ===== 数据初始化 ===== */
 function initGiftData() {
     const saved = localStorage.getItem('ds_gift_items');
     if (saved) {
         try {
             giftItems = JSON.parse(saved);
-            while (giftItems.length < GIFT_COUNT) {
-                giftItems.push(createDefaultGift(giftItems.length));
-            }
-        } catch (e) {
-            giftItems = [];
-        }
+            while (giftItems.length < GIFT_COUNT) giftItems.push(createDefaultGift(giftItems.length));
+        } catch (e) { giftItems = []; }
     }
     if (!giftItems.length) {
-        for (let i = 0; i < GIFT_COUNT; i++) {
-            giftItems.push(createDefaultGift(i));
-        }
+        for (let i = 0; i < GIFT_COUNT; i++) giftItems.push(createDefaultGift(i));
     }
     const savedWall = localStorage.getItem('ds_gift_wall');
-    if (savedWall) {
-        try { giftWallItems = JSON.parse(savedWall); } catch (e) { giftWallItems = []; }
-    }
+    if (savedWall) { try { giftWallItems = JSON.parse(savedWall); } catch (e) { giftWallItems = []; } }
     const savedCats = localStorage.getItem('ds_gift_cats');
-    if (savedCats) {
-        try {
-            const c = JSON.parse(savedCats);
-            if (c.length) giftCategories = c;
-        } catch (e) { }
-    }
+    if (savedCats) { try { const c = JSON.parse(savedCats); if (c.length) giftCategories = c; } catch (e) {} }
     if (giftCategories[0] !== '全部') giftCategories.unshift('全部');
+    const savedOrders = localStorage.getItem('ds_gift_orders');
+    if (savedOrders) { try { giftOrders = JSON.parse(savedOrders); } catch (e) { giftOrders = []; } }
+    const savedOC = localStorage.getItem('ds_gift_order_count');
+    if (savedOC) { try { giftOrderCount = parseInt(savedOC) || 0; } catch (e) { giftOrderCount = 0; } }
 }
 
 function createDefaultGift(idx) {
-    return {
-        id: idx,
-        name: '未设置',
-        price: '0.00',
-        desc: '未设置',
-        img: '',
-        category: '全部'
-    };
+    return { id: idx, name: '未设置', price: '0.00', desc: '未设置', img: '', category: '全部' };
 }
 
-function saveGifts() {
-    localStorage.setItem('ds_gift_items', JSON.stringify(giftItems));
-}
-function saveWall() {
-    localStorage.setItem('ds_gift_wall', JSON.stringify(giftWallItems));
-}
-function saveCats() {
-    localStorage.setItem('ds_gift_cats', JSON.stringify(giftCategories));
-}
+function saveGifts() { localStorage.setItem('ds_gift_items', JSON.stringify(giftItems)); }
+function saveWall() { localStorage.setItem('ds_gift_wall', JSON.stringify(giftWallItems)); }
+function saveCats() { localStorage.setItem('ds_gift_cats', JSON.stringify(giftCategories)); }
+function saveOrders() { localStorage.setItem('ds_gift_orders', JSON.stringify(giftOrders)); }
+function saveOrderCount() { localStorage.setItem('ds_gift_order_count', String(giftOrderCount)); }
 
-/* ===== 占位渲染 ===== */
 function giftPlaceholderHTML(size) {
     const fs = size === 'big' ? '16px' : '12px';
     return `<span class="gift-placeholder" style="font-size:${fs};color:rgba(180,180,180,0.6);font-weight:500;user-select:none;">未设置</span>`;
 }
 
-/* ===== 打开 / 关闭商城 ===== */
-function openGiftShop() {
-    initGiftData();
-    const ov = document.getElementById('giftShopOverlay');
-    ov.classList.add('show');
-    renderGiftShop();
+/* ===== 渲染详情面板图片区 ===== */
+function renderDetailImgArea(g) {
+    if (g.img) {
+        return `<img src="${g.img}" alt="">
+                <div class="gift-detail-upload-btn">
+                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    更换图片
+                </div>`;
+    } else {
+        return `<span class="gift-placeholder" style="font-size:16px;color:rgba(180,180,180,0.6);font-weight:500;user-select:none;">未设置</span>
+                <div class="gift-detail-upload-btn">
+                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    上传图片
+                </div>`;
+    }
 }
 
+/* ===== 打开/关闭商城 ===== */
+function openGiftShop() {
+    initGiftData();
+    document.getElementById('giftShopOverlay').classList.add('show');
+    renderGiftShop();
+}
 function closeGiftShop() {
-    const ov = document.getElementById('giftShopOverlay');
-    ov.classList.remove('show');
+    document.getElementById('giftShopOverlay').classList.remove('show');
 }
 
 /* ===== 渲染商城主体 ===== */
@@ -123,18 +144,17 @@ function renderGiftShop() {
                 ontouchend="giftCatTouchEnd()"
                 ontouchmove="giftCatTouchEnd()">
                 ${escGift(c)}
-                <span class="gift-cat-del-x" onclick="event.stopPropagation();confirmDeleteCat(${i},'${escAttr(c)}')">×</span>
+                <span class="gift-cat-del-x" onclick="event.stopPropagation();confirmDeleteCat(${i},'${escAttr(c)}')">x</span>
             </div>`;
         }
     });
     catHTML += `<div class="gift-category-add" onclick="addGiftCategory()">
         <svg viewBox="0 0 24 24" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    </div>`;
-    catHTML += `</div>`;
+    </div></div>`;
 
     const filtered = giftCurrentCat === '全部' ? giftItems : giftItems.filter(g => g.category === giftCurrentCat);
     let gridHTML = `<div class="gift-grid">`;
-    if (filtered.length === 0) {
+    if (!filtered.length) {
         gridHTML += `<div style="grid-column:1/-1;text-align:center;padding:40px 0;font-size:13px;color:rgba(50,40,55,0.3);">该分类下暂无礼物</div>`;
     }
     filtered.forEach(g => {
@@ -151,53 +171,28 @@ function renderGiftShop() {
         </div>`;
     });
     gridHTML += `</div>`;
-
     body.innerHTML = recHTML + catHTML + gridHTML;
 }
 
-function switchGiftCat(cat) {
-    giftCurrentCat = cat;
-    renderGiftShop();
-}
+function switchGiftCat(cat) { giftCurrentCat = cat; renderGiftShop(); }
 
 /* ===== 分类管理 ===== */
 let _catTouchTimer = null;
-
-function giftCatTouchStart(idx, name) {
-    _catTouchTimer = setTimeout(() => {
-        confirmDeleteCat(idx, name);
-    }, 600);
-}
-
-function giftCatTouchEnd() {
-    if (_catTouchTimer) { clearTimeout(_catTouchTimer); _catTouchTimer = null; }
-}
-
+function giftCatTouchStart(idx, name) { _catTouchTimer = setTimeout(() => { confirmDeleteCat(idx, name); }, 600); }
+function giftCatTouchEnd() { if (_catTouchTimer) { clearTimeout(_catTouchTimer); _catTouchTimer = null; } }
 function addGiftCategory() {
     const name = prompt('输入新分组名称:');
     if (!name || !name.trim()) return;
     const n = name.trim();
-    if (giftCategories.includes(n)) {
-        alert('该分组已存在');
-        return;
-    }
-    giftCategories.push(n);
-    saveCats();
-    renderGiftShop();
+    if (giftCategories.includes(n)) { alert('该分组已存在'); return; }
+    giftCategories.push(n); saveCats(); renderGiftShop();
 }
-
 function confirmDeleteCat(idx, name) {
-    giftCatTouchEnd();
-    if (idx <= 0) return;
-    if (confirm('确定删除分组「' + name + '」吗？\n该分组下的礼物会变为"全部"分类。')) {
-        giftItems.forEach(g => {
-            if (g.category === name) g.category = '全部';
-        });
-        saveGifts();
-        giftCategories.splice(idx, 1);
-        saveCats();
-        if (giftCurrentCat === name) giftCurrentCat = '全部';
-        renderGiftShop();
+    giftCatTouchEnd(); if (idx <= 0) return;
+    if (confirm('确定删除分组「' + name + '」吗？')) {
+        giftItems.forEach(g => { if (g.category === name) g.category = '全部'; });
+        saveGifts(); giftCategories.splice(idx, 1); saveCats();
+        if (giftCurrentCat === name) giftCurrentCat = '全部'; renderGiftShop();
     }
 }
 
@@ -218,15 +213,9 @@ function openGiftDetail(id) {
         <div class="gift-detail-close" onclick="closeGiftDetail()">
             <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </div>
-
-        <div class="gift-detail-img-wrap" id="giftDetailImgWrap" style="background:#fff;" onclick="uploadGiftImg(${id})">
-            ${g.img ? `<img src="${g.img}" alt="" id="giftDetailPreviewImg">` : `<span class="gift-placeholder" id="giftDetailPlaceholder" style="font-size:16px;color:rgba(180,180,180,0.6);font-weight:500;user-select:none;">未设置</span>`}
-            <div class="gift-detail-upload-btn">
-                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                上传图片
-            </div>
+        <div class="gift-detail-img-wrap" id="giftDetailImgWrap" onclick="uploadGiftImg(${id})">
+            ${renderDetailImgArea(g)}
         </div>
-
         <div class="gift-detail-body">
             <div class="gift-detail-field">
                 <label class="gift-detail-label">名称</label>
@@ -258,73 +247,32 @@ function openGiftDetail(id) {
                     onclick="event.stopPropagation()"
                     onfocus="event.stopPropagation()">${escGift(g.desc)}</textarea>
             </div>
-
             <div class="gift-detail-btns">
                 <div class="gift-detail-save-btn" onclick="saveAndClose(${id})">保存设置</div>
-                <div class="gift-detail-buy-btn" onclick="buyGift(${id})">送出</div>
+                <div class="gift-detail-buy-btn" onclick="openOrderConfirm(${id})">送出</div>
             </div>
-            <div class="gift-detail-balance">点击"保存设置"保存并返回 · 点击"送出"添加到礼物墙</div>
+            <div class="gift-detail-balance">余额: ${getWalletBalance().toFixed(2)}</div>
         </div>
     </div>`;
 
-    ov.onclick = function (e) {
-        if (e.target === ov) closeGiftDetail();
-    };
-
-    requestAnimationFrame(() => {
-        ov.classList.add('show');
-    });
+    ov.onclick = function (e) { if (e.target === ov) closeGiftDetail(); };
+    requestAnimationFrame(() => { ov.classList.add('show'); });
 }
 
 function closeGiftDetail() {
     const ov = document.getElementById('giftDetailOverlay');
     ov.classList.remove('show');
-    setTimeout(() => {
-        if (!ov.classList.contains('show')) {
-            ov.innerHTML = '';
-            ov.onclick = null;
-        }
-    }, 350);
+    setTimeout(() => { if (!ov.classList.contains('show')) { ov.innerHTML = ''; ov.onclick = null; } }, 350);
     giftDetailIdx = -1;
-    // 关闭时刷新列表，确保列表是最新的
     renderGiftShop();
 }
 
-/* ========================================================
-   实时编辑 — 关键：同时更新数据 + 详情面板内的预览 + 背后列表
-   ======================================================== */
+/* ===== 实时编辑 ===== */
+function liveUpdateName(id, val) { const g = giftItems.find(x => x.id === id); if (g) { g.name = val || '未设置'; saveGifts(); } }
+function liveUpdatePrice(id, val) { const g = giftItems.find(x => x.id === id); if (g) { g.price = val || '0.00'; saveGifts(); } }
+function liveUpdateDesc(id, val) { const g = giftItems.find(x => x.id === id); if (g) { g.desc = val || '未设置'; saveGifts(); } }
+function liveUpdateCategory(id, val) { const g = giftItems.find(x => x.id === id); if (g) { g.category = val || '全部'; saveGifts(); } }
 
-function liveUpdateName(id, val) {
-    const g = giftItems.find(x => x.id === id);
-    if (!g) return;
-    g.name = val || '未设置';
-    saveGifts();
-    // 不调 renderGiftShop()，避免抢焦点；关闭时会刷新
-    // 详情面板里的 input 本身已经显示了用户输入，无需额外更新
-}
-
-function liveUpdatePrice(id, val) {
-    const g = giftItems.find(x => x.id === id);
-    if (!g) return;
-    g.price = val || '0.00';
-    saveGifts();
-}
-
-function liveUpdateDesc(id, val) {
-    const g = giftItems.find(x => x.id === id);
-    if (!g) return;
-    g.desc = val || '未设置';
-    saveGifts();
-}
-
-function liveUpdateCategory(id, val) {
-    const g = giftItems.find(x => x.id === id);
-    if (!g) return;
-    g.category = val || '全部';
-    saveGifts();
-}
-
-/* ===== 保存并关闭 → 回到列表页，列表立即显示最新数据 ===== */
 function saveAndClose(id) {
     const g = giftItems.find(x => x.id === id);
     if (g) {
@@ -334,69 +282,635 @@ function saveAndClose(id) {
         if (!g.desc || !g.desc.trim()) g.desc = '未设置';
         saveGifts();
     }
-    closeGiftDetail();  // 内部已会调 renderGiftShop()
-    if (typeof showToast === 'function') {
-        showToast('已保存');
-    }
+    closeGiftDetail();
+    if (typeof showToast === 'function') showToast('已保存');
 }
 
-/* ===== 上传图片 — 立即在详情面板内显示新图片 ===== */
+/* ===== 上传图片 ===== */
 function uploadGiftImg(id) {
     const inp = document.createElement('input');
-    inp.type = 'file';
-    inp.accept = 'image/*';
-    inp.onchange = function () {
-        const file = inp.files[0];
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+    document.body.appendChild(inp);
+    inp.addEventListener('change', function () {
+        const file = this.files && this.files[0];
+        try { document.body.removeChild(inp); } catch (e) {}
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = function (e) {
+        reader.onload = function (ev) {
             const g = giftItems.find(x => x.id === id);
             if (!g) return;
-            g.img = e.target.result;
+            g.img = ev.target.result;
             saveGifts();
-
-            // ★ 关键：直接更新详情面板里的图片DOM，不重建面板 ★
             const wrap = document.getElementById('giftDetailImgWrap');
-            if (wrap) {
-                // 移除"未设置"占位文字
-                const ph = document.getElementById('giftDetailPlaceholder');
-                if (ph) ph.remove();
-
-                // 找或创建 img
-                let img = document.getElementById('giftDetailPreviewImg');
-                if (!img) {
-                    img = document.createElement('img');
-                    img.id = 'giftDetailPreviewImg';
-                    img.alt = '';
-                    // 插到上传按钮之前
-                    const uploadBtn = wrap.querySelector('.gift-detail-upload-btn');
-                    wrap.insertBefore(img, uploadBtn);
-                }
-                img.src = e.target.result;
-            }
-
-            // 不调 renderGiftShop()，关闭时会刷新
+            if (wrap) wrap.innerHTML = renderDetailImgArea(g);
         };
         reader.readAsDataURL(file);
-    };
-    inp.click();
+    });
+    requestAnimationFrame(() => { inp.click(); });
 }
 
-/* ===== 送出（加入礼物墙） ===== */
-function buyGift(id) {
+/* ==========================================================
+   订单号 & 日期
+   ========================================================== */
+function generateOrderNo() {
+    const now = new Date();
+    const ymd = String(now.getFullYear()).slice(-2) +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0');
+    const hm = String(now.getHours()).padStart(2, '0') +
+        String(now.getMinutes()).padStart(2, '0');
+    giftOrderCount++;
+    saveOrderCount();
+    return ymd + hm + String(giftOrderCount).padStart(4, '0');
+}
+
+function formatOrderDate(ts) {
+    const d = new Date(ts);
+    return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0') + ' ' +
+        String(d.getHours()).padStart(2, '0') + ':' +
+        String(d.getMinutes()).padStart(2, '0');
+}
+
+/* ==========================================================
+   订单确认悬浮窗
+   ========================================================== */
+function openOrderConfirm(id) {
     const g = giftItems.find(x => x.id === id);
     if (!g) return;
-    giftWallItems.push({
-        ...g,
-        sentAt: Date.now()
-    });
-    saveWall();
-    closeGiftDetail();
-    if (typeof showToast === 'function') {
-        showToast('已送出，已添加到礼物墙');
-    } else {
-        alert('已送出，已添加到礼物墙');
+    const now = Date.now();
+    const orderNo = generateOrderNo();
+    const orderDate = formatOrderDate(now);
+    const bal = getWalletBalance();
+
+    let ov = document.getElementById('giftOrderOverlay');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'giftOrderOverlay';
+        ov.className = 'gift-order-overlay';
+        const parent = document.getElementById('giftShopOverlay');
+        if (parent && parent.parentElement) parent.parentElement.appendChild(ov);
+        else document.body.appendChild(ov);
     }
+
+    ov.innerHTML = `
+    <div class="gift-order-panel" onclick="event.stopPropagation()">
+        <div class="gift-order-header">
+            <div class="gift-order-title">确认订单</div>
+            <div class="gift-order-close" onclick="closeOrderConfirm()">
+                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </div>
+        </div>
+        <div class="gift-order-body">
+            <div class="gift-order-product">
+                <div class="gift-order-product-img">
+                    ${g.img ? `<img src="${g.img}" alt="">` : `<span style="font-size:11px;color:rgba(180,180,180,0.6);">无图</span>`}
+                </div>
+                <div class="gift-order-product-info">
+                    <div class="gift-order-product-name">${escGift(g.name)}</div>
+                    <div class="gift-order-product-desc">${escGift(g.desc)}</div>
+                </div>
+                <div class="gift-order-product-price">${g.price}</div>
+            </div>
+            <div class="gift-order-info-block">
+                <div class="gift-order-row">
+                    <span class="gift-order-row-label">创建时间</span>
+                    <span class="gift-order-row-val">${orderDate}</span>
+                </div>
+                <div class="gift-order-row">
+                    <span class="gift-order-row-label">订单号</span>
+                    <span class="gift-order-row-val gift-order-no">${orderNo}</span>
+                </div>
+                <div class="gift-order-row">
+                    <span class="gift-order-row-label">钱包余额</span>
+                    <span class="gift-order-row-val">${bal.toFixed(2)}</span>
+                </div>
+            </div>
+            <div class="gift-order-info-block">
+                <div class="gift-order-row">
+                    <span class="gift-order-row-label">收货位置</span>
+                </div>
+                <textarea class="gift-order-addr-input" id="giftOrderAddr"
+                    placeholder="输入收货地址..."
+                    onclick="event.stopPropagation()"
+                    onfocus="event.stopPropagation()"
+                    rows="2"></textarea>
+            </div>
+            <div class="gift-order-total">
+                <span>合计</span>
+                <span class="gift-order-total-price">${g.price}</span>
+            </div>
+        </div>
+        <div class="gift-order-actions">
+            <div class="gift-order-btn-secondary" onclick="askOtherPay(${id},'${escAttr(orderNo)}',${now})">请TA代付</div>
+            <div class="gift-order-btn-primary" onclick="placeOrder(${id},'${escAttr(orderNo)}',${now})">下单</div>
+        </div>
+    </div>`;
+
+    ov.onclick = function (e) { if (e.target === ov) closeOrderConfirm(); };
+    requestAnimationFrame(() => { ov.classList.add('show'); });
+}
+
+function closeOrderConfirm() {
+    const ov = document.getElementById('giftOrderOverlay');
+    if (!ov) return;
+    ov.classList.remove('show');
+    setTimeout(() => { if (!ov.classList.contains('show')) ov.innerHTML = ''; }, 300);
+}
+
+/* ==========================================================
+   ★ 下单（自付）— 扣钱包 + 记账单 + 存消息 + 跳回聊天
+   ========================================================== */
+function placeOrder(id, orderNo, ts) {
+    const g = giftItems.find(x => x.id === id);
+    if (!g) return;
+    const price = parseFloat(g.price) || 0;
+    const bal = getWalletBalance();
+
+    if (price > bal) {
+        if (typeof showToast === 'function') showToast('余额不足');
+        else alert('余额不足');
+        return;
+    }
+
+    const addr = (document.getElementById('giftOrderAddr') || {}).value || '未填写';
+
+    // 记住当前对话角色ID（关闭overlay前取）
+    var targetRid = _chatCurrentConv;
+
+    // 扣款
+    setWalletBalance(bal - price);
+    addWalletBill('支出', '购买礼物: ' + g.name, -price, orderNo);
+
+    const order = {
+        orderNo, giftId: id, giftName: g.name, giftImg: g.img,
+        giftDesc: g.desc, price: g.price, address: addr,
+        createdAt: ts, status: '已发货', payType: '自付',
+        targetRoleId: targetRid
+    };
+    giftOrders.unshift(order);
+    saveOrders();
+
+    giftWallItems.push({ ...g, sentAt: ts });
+    saveWall();
+
+    // 关闭所有礼物弹窗
+    closeOrderConfirm();
+    closeGiftDetail();
+    closeGiftShop();
+
+    // 存消息到角色 + 跳转回聊天
+    _pushGiftMsg(targetRid, true, 'delivery', {
+        name: g.name, img: g.img || '', desc: g.desc || '',
+        price: g.price, orderNo: orderNo
+    });
+
+    if (typeof showToast === 'function') showToast('下单成功，已从钱包扣款 ' + price.toFixed(2));
+}
+
+/* ==========================================================
+   ★ 请TA代付 — 存消息 + 跳回聊天
+   ========================================================== */
+function askOtherPay(id, orderNo, ts) {
+    const g = giftItems.find(x => x.id === id);
+    if (!g) return;
+    const addr = (document.getElementById('giftOrderAddr') || {}).value || '未填写';
+
+    // 记住当前对话角色ID
+    var targetRid = _chatCurrentConv;
+
+    const order = {
+        orderNo, giftId: id, giftName: g.name, giftImg: g.img,
+        giftDesc: g.desc, price: g.price, address: addr,
+        createdAt: ts, status: '待代付', payType: '请TA代付',
+        targetRoleId: targetRid
+    };
+    giftOrders.unshift(order);
+    saveOrders();
+
+    // 关闭所有礼物弹窗
+    closeOrderConfirm();
+    closeGiftDetail();
+    closeGiftShop();
+
+    // 存消息到角色 + 跳转回聊天
+    _pushGiftMsg(targetRid, true, 'request', {
+        name: g.name, img: g.img || '', desc: g.desc || '',
+        price: g.price, orderNo: orderNo
+    });
+
+    if (typeof showToast === 'function') showToast('已发送代付请求');
+}
+
+/* ==========================================================
+   工具：获取时间字符串
+   ========================================================== */
+function _giftTimeStr() {
+    var d = new Date();
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
+/* ==========================================================
+   ★★★ 核心修复：把礼物卡片消息存入 role.msgs 并重新打开对话
+   之前的 bug：往 chatConversation 追加 HTML，但消息气泡实际
+   渲染在 chatConvBody 里，所以看不到。
+   修复方案：存完消息后直接调用 openConversation(rid) 重新渲染。
+   ========================================================== */
+function _pushGiftMsg(targetRid, fromSelf, giftCardType, giftData) {
+    var rid = targetRid || _chatCurrentConv;
+    if (!rid && typeof _chatRoles !== 'undefined' && _chatRoles.length) rid = _chatRoles[0].id;
+    if (!rid) return;
+    var role = (typeof findRole === 'function') ? findRole(rid) : null;
+    if (!role) return;
+    if (!role.msgs) role.msgs = [];
+
+    var msgObj = {
+        from: fromSelf ? 'self' : 'other',
+        text: '',
+        time: _giftTimeStr(),
+        ts: Date.now(),
+        giftCard: true,
+        giftCardType: giftCardType,
+        giftData: giftData
+    };
+    role.msgs.push(msgObj);
+
+    // 更新消息列表预览
+    var previewMap = {
+        'delivery': '送出了一份礼物',
+        'request': '请求代付一份礼物',
+        'charGift': '送了你一份礼物'
+    };
+    role.lastMsg = previewMap[giftCardType] || '礼物消息';
+    role.lastTime = Date.now();
+    role.lastTimeStr = _giftTimeStr();
+    if (typeof saveChatRoles === 'function') saveChatRoles();
+
+    // ★ 直接调用 openConversation 重新渲染整个对话页（最可靠）
+    if (typeof openConversation === 'function') {
+        openConversation(rid);
+    }
+}
+
+/* ==========================================================
+   发送拆礼物卡片（下单成功后）
+   ========================================================== */
+function sendGiftDeliveryCard(g, orderNo, sender, targetRid) {
+    _pushGiftMsg(targetRid, true, 'delivery', {
+        name: g.name, img: g.img || '', desc: g.desc || '',
+        price: g.price, orderNo: orderNo
+    });
+}
+
+/* ==========================================================
+   发送代付请求卡片
+   ========================================================== */
+function sendPayRequestCard(g, orderNo, targetRid) {
+    _pushGiftMsg(targetRid, true, 'request', {
+        name: g.name, img: g.img || '', desc: g.desc || '',
+        price: g.price, orderNo: orderNo
+    });
+}
+
+/* ==========================================================
+   Char代付确认
+   ========================================================== */
+function charConfirmPay(orderNo) {
+    initGiftData();
+    var order = null;
+    for (var i = 0; i < giftOrders.length; i++) {
+        if (giftOrders[i].orderNo === orderNo) { order = giftOrders[i]; break; }
+    }
+    if (!order) return;
+    if (order.status !== '待代付') {
+        if (typeof showToast === 'function') showToast('该订单已处理');
+        return;
+    }
+
+    order.status = '已发货';
+    order.payType = 'TA已代付';
+    saveOrders();
+
+    giftWallItems.push({ name: order.giftName, img: order.giftImg, desc: order.giftDesc, price: order.price, sentAt: Date.now() });
+    saveWall();
+
+    var g = { name: order.giftName, img: order.giftImg, desc: order.giftDesc, price: order.price };
+    _pushGiftMsg(order.targetRoleId, true, 'delivery', {
+        name: g.name, img: g.img || '', desc: g.desc || '',
+        price: g.price, orderNo: orderNo
+    });
+
+    if (typeof showToast === 'function') showToast('TA已帮你付款，礼物已发出');
+}
+
+/* ==========================================================
+   Char主动送礼
+   ========================================================== */
+function charSendGift(giftId) {
+    initGiftData();
+    var g = giftItems.find(function (x) { return x.id === giftId; });
+    if (!g) return;
+    var orderNo = generateOrderNo();
+    var ts = Date.now();
+    var targetRid = _chatCurrentConv;
+
+    var order = {
+        orderNo: orderNo, giftId: giftId, giftName: g.name, giftImg: g.img,
+        giftDesc: g.desc, price: g.price, address: '',
+        createdAt: ts, status: '已发货', payType: 'TA送出', fromChar: true,
+        targetRoleId: targetRid
+    };
+    giftOrders.unshift(order);
+    saveOrders();
+    giftWallItems.push({ name: g.name, img: g.img, desc: g.desc, price: g.price, sentAt: ts });
+    saveWall();
+
+    _pushGiftMsg(targetRid, false, 'charGift', {
+        name: g.name, img: g.img || '', desc: g.desc || '',
+        price: g.price, orderNo: orderNo
+    });
+}
+
+// char请user代付
+function charAskUserPay(giftId) {
+    initGiftData();
+    var g = giftItems.find(function (x) { return x.id === giftId; });
+    if (!g) return;
+    var orderNo = generateOrderNo();
+    var ts = Date.now();
+    var targetRid = _chatCurrentConv;
+
+    var order = {
+        orderNo: orderNo, giftId: giftId, giftName: g.name, giftImg: g.img,
+        giftDesc: g.desc, price: g.price, address: '',
+        createdAt: ts, status: '待User代付', payType: 'TA请你代付', fromChar: true,
+        targetRoleId: targetRid
+    };
+    giftOrders.unshift(order);
+    saveOrders();
+
+    _pushGiftMsg(targetRid, false, 'charGift', {
+        name: g.name, img: g.img || '', desc: g.desc || '',
+        price: g.price, orderNo: orderNo
+    });
+}
+
+// user收下char的礼物
+function acceptCharGift(orderNo) {
+    initGiftData();
+    var order = null;
+    for (var i = 0; i < giftOrders.length; i++) {
+        if (giftOrders[i].orderNo === orderNo) { order = giftOrders[i]; break; }
+    }
+    if (!order) return;
+    if (order.status === '已发货' || order.status === '已收货') {
+        if (typeof showToast === 'function') showToast('已收下');
+        return;
+    }
+    order.status = '已发货';
+    saveOrders();
+    giftWallItems.push({ name: order.giftName, img: order.giftImg, desc: order.giftDesc, price: order.price, sentAt: Date.now() });
+    saveWall();
+    if (typeof showToast === 'function') showToast('已收下礼物');
+}
+
+// user为char的礼物付款
+function userPayForCharGift(orderNo) {
+    initGiftData();
+    var order = null;
+    for (var i = 0; i < giftOrders.length; i++) {
+        if (giftOrders[i].orderNo === orderNo) { order = giftOrders[i]; break; }
+    }
+    if (!order) return;
+    var price = parseFloat(order.price) || 0;
+    var bal = getWalletBalance();
+    if (price > bal) {
+        if (typeof showToast === 'function') showToast('余额不足');
+        return;
+    }
+    setWalletBalance(bal - price);
+    addWalletBill('支出', '代付礼物: ' + order.giftName, -price, orderNo);
+    order.status = '已发货';
+    order.payType = '你已代付';
+    saveOrders();
+    giftWallItems.push({ name: order.giftName, img: order.giftImg, desc: order.giftDesc, price: order.price, sentAt: Date.now() });
+    saveWall();
+
+    _pushGiftMsg(order.targetRoleId, true, 'delivery', {
+        name: order.giftName, img: order.giftImg || '', desc: order.giftDesc || '',
+        price: order.price, orderNo: orderNo
+    });
+
+    if (typeof showToast === 'function') showToast('已付款 ' + price.toFixed(2));
+}
+
+/* ==========================================================
+   我的订单页面
+   ========================================================== */
+function openMyOrders() {
+    initGiftData();
+    let ov = document.getElementById('giftMyOrdersOverlay');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'giftMyOrdersOverlay';
+        ov.className = 'gift-orders-overlay';
+        const parent = document.getElementById('giftShopOverlay');
+        if (parent && parent.parentElement) parent.parentElement.appendChild(ov);
+        else document.querySelector('.phone-frame').appendChild(ov);
+    }
+    renderMyOrders(ov);
+    requestAnimationFrame(() => { ov.classList.add('show'); });
+}
+
+function renderMyOrders(ov) {
+    if (!ov) ov = document.getElementById('giftMyOrdersOverlay');
+    if (!ov) return;
+
+    const bal = getWalletBalance();
+    let html = `
+    <div class="gift-orders-header">
+        <div class="gift-orders-back" onclick="closeMyOrders()">
+            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="gift-orders-title">我的订单</div>
+        <div class="gift-orders-wallet" onclick="openWalletDetail()">
+            <svg viewBox="0 0 24 24" width="15" height="15" style="stroke:rgba(50,40,55,0.5);stroke-width:2;fill:none;">
+                <rect x="2" y="4" width="20" height="16" rx="3"/>
+                <path d="M2 10h20"/>
+                <circle cx="17" cy="14" r="1.5"/>
+            </svg>
+        </div>
+    </div>
+    <div class="gift-orders-balance-bar">
+        <span>钱包余额</span>
+        <span class="gift-orders-bal-num">${bal.toFixed(2)}</span>
+    </div>
+    <div class="gift-orders-body">`;
+
+    if (!giftOrders.length) {
+        html += `<div style="text-align:center;padding:60px 20px;font-size:13px;color:rgba(50,40,55,0.3);line-height:2;">暂无订单</div>`;
+    } else {
+        giftOrders.forEach((o, i) => {
+            const isShipped = o.status === '已发货';
+            const isPending = o.status === '待代付' || o.status === '待User代付';
+            const statusClass = isShipped ? 'done' : (isPending ? 'pending' : 'normal');
+
+            let actionBtns = '';
+            if (isShipped) {
+                actionBtns = `<span class="gift-order-card-action" onclick="refundOrder(${i})">退货退款</span>`;
+            } else if (isPending) {
+                actionBtns = `<span class="gift-order-card-action" onclick="cancelOrder(${i})">取消</span>`;
+            }
+
+            html += `
+            <div class="gift-order-card">
+                <div class="gift-order-card-top">
+                    <span class="gift-order-card-no">No.${escGift(o.orderNo)}</span>
+                    <span class="gift-order-card-status gift-order-status-${statusClass}">${escGift(o.status)}</span>
+                </div>
+                <div class="gift-order-card-content">
+                    <div class="gift-order-card-img">
+                        ${o.giftImg ? `<img src="${o.giftImg}" alt="">` : `<span style="font-size:10px;color:rgba(180,180,180,0.5);">无图</span>`}
+                    </div>
+                    <div class="gift-order-card-info">
+                        <div class="gift-order-card-name">${escGift(o.giftName)}</div>
+                        <div class="gift-order-card-addr">${o.address ? '收货: ' + escGift(o.address) : ''}</div>
+                        <div class="gift-order-card-time">${formatOrderDate(o.createdAt)}</div>
+                    </div>
+                    <div class="gift-order-card-price">${o.price}</div>
+                </div>
+                <div class="gift-order-card-bottom">
+                    <span class="gift-order-card-paytype">${escGift(o.payType)}</span>
+                    <div style="display:flex;gap:8px;">
+                        ${actionBtns}
+                        <span class="gift-order-card-del" onclick="deleteOrder(${i})">删除</span>
+                    </div>
+                </div>
+            </div>`;
+        });
+    }
+    html += `</div>`;
+    ov.innerHTML = html;
+}
+
+function closeMyOrders() {
+    const ov = document.getElementById('giftMyOrdersOverlay');
+    if (ov) { ov.classList.remove('show'); setTimeout(() => { ov.innerHTML = ''; }, 300); }
+}
+
+function deleteOrder(idx) {
+    if (!confirm('确定删除该订单记录？')) return;
+    giftOrders.splice(idx, 1);
+    saveOrders();
+    renderMyOrders();
+}
+
+function cancelOrder(idx) {
+    if (!confirm('确定取消该订单？')) return;
+    giftOrders.splice(idx, 1);
+    saveOrders();
+    renderMyOrders();
+    if (typeof showToast === 'function') showToast('订单已取消');
+}
+
+/* ==========================================================
+   退货退款
+   ========================================================== */
+function refundOrder(idx) {
+    const o = giftOrders[idx];
+    if (!o) return;
+    const reason = prompt('请填写退货理由:');
+    if (!reason || !reason.trim()) return;
+
+    const price = parseFloat(o.price) || 0;
+
+    if (o.payType === '自付' || o.payType === '你已代付') {
+        const bal = getWalletBalance();
+        setWalletBalance(bal + price);
+        addWalletBill('退款', '退货: ' + o.giftName + ' (理由: ' + reason.trim() + ')', price, o.orderNo);
+    }
+
+    o.status = '已退货';
+    o.refundReason = reason.trim();
+    saveOrders();
+    renderMyOrders();
+    if (typeof showToast === 'function') showToast('退货成功，已退款 ' + price.toFixed(2));
+}
+
+/* ==========================================================
+   钱包账单详情
+   ========================================================== */
+function openWalletDetail() {
+    let ov = document.getElementById('giftWalletOverlay');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'giftWalletOverlay';
+        ov.className = 'gift-orders-overlay';
+        const parent = document.getElementById('giftMyOrdersOverlay');
+        if (parent && parent.parentElement) parent.parentElement.appendChild(ov);
+        else document.querySelector('.phone-frame').appendChild(ov);
+    }
+
+    const bal = getWalletBalance();
+    const bills = getWalletBills();
+
+    let html = `
+    <div class="gift-orders-header">
+        <div class="gift-orders-back" onclick="closeWalletDetail()">
+            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="gift-orders-title">钱包</div>
+        <div style="width:32px;"></div>
+    </div>
+    <div class="gift-wallet-balance-card">
+        <div class="gift-wallet-bal-label">余额</div>
+        <div class="gift-wallet-bal-num">${bal.toFixed(2)}</div>
+        <div class="gift-wallet-recharge" onclick="rechargeWallet()">充值</div>
+    </div>
+    <div class="gift-orders-body">
+        <div style="padding:0 4px 6px;font-size:13px;font-weight:600;color:rgba(50,40,55,0.5);">账单记录</div>`;
+
+    if (!bills.length) {
+        html += `<div style="text-align:center;padding:40px 0;font-size:12px;color:rgba(50,40,55,0.3);">暂无账单</div>`;
+    } else {
+        bills.forEach(b => {
+            const isPositive = b.amount >= 0;
+            html += `
+            <div class="gift-order-card" style="padding:12px 14px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <div style="font-size:13px;font-weight:600;color:rgba(50,40,55,0.75);">${escGift(b.desc)}</div>
+                        <div style="font-size:10px;color:rgba(50,40,55,0.3);margin-top:3px;">${formatOrderDate(b.time)}${b.orderNo ? ' | No.' + b.orderNo : ''}</div>
+                    </div>
+                    <div style="font-size:15px;font-weight:700;color:${isPositive ? 'rgba(80,160,100,0.85)' : 'rgba(255,110,140,0.9)'};">
+                        ${isPositive ? '+' : ''}${b.amount.toFixed(2)}
+                    </div>
+                </div>
+            </div>`;
+        });
+    }
+    html += `</div>`;
+    ov.innerHTML = html;
+    requestAnimationFrame(() => { ov.classList.add('show'); });
+}
+
+function closeWalletDetail() {
+    const ov = document.getElementById('giftWalletOverlay');
+    if (ov) { ov.classList.remove('show'); setTimeout(() => { ov.innerHTML = ''; }, 300); }
+}
+
+function rechargeWallet() {
+    const amount = prompt('输入充值金额:');
+    if (!amount) return;
+    const num = parseFloat(amount);
+    if (isNaN(num) || num <= 0) { alert('请输入有效金额'); return; }
+    const bal = getWalletBalance();
+    setWalletBalance(bal + num);
+    addWalletBill('充值', '钱包充值', num, '');
+    if (typeof showToast === 'function') showToast('充值成功 +' + num.toFixed(2));
+    openWalletDetail();
 }
 
 /* ===== 搜索 ===== */
@@ -412,30 +926,19 @@ function openGiftSearch() {
         <div style="text-align:center;padding:40px 0;font-size:12px;color:rgba(50,40,55,0.3);">输入关键词搜索</div>
     </div>`;
     ov.classList.add('show');
-    setTimeout(() => {
-        const inp = document.getElementById('giftSearchInput');
-        if (inp) inp.focus();
-    }, 300);
+    setTimeout(() => { const i = document.getElementById('giftSearchInput'); if (i) i.focus(); }, 300);
 }
-
 function closeGiftSearch() {
     const ov = document.getElementById('giftSearchOverlay');
     ov.classList.remove('show');
     setTimeout(() => { ov.innerHTML = ''; }, 250);
 }
-
 function doGiftSearch(kw) {
     const body = document.getElementById('giftSearchBody');
     if (!body) return;
-    if (!kw.trim()) {
-        body.innerHTML = `<div style="text-align:center;padding:40px 0;font-size:12px;color:rgba(50,40,55,0.3);">输入关键词搜索</div>`;
-        return;
-    }
+    if (!kw.trim()) { body.innerHTML = `<div style="text-align:center;padding:40px 0;font-size:12px;color:rgba(50,40,55,0.3);">输入关键词搜索</div>`; return; }
     const results = giftItems.filter(g => g.name.includes(kw) || g.desc.includes(kw));
-    if (!results.length) {
-        body.innerHTML = `<div style="text-align:center;padding:40px 0;font-size:12px;color:rgba(50,40,55,0.3);">未找到相关礼物</div>`;
-        return;
-    }
+    if (!results.length) { body.innerHTML = `<div style="text-align:center;padding:40px 0;font-size:12px;color:rgba(50,40,55,0.3);">未找到相关礼物</div>`; return; }
     let html = `<div class="gift-grid">`;
     results.forEach(g => {
         html += `
@@ -455,25 +958,16 @@ function doGiftSearch(kw) {
 
 /* ===== 礼物墙 ===== */
 function openGiftWall() {
-    const ov = document.getElementById('giftWallOverlay');
-    if (!ov) return;
-    ov.classList.add('show');
-    renderGiftWall();
+    const ov = document.getElementById('giftWallOverlay'); if (!ov) return;
+    ov.classList.add('show'); renderGiftWall();
 }
-
 function closeGiftWall() {
-    const ov = document.getElementById('giftWallOverlay');
-    if (ov) ov.classList.remove('show');
+    const ov = document.getElementById('giftWallOverlay'); if (ov) ov.classList.remove('show');
 }
-
 function renderGiftWall() {
-    const body = document.getElementById('giftWallBody');
-    if (!body) return;
+    const body = document.getElementById('giftWallBody'); if (!body) return;
     if (!giftWallItems.length) {
-        body.innerHTML = `<div style="text-align:center;padding:60px 20px;font-size:13px;color:rgba(50,40,55,0.3);line-height:2;">
-            还没有收到礼物<br>快去商城送一个吧
-        </div>`;
-        return;
+        body.innerHTML = `<div style="text-align:center;padding:60px 20px;font-size:13px;color:rgba(50,40,55,0.3);line-height:2;">还没有收到礼物</div>`; return;
     }
     let html = `<div class="gift-grid" style="padding:14px;">`;
     giftWallItems.forEach((g) => {
@@ -493,17 +987,92 @@ function renderGiftWall() {
     body.innerHTML = html;
 }
 
-/* ===== 工具 ===== */
-function escGift(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-function escAttr(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+/* ===== 礼物卡片详情弹窗（点击聊天中的礼物盒卡片时弹出） ===== */
+function showGiftCardDetail(orderNo) {
+    initGiftData();
+    var order = null;
+    for (var i = 0; i < giftOrders.length; i++) {
+        if (giftOrders[i].orderNo === orderNo) { order = giftOrders[i]; break; }
+    }
+    if (!order) { if (typeof showToast === 'function') showToast('订单未找到'); return; }
+
+    var ov = document.getElementById('giftCardDetailPopup');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'giftCardDetailPopup';
+        var pf = document.querySelector('.phone-frame');
+        if (pf) pf.appendChild(ov);
+        else document.body.appendChild(ov);
+    }
+
+    var imgPart = order.giftImg
+        ? '<img src="' + order.giftImg + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
+        : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(150,140,155,0.5);">无图</div>';
+
+    var statusColor = order.status === '已发货' ? 'rgba(80,160,100,0.85)' : (order.status === '待代付' || order.status === '待User代付' ? 'rgba(255,160,80,0.85)' : 'rgba(50,40,55,0.5)');
+
+    ov.style.cssText = 'position:absolute;inset:0;z-index:999;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;border-radius:44px;';
+    ov.innerHTML = '<div style="width:280px;background:rgba(255,255,255,0.92);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border-radius:20px;border:1px solid rgba(255,255,255,0.7);box-shadow:0 8px 40px rgba(0,0,0,0.1);overflow:hidden;" onclick="event.stopPropagation()">'
+        + '<div style="width:100%;height:160px;overflow:hidden;background:rgba(248,242,250,0.5);">' + imgPart + '</div>'
+        + '<div style="padding:14px 18px;">'
+        + '<div style="font-size:16px;font-weight:700;color:rgba(50,40,55,0.85);margin-bottom:4px;">' + escGift(order.giftName) + '</div>'
+        + '<div style="font-size:12px;color:rgba(50,40,55,0.35);margin-bottom:8px;">' + escGift(order.giftDesc || '') + '</div>'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+        + '<span style="font-size:18px;font-weight:800;color:rgba(255,110,140,0.9);">' + order.price + '</span>'
+        + '<span style="font-size:11px;font-weight:600;color:' + statusColor + ';padding:2px 8px;border-radius:8px;background:rgba(0,0,0,0.03);">' + escGift(order.status) + '</span>'
+        + '</div>'
+        + '<div style="font-size:11px;color:rgba(50,40,55,0.3);line-height:1.8;">'
+        + '订单号: ' + order.orderNo + '<br>'
+        + '时间: ' + formatOrderDate(order.createdAt) + '<br>'
+        + '付款: ' + escGift(order.payType || '')
+        + (order.address ? '<br>地址: ' + escGift(order.address) : '')
+        + '</div>'
+        + '</div>'
+        + '<div style="padding:10px 18px 14px;border-top:1px solid rgba(0,0,0,0.04);text-align:center;">'
+        + '<div style="display:inline-block;padding:8px 28px;border-radius:20px;background:rgba(255,140,170,0.15);color:rgba(255,100,140,0.85);font-size:13px;font-weight:600;cursor:pointer;" onclick="closeGiftCardDetail()">关闭</div>'
+        + '</div>'
+        + '</div>';
+
+    ov.onclick = function (e) { if (e.target === ov) closeGiftCardDetail(); };
 }
 
-/* ===== 初始化 ===== */
-document.addEventListener('DOMContentLoaded', function () {
+function closeGiftCardDetail() {
+    var ov = document.getElementById('giftCardDetailPopup');
+    if (ov) ov.remove();
+}
+
+/* ==========================================================
+   ★ "我"页面渲染订单入口（供 chat.js 的 renderMe 调用）
+   在 chat.js 的 renderMe() 里加一行：
+   h += renderMeOrdersSection();
+   ========================================================== */
+function renderMeOrdersSection() {
     initGiftData();
-});
+    var cnt = giftOrders.length;
+    var shipped = 0;
+    for (var i = 0; i < giftOrders.length; i++) {
+        if (giftOrders[i].status === '已发货') shipped++;
+    }
+    return '<div class="chat-me-cell" onclick="openMyOrders()" style="cursor:pointer;">'
+        + '<div style="display:flex;align-items:center;gap:10px;">'
+        + '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="rgba(255,140,170,0.7)" stroke-width="1.8">'
+        + '<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/>'
+        + '<line x1="12" y1="22" x2="12" y2="7"/>'
+        + '<path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>'
+        + '<path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>'
+        + '</svg>'
+        + '<span style="font-size:14px;font-weight:600;color:rgba(50,40,55,0.8);">我的订单</span>'
+        + '</div>'
+        + '<div style="display:flex;align-items:center;gap:6px;">'
+        + (shipped > 0 ? '<span style="font-size:11px;color:rgba(80,160,100,0.8);background:rgba(80,160,100,0.08);padding:1px 6px;border-radius:6px;">' + shipped + '已发货</span>' : '')
+        + '<span style="font-size:12px;color:rgba(50,40,55,0.3);">' + cnt + '单</span>'
+        + '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="rgba(50,40,55,0.3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>'
+        + '</div>'
+        + '</div>';
+}
+
+/* ===== 工具 ===== */
+function escGift(str) { if (!str) return ''; return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function escAttr(str) { if (!str) return ''; return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
+document.addEventListener('DOMContentLoaded', function () { initGiftData(); });

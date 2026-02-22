@@ -172,7 +172,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(80, 75, 95, 0.85);
     font-size: 9px;
     letter-spacing: 0.5px;
     pointer-events: none;
@@ -621,7 +621,7 @@
 /* 虚线分割 */
 .p2-note-divider {
     border: none;
-    border-top: 1.5px dashed rgba(60, 55, 65, 0.15);
+    border-top: 1.5px dashed rgba(0, 0, 0, 0.04);
     margin: 0 8px;
 }
 
@@ -725,7 +725,7 @@
     background: rgba(220, 215, 210, 0.3);
     cursor: pointer;
     position: relative;
-    border: 3px solid rgba(40, 35, 45, 0.85);
+    border: 3px solid rgba(200, 198, 210, 0.7);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     flex-shrink: 0;
 }
@@ -805,9 +805,10 @@
 /* ========== 底部深色播放器 ========== */
 .p2-duo-player {
     width: 100%;
-    background: rgba(40, 38, 42, 0.92);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: rgba(235, 235, 242, 0.55);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255, 255, 255, 0.45);
     border-radius: 14px;
     padding: 10px 14px 8px;
     display: flex;
@@ -815,7 +816,7 @@
     gap: 4px;
     border: 1px solid rgba(255, 255, 255, 0.06);
     box-shadow:
-        0 4px 20px rgba(0, 0, 0, 0.15),
+        0 4px 20px rgba(0, 0, 0, 0.04),
         0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
@@ -829,7 +830,7 @@
 .p2-duo-song {
     font-size: 14px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(55, 50, 65, 0.85);
     letter-spacing: 0.3px;
     min-height: 18px;
     flex: 1;
@@ -845,7 +846,7 @@
     flex-shrink: 0;
     width: 20px;
     height: 16px;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(100, 105, 120, 0.5);
 }
 
 .p2-duo-eq svg {
@@ -856,7 +857,7 @@
 /* 装饰文字 */
 .p2-duo-player-decor {
     font-size: 8.5px;
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(100, 95, 115, 0.45);
     letter-spacing: 0.8px;
     text-align: center;
     min-height: 11px;
@@ -865,7 +866,7 @@
 
 .p2-duo-player-decor:focus {
     outline: none !important;
-    color: rgba(255, 255, 255, 0.65);
+    color: rgba(55, 50, 65, 0.75);
 }
 
 /* 进度条 */
@@ -878,7 +879,7 @@
 
 .p2-duo-time {
     font-size: 9px;
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(100, 95, 115, 0.5);
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
     min-width: 22px;
@@ -902,7 +903,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.08);
     border-radius: 2px;
 }
 
@@ -911,7 +912,7 @@
     top: 0;
     left: 0;
     height: 100%;
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(80, 75, 95, 0.45);
     border-radius: 2px;
     width: 37%;
     transition: width 0.3s linear;
@@ -924,7 +925,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #fff;
+    background: rgba(80, 75, 95, 0.7);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
     left: 37%;
     transition: left 0.3s linear;
@@ -946,7 +947,7 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(80, 75, 95, 0.6);
     transition: color 0.2s, transform 0.15s;
 }
 
@@ -973,4 +974,113 @@
     stroke-width: 2.5;
     stroke-linecap: round;
     stroke-linejoin: round;
+}
+
+/* =============================================
+   拍立得轮播组件（3张卡片循环切换）
+   ============================================= */
+.p2-carousel-widget {
+    margin-top: 10px;
+    padding: 14px 0 8px;
+    position: relative;
+    overflow: visible;
+    background: none;
+    border: none;
+    box-shadow: none;
+}
+
+.p2-carousel-inner {
+    position: relative;
+    height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 每张拍立得卡片 */
+.p2-carousel-card {
+    position: absolute;
+    width: 115px;
+    background: #fff;
+    border-radius: 4px;
+    padding: 6px 6px 6px 6px;
+    box-shadow:
+        0 2px 10px rgba(0, 0, 0, 0.1),
+        0 6px 20px rgba(0, 0, 0, 0.06),
+        0 0 0 1px rgba(0, 0, 0, 0.03);
+    cursor: pointer;
+    transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+        z-index 0s 0.22s,
+        opacity 0.45s ease;
+    will-change: transform;
+}
+
+.p2-carousel-card:active {
+    opacity: 0.85;
+}
+
+/* 照片区域 */
+.p2-carousel-frame {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: rgba(235, 232, 240, 0.35);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+}
+
+.p2-carousel-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.p2-carousel-frame img[src=""] {
+    display: none;
+}
+
+.p2-carousel-hint {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+
+.p2-carousel-frame img:not([src=""])~.p2-carousel-hint {
+    opacity: 0;
+}
+
+.p2-carousel-hint svg {
+    fill: none;
+    stroke: rgba(170, 165, 180, 0.35);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* ===== 三个位置（左/中/右）的变换 ===== */
+.p2-cc-left {
+    transform: translateX(-72px) rotate(-8deg) scale(0.88);
+    z-index: 1;
+}
+
+.p2-cc-center {
+    transform: translateX(0) rotate(0deg) scale(1);
+    z-index: 3;
+}
+
+.p2-cc-right {
+    transform: translateX(72px) rotate(8deg) scale(0.88);
+    z-index: 1;
+}
+
+/* 拍立得底部白边（经典宽下巴） */
+.p2-carousel-card::after {
+    content: '';
+    display: block;
+    height: 18px;
 }

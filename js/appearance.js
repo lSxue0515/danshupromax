@@ -13,8 +13,12 @@ var ICON_LIST = [
     { id: 'icon_music', name: '音乐' },
     { id: 'icon_album', name: '相册' },
     { id: 'icon_dock_msg', name: '消息' },
-    { id: 'icon_dock_note', name: '手帐' },
-    { id: 'icon_dock_browser', name: '浏览器' }
+    { id: 'icon_dock_note', name: '手账' },
+    { id: 'icon_dock_worldbook', name: '世界书' },
+    { id: 'icon_game', name: '游戏' },
+    { id: 'icon_catnip', name: '猫尾薄荷' },
+    { id: 'icon_mood', name: '心绪回响' },
+    { id: 'icon_video', name: '视频' }
 ];
 
 var _editingIconId = null;

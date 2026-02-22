@@ -4,7 +4,7 @@
 
 (function () {
     var track, viewport, dots;
-    var current = 0, total = 2;
+    var current = 0, total = 3;       // ★ 改成3页
     var startX = 0, moveX = 0, isDragging = false;
     var trackWidth = 0;
 
@@ -63,7 +63,8 @@
 
     function goTo(page) {
         current = page;
-        track.style.transform = 'translateX(-' + (current * 50) + '%)';
+        var pct = 100 / total;                              // ★ 每页占比 = 33.333%
+        track.style.transform = 'translateX(-' + (current * pct) + '%)';
         dots.forEach(function (d, i) {
             d.classList.toggle('active', i === current);
         });
@@ -71,5 +72,3 @@
 
     document.addEventListener('DOMContentLoaded', init);
 })();
-
-
