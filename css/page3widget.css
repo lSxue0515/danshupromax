@@ -644,7 +644,7 @@
 
 /* 确保原来的大拍立得在最上层 */
 .p3-polaroid-group .p3-polaroid:not(.p3-polaroid-sm) {
-    z-index: 1;
+    z-index: 2;
     margin-left: 0;
     /* 清除自带的偏移，交给外层group控制 */
 }
@@ -660,7 +660,7 @@
     margin-top: 20px;
     /* 高度往下错开一点 */
     margin-left: 0;
-    z-index: 2;
+    z-index: 1;
     /* 垫在底层 */
 }
 

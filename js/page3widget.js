@@ -244,19 +244,81 @@
     }
 })();
 
-/* ========== 新增：小拍立得图片选择 ========== */
-function p3PickTicketImgSm() {
-    // 调用第三页已有的文件上传函数
-    _p3PickFile(function (result) {
-        var el = document.getElementById('p3TicketImgSm');
-        if (el) el.src = result; // 替换为选中的图片
+/* ========== 小拍立得完整功能（专属独立版） ========== */
+(function () {
+    // 1. 专属图片上传功能
+    window.p3PickTicketImgSm = function () {
+        var inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = 'image/*';
+        inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+        document.body.appendChild(inp);
 
-        // 本地保存图片，防止刷新后丢失
-        if (typeof _p3Load === 'function') {
-            _p3Load();
-            if (!_p3Data) _p3Data = {};
-            _p3Data.ticketImgSm = result;
-            _p3Save();
+        inp.addEventListener('change', function () {
+            var file = inp.files && inp.files[0];
+            try { document.body.removeChild(inp); } catch (e) { }
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                var result = ev.target.result;
+                var el = document.getElementById('p3TicketImgSm');
+                var hint = document.getElementById('p3TicketImgSmHint');
+
+                if (el) el.src = result; // 替换图片
+                if (hint) hint.style.display = 'none'; // 隐藏加号
+
+                // 存入本地缓存
+                try {
+                    var d = JSON.parse(localStorage.getItem('ds_p3_contact') || '{}');
+                    d.ticketImgSm = result;
+                    localStorage.setItem('ds_p3_contact', JSON.stringify(d));
+                } catch (e) { }
+            };
+            reader.readAsDataURL(file);
+        });
+
+        requestAnimationFrame(function () { inp.click(); });
+    };
+
+    // 2. 页面加载时自动恢复图片和文字，并绑定文字编辑
+    function initSm() {
+        var el = document.getElementById('p3TicketImgSm');
+        var hint = document.getElementById('p3TicketImgSmHint');
+        var textEl = document.getElementById('p3TicketTextSm');
+
+        // 恢复数据
+        try {
+            var d = JSON.parse(localStorage.getItem('ds_p3_contact') || '{}');
+            if (d.ticketImgSm && el) {
+                el.src = d.ticketImgSm;
+                if (hint) hint.style.display = 'none';
+            }
+            if (d.ticketTextSm && textEl) {
+                textEl.textContent = d.ticketTextSm;
+            }
+        } catch (e) { }
+
+        // 让文字编辑后能自动保存
+        if (textEl) {
+            textEl.addEventListener('blur', function () {
+                try {
+                    var d = JSON.parse(localStorage.getItem('ds_p3_contact') || '{}');
+                    d.ticketTextSm = textEl.textContent.trim();
+                    localStorage.setItem('ds_p3_contact', JSON.stringify(d));
+                } catch (e) { }
+            });
+            // 敲回车时取消焦点
+            textEl.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); textEl.blur(); }
+            });
         }
-    }, 400, 500); // 这里的数字是图片的宽高裁剪限制
-}
+    }
+
+    // 启动专属组件
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSm);
+    } else {
+        initSm();
+    }
+})();
