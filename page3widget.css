@@ -649,19 +649,20 @@
     /* 清除自带的偏移，交给外层group控制 */
 }
 
-/* 新增：小拍立得样式 */
+/* 修改小拍立得样式，改为并排 */
 .p3-polaroid-sm {
     width: 90px;
     padding: 5px 5px 0 5px;
-    transform: rotate(-6deg);
-    /* 往左倾斜，和大的错开弧度 */
-    margin-right: -30px;
-    /* ★关键：用负边距把它插到大图的下面去 */
-    margin-top: 20px;
-    /* 高度往下错开一点 */
+    transform: rotate(-4deg);
+    /* 倾斜稍微收一点点，看着更自然 */
+
+    margin-right: 12px;
+    /* ★ 核心重点：把原来的 -30px 改成正数 12px，就能产生合适的空隙 */
+    margin-top: 5px;
+    /* 高度上稍微错开一丢丢，如果想两张图上边缘完全平齐，可以改成 0 */
     margin-left: 0;
+
     z-index: 1;
-    /* 垫在底层 */
 }
 
 /* 小拍立得悬浮微动 */
