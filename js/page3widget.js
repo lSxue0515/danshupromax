@@ -243,3 +243,20 @@
         initProfile();
     }
 })();
+
+/* ========== 新增：小拍立得图片选择 ========== */
+function p3PickTicketImgSm() {
+    // 调用第三页已有的文件上传函数
+    _p3PickFile(function (result) {
+        var el = document.getElementById('p3TicketImgSm');
+        if (el) el.src = result; // 替换为选中的图片
+
+        // 本地保存图片，防止刷新后丢失
+        if (typeof _p3Load === 'function') {
+            _p3Load();
+            if (!_p3Data) _p3Data = {};
+            _p3Data.ticketImgSm = result;
+            _p3Save();
+        }
+    }, 400, 500); // 这里的数字是图片的宽高裁剪限制
+}

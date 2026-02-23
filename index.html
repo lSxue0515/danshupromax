@@ -630,27 +630,46 @@
                                 </div>
                             </div>
 
-                            <!-- 右侧：拍立得小组件 -->
-                            <div class="p3-polaroid" id="p3Polaroid">
-                                <div class="p3-polaroid-photo" onclick="p3PickTicketImg()">
-                                    <img src="" id="p3TicketImg" alt="">
-                                    <div class="p3-polaroid-photo-hint" id="p3TicketImgHint">
-                                        <svg viewBox="0 0 24 24" width="26" height="26">
-                                            <rect x="3" y="3" width="18" height="18" rx="2" />
-                                            <circle cx="8.5" cy="8.5" r="1.5" />
-                                            <polyline points="21 15 16 10 5 21" />
-                                        </svg>
+                            <!-- 右侧：拍立得组（左侧垫底小图 + 表面大图） -->
+                            <div class="p3-polaroid-group">
+
+                                <!-- 1. 新增的小拍立得（垫在底层左侧） -->
+                                <div class="p3-polaroid p3-polaroid-sm" id="p3PolaroidSm">
+                                    <div class="p3-polaroid-photo" onclick="p3PickTicketImgSm()">
+                                        <img src="" id="p3TicketImgSm" alt="">
+                                        <div class="p3-polaroid-photo-hint" id="p3TicketImgSmHint">
+                                            <svg viewBox="0 0 24 24" width="20" height="20">
+                                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                                <polyline points="21 15 16 10 5 21" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div class="p3-polaroid-caption" id="p3TicketTextSm" contenteditable="true">✨</div>
+                                </div>
+
+                                <!-- 2. 原来的大拍立得（保持不变） -->
+                                <div class="p3-polaroid" id="p3Polaroid">
+                                    <div class="p3-polaroid-photo" onclick="p3PickTicketImg()">
+                                        <img src="" id="p3TicketImg" alt="">
+                                        <div class="p3-polaroid-photo-hint" id="p3TicketImgHint">
+                                            <svg viewBox="0 0 24 24" width="26" height="26">
+                                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                                <polyline points="21 15 16 10 5 21" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div class="p3-polaroid-caption" id="p3TicketText" contenteditable="true">💭₊˚🤍₊⁺
+                                        딩동
+                                        ㅎㅇ…🩶
                                     </div>
                                 </div>
-                                <div class="p3-polaroid-caption" id="p3TicketText" contenteditable="true">💭₊˚🤍₊⁺
-                                    딩동
-                                    ㅎㅇ…🩶
-                                </div>
-                            </div>
+
+                            </div> <!-- 拍立得组结束 -->
 
                         </div>
-
-                    </div>
+                    </div> <!-- ★★★ 加上这行！补回不小心删掉的闭合标签 ★★★ -->
                 </div> <!-- /page page-3 -->
 
             </div> <!-- ★ /pages-track ★ -->
