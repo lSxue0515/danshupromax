@@ -506,7 +506,8 @@
 
 .p3-bottom-row {
     display: flex;
-    gap: 12px;
+    gap: 16px;
+    /* 增大左右两大部分的间距，参考p2的宽敞感 */
     align-items: flex-start;
 }
 
@@ -516,9 +517,14 @@
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
     gap: 14px 18px;
+    /* 列间距从 6px 增大到 18px，让猫尾薄荷不那么挤 */
     flex-shrink: 0;
     width: 160px;
-    margin-right: 0px;
+    /* 配合间距加大整体宽度 */
+    margin-left: -12px;
+    /* 关键：把整个网格往左拉，这样左列往左，右列也跟着往左 */
+    margin-right: 0;
+    /* 去掉之前的右偏移 */
 }
 
 /* =============================================
@@ -626,4 +632,45 @@
     outline: 1px dashed rgba(180, 175, 190, 0.35);
     outline-offset: 2px;
     border-radius: 3px;
+}
+
+/* ====== 拍立得双图排版 ====== */
+.p3-polaroid-group {
+    display: flex;
+    align-items: flex-start;
+    margin-left: -4px;
+    /* 整体组的位置微调 */
+}
+
+/* 确保原来的大拍立得在最上层 */
+.p3-polaroid-group .p3-polaroid:not(.p3-polaroid-sm) {
+    z-index: 2;
+    margin-left: 0;
+    /* 清除自带的偏移，交给外层group控制 */
+}
+
+/* 新增：小拍立得样式 */
+.p3-polaroid-sm {
+    width: 90px;
+    padding: 5px 5px 0 5px;
+    transform: rotate(-6deg);
+    /* 往左倾斜，和大的错开弧度 */
+    margin-right: -30px;
+    /* ★关键：用负边距把它插到大图的下面去 */
+    margin-top: 20px;
+    /* 高度往下错开一点 */
+    margin-left: 0;
+    z-index: 1;
+    /* 垫在底层 */
+}
+
+/* 小拍立得悬浮微动 */
+.p3-polaroid-sm:hover {
+    transform: rotate(-3deg) scale(1.02);
+}
+
+/* 缩小小拍立得的文字区高度 */
+.p3-polaroid-sm .p3-polaroid-caption {
+    height: 24px;
+    font-size: 9px;
 }
