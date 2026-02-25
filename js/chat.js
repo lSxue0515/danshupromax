@@ -1932,14 +1932,15 @@ function loadWallpaper(roleId) {
 
 /* ---- 强制应用壁纸到聊天体 ---- */
 function applyConvWallpaper(dataUrl) {
-    var body = document.getElementById('chatConvBody');
-    if (!body) return;
+    // 壁纸应用到整个 conversation 容器（覆盖顶栏和底栏背后）
+    var conv = document.getElementById('chatConversation');
+    if (!conv) return;
     if (dataUrl) {
-        body.style.cssText += '; background-image: url("' + dataUrl + '") !important; background-size: cover !important; background-position: center !important;';
+        conv.style.cssText += '; background-image: url("' + dataUrl + '") !important; background-size: cover !important; background-position: center !important;';
     } else {
-        body.style.backgroundImage = '';
-        body.style.backgroundSize = '';
-        body.style.backgroundPosition = '';
+        conv.style.backgroundImage = '';
+        conv.style.backgroundSize = '';
+        conv.style.backgroundPosition = '';
     }
 }
 
