@@ -2,6 +2,7 @@
    game.js — 游戏大厅 + UNO + 麻将(四地区)
    ============================================ */
 var _gameView = 'lobby', _gameType = '', _gameSelectedPersona = '', _gameSelectedChars = [];
+var _gameRecords = JSON.parse(localStorage.getItem('_gameRecords') || '[]');
 var _unoState = null, _mjState = null;
 var _mjRegion = 'northeast', _mjRounds = 4;
 
@@ -11,8 +12,9 @@ function openGameApp() {
     _gameView = 'lobby'; el.innerHTML = gameBuildLobby(); el.classList.add('show');
 }
 function closeGameApp() {
-    var el = document.getElementById('gameOverlay'); if (el) el.classList.remove('show');
-    _unoState = null; _mjState = null;
+    var el = document.getElementById('gameOverlay');
+    if (el) { el.classList.remove('show'); el.classList.remove('landscape'); }
+    _unoState = null; _mjState = null; _ddzState = null;
 }
 
 /* ===== 大厅 ===== */
@@ -21,14 +23,44 @@ function gameBuildLobby() {
     h += '<div class="game-lobby"><div class="game-lobby-title">Game Center 游戏大厅</div><div class="game-lobby-sub">选择游戏，邀请角色一起玩</div><div class="game-cards">';
     h += '<div class="game-card uno" onclick="gamePickType(\'uno\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="3"/><path d="M7 8v8M12 8v5a3 3 0 006 0V8"/></svg></div><div class="game-card-name">UNO</div><div class="game-card-desc">经典卡牌 Classic Cards</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>2-10人</div></div>';
     h += '<div class="game-card mahjong" onclick="gamePickType(\'mahjong\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="9" rx="1.5"/><rect x="3" y="15" width="7" height="6" rx="1.5"/><rect x="14" y="15" width="7" height="6" rx="1.5"/></svg></div><div class="game-card-name">Mahjong 麻将</div><div class="game-card-desc">四地区玩法 Regional Rules</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>4人</div></div>';
-    h += '<div class="game-card landlord" onclick="gamePickType(\'landlord\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div><div class="game-card-name">Landlord 斗地主</div><div class="game-card-desc">开发中 Coming Soon</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>3人</div></div>';
+    h += '<div class="game-card landlord" onclick="gamePickType(\'landlord\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div><div class="game-card-name">Landlord 斗地主</div><div class="game-card-desc">经典扑克 Classic Poker</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>3人</div></div>';
     h += '<div class="game-card guess" onclick="gamePickType(\'guess\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg></div><div class="game-card-name">Charades 你说我猜</div><div class="game-card-desc">开发中 Coming Soon</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>3-10人</div></div>';
-    h += '</div><div class="game-recent"><div class="game-recent-title">Recent 近期记录</div><div class="game-recent-empty">暂无游戏记录</div></div></div>';
+    h += '</div><div class="game-recent"><div class="game-recent-title">Recent 近期记录</div>';
+    // 渲染记录
+    if (!_gameRecords || !_gameRecords.length) {
+        h += '<div class="game-recent-empty">暂无游戏记录</div>';
+    } else {
+        h += '<div class="game-recent-list">';
+        var typeNames = { uno: 'UNO', mahjong: '麻将', landlord: '斗地主' };
+        var typeColors = { uno: '#c9908e', mahjong: '#8fb5a0', landlord: '#8fa8c5' };
+        for (var ri = 0; ri < Math.min(_gameRecords.length, 10); ri++) {
+            var rec = _gameRecords[ri];
+            var ago = _gameTimeAgo(rec.time);
+            h += '<div class="game-recent-item">';
+            h += '<div class="game-recent-dot" style="background:' + (typeColors[rec.type] || '#aaa') + '"></div>';
+            h += '<div class="game-recent-info">';
+            h += '<div class="game-recent-name">' + _gEsc(typeNames[rec.type] || rec.type) + ' <span class="game-recent-time">' + ago + '</span></div>';
+            h += '<div class="game-recent-detail">🏆 ' + _gEsc(rec.winner || '???') + ' &nbsp;·&nbsp; ' + _gEsc(rec.players.join(', '));
+            if (rec.scores) h += ' &nbsp;·&nbsp; ' + rec.scores;
+            h += '</div></div></div>';
+        }
+        h += '</div>';
+    }
+    h += '</div></div>';
     return h;
 }
 
+function _gameTimeAgo(ts) {
+    var d = Date.now() - ts, m = Math.floor(d / 60000);
+    if (m < 1) return '刚刚';
+    if (m < 60) return m + '分钟前';
+    var hr = Math.floor(m / 60);
+    if (hr < 24) return hr + '小时前';
+    return Math.floor(hr / 24) + '天前';
+}
+
 function gamePickType(type) {
-    if (type !== 'uno' && type !== 'mahjong') { if (typeof showToast === 'function') showToast('开发中，敬请期待'); return; }
+    if (type !== 'uno' && type !== 'mahjong' && type !== 'landlord') { if (typeof showToast === 'function') showToast('开发中，敬请期待'); return; }
     _gameType = type; _gameSelectedPersona = ''; _gameSelectedChars = []; _gameView = 'setup';
     var el = document.getElementById('gameOverlay'); if (el) el.innerHTML = _gameBuildSetup();
 }
@@ -98,17 +130,9 @@ function _gameBuildSetup() {
     return h;
 }
 
-/* 事件委托 */
+/* 事件委托 — click */
+/* 事件委托 — click */
 document.addEventListener('click', function (e) {
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-            var inp = document.getElementById('mjChatInput');
-            if (inp && document.activeElement === inp) {
-                e.preventDefault();
-                _mjSendUserChat();
-            }
-        }
-    });
     // 人设
     var pi = e.target.closest('[data-game-persona]');
     if (pi) { var pid = pi.getAttribute('data-game-persona'); if (pid) { _gameSelectedPersona = pid; _gameRefreshSetup(); } return; }
@@ -129,15 +153,18 @@ document.addEventListener('click', function (e) {
     // 麻将出牌
     var mt = e.target.closest('[data-mj-play]');
     if (mt) { var ti = parseInt(mt.getAttribute('data-mj-play')); _mjUserDiscard(ti); return; }
-    // 刷新对话
-    var cr = e.target.closest('[data-mj-chat]');
-    if (cr) { var si = parseInt(cr.getAttribute('data-mj-chat')); _mjRefreshChat(si); return; }
     // UNO操作
     var t = e.target.closest('[data-uno-action]');
     if (t) { _handleUnoAction(t.getAttribute('data-uno-action')); return; }
+    // 斗地主操作
+    var da = e.target.closest('[data-ddz-action]');
+    if (da) { _ddzHandleAction(da.getAttribute('data-ddz-action')); return; }
+    // 斗地主选牌
+    var dc = e.target.closest('[data-ddz-card]');
+    if (dc) { _ddzToggleCard(parseInt(dc.getAttribute('data-ddz-card'))); return; }
 });
 
-function gameBackToLobby() { _gameView = 'lobby'; var el = document.getElementById('gameOverlay'); if (el) el.innerHTML = gameBuildLobby(); }
+function gameBackToLobby() { _gameView = 'lobby'; var el = document.getElementById('gameOverlay'); if (el) { el.classList.remove('landscape'); el.innerHTML = gameBuildLobby(); } }
 function _gameRefreshSetup() { var el = document.getElementById('gameOverlay'); if (el) el.innerHTML = _gameBuildSetup(); }
 function _gameToggleChar(id) {
     var maxP = (_gameType === 'mahjong') ? 3 : (_gameType === 'landlord') ? 2 : (_gameType === 'guess') ? 9 : 10;
@@ -146,7 +173,21 @@ function _gameToggleChar(id) {
     else { if (_gameSelectedChars.length >= maxP) { if (typeof showToast === 'function') showToast('最多选择' + maxP + '个角色'); return; } _gameSelectedChars.push(id); }
     _gameRefreshSetup();
 }
-function gameStart() { if (_gameType === 'uno') unoStart(); if (_gameType === 'mahjong') mjStart(); }
+function gameStart() { if (_gameType === 'uno') unoStart(); if (_gameType === 'mahjong') mjStart(); if (_gameType === 'landlord') ddzStart(); }
+
+function _gameSaveRecord(type, players, winnerName, scores) {
+    var names = [];
+    for (var i = 0; i < players.length; i++) names.push(players[i].name);
+    _gameRecords.unshift({
+        type: type,
+        players: names,
+        winner: winnerName,
+        scores: scores,
+        time: Date.now()
+    });
+    if (_gameRecords.length > 20) _gameRecords = _gameRecords.slice(0, 20);
+    try { localStorage.setItem('_gameRecords', JSON.stringify(_gameRecords)); } catch (e) { }
+}
 
 /* ==========================================
    麻将引擎 MAHJONG ENGINE
@@ -155,8 +196,6 @@ var MJ_WINDS = ['东', '南', '西', '北'];
 var MJ_JIAN = ['中', '发', '白'];
 var MJ_SUITS = ['wan', 'tiao', 'tong'];
 var MJ_SUIT_CN = { wan: '万', tiao: '条', tong: '筒' };
-var _mjChatLog = [];       // 局内聊天记录
-var _mjChatPending = false; // API请求中
 
 function _mjBuildTiles() {
     var tiles = [];
@@ -194,6 +233,7 @@ function _mjSortHand(hand) {
 }
 
 function mjStart() {
+    var ov = document.getElementById('gameOverlay'); if (ov) ov.classList.add('landscape');
     var persona = (typeof findPersona === 'function') ? findPersona(_gameSelectedPersona) : null;
     var pl = [];
     pl.push({ id: 'user', name: (persona && persona.name) || '我', avatar: (persona && persona.avatar) || '', hand: [], melds: [], discards: [], isUser: true, score: 0, wind: 0, dingque: -1 });
@@ -205,7 +245,6 @@ function mjStart() {
     for (var p = 0; p < 4; p++) { pl[p].hand = tiles.splice(0, p === 0 ? 14 : 13); _mjSortHand(pl[p].hand); }
     var bao = null;
     if (_mjRegion === 'northeast' && tiles.length > 0) bao = tiles[tiles.length - 1];
-    _mjChatLog = []; _mjChatPending = false;
     _mjState = {
         players: pl, wall: tiles, phase: 'play', currentPlayer: 0,
         dealer: 0, roundNum: 1, totalRounds: _mjRounds,
@@ -388,13 +427,21 @@ function _mjDoHu(winnerIdx, huTile, fromIdx) {
     _mjLog(pl.name + ' 胡了! +' + pts + '分');
     pl.score += pts;
     for (var i = 0; i < 4; i++) { if (i !== winnerIdx) s.players[i].score -= Math.floor(pts / 3); }
-    if (s.roundNum >= s.totalRounds) { s.phase = 'result'; s.gameOver = true; }
+    if (s.roundNum >= s.totalRounds) {
+        s.phase = 'result'; s.gameOver = true;
+        var scStr = ''; for (var si = 0; si < 4; si++) scStr += s.players[si].name + ':' + s.players[si].score + ' ';
+        _gameSaveRecord('mahjong', s.players, pl.name, scStr.trim());
+    }
     else { s.roundNum++; setTimeout(function () { _mjNextRound(); }, 2000); }
     _mjRender();
 }
 function _mjDraw() {
     var s = _mjState; _mjLog('流局 海底');
-    if (s.roundNum >= s.totalRounds) { s.phase = 'result'; s.gameOver = true; }
+    if (s.roundNum >= s.totalRounds) {
+        s.phase = 'result'; s.gameOver = true;
+        var scStr = ''; for (var si = 0; si < 4; si++) scStr += s.players[si].name + ':' + s.players[si].score + ' ';
+        _gameSaveRecord('mahjong', s.players, '流局', scStr.trim());
+    }
     else { s.roundNum++; setTimeout(function () { _mjNextRound(); }, 2000); }
     _mjRender();
 }
@@ -424,89 +471,28 @@ function _mjHandleAction(act) {
     if (act === 'again') { _mjState.roundNum = 1; _mjNextRound(); return; }
     if (act === 'lobby') { _mjState = null; gameBackToLobby(); return; }
     if (act.indexOf('dingque-') === 0) { _mjUserDingque(parseInt(act.substring(8))); return; }
-    if (act === 'sendchat') { _mjSendUserChat(); return; }
 }
 function _mjLog(msg) { if (_mjState) _mjState.logs.push(msg); }
 
-/* ===== 局内聊天系统 ===== */
-function _mjSendUserChat() {
-    var inp = document.getElementById('mjChatInput');
-    if (!inp) return;
-    var msg = inp.value.trim(); if (!msg) return;
-    inp.value = '';
-    var s = _mjState; if (!s) return;
-    var me = s.players[0];
-    _mjChatLog.push({ name: me.name, avatar: me.avatar, text: msg, isUser: true });
-    _mjRenderChatOnly();
-    // 3个char依次回复
-    if (_mjChatPending) return;
-    _mjChatPending = true;
-    _mjAiChatReplyChain(msg, 1, function () { _mjChatPending = false; });
-}
-
-function _mjAiChatReplyChain(userMsg, charIdx, done) {
-    var s = _mjState; if (!s || charIdx >= 4) { done(); return; }
-    var pl = s.players[charIdx];
-    var apiConfig = (typeof getActiveApiConfig === 'function') ? getActiveApiConfig() : null;
-    if (!apiConfig || !apiConfig.url || !apiConfig.key || !apiConfig.model) {
-        // 无API时用预设回复
-        var fallbacks = ['哈哈好的~', '嗯嗯', '有道理', '来来来继续打牌!', '你说的对', '别说了快出牌', '哎呀这牌太难了', '稳住稳住'];
-        _mjChatLog.push({ name: pl.name, avatar: pl.avatar, text: fallbacks[Math.floor(Math.random() * fallbacks.length)], isUser: false });
-        _mjRenderChatOnly();
-        setTimeout(function () { _mjAiChatReplyChain(userMsg, charIdx + 1, done); }, 300);
-        return;
-    }
-
-    var regionCN = { northeast: '东北', sichuan: '四川', yunnan: '云南', hubei: '湖北' };
-    var sysMsg = '你正在扮演"' + pl.name + '"，和朋友们一起打' + (regionCN[s.region] || '') + '麻将。';
-    if (pl.detail) sysMsg += '你的角色设定：' + pl.detail + '。';
-    sysMsg += '请根据你的性格特点，用1-2句话自然地回复对方说的话。不要暴露手牌。简短自然有个性。';
-    // 构建对话历史
-    var msgs = [{ role: 'system', content: sysMsg }];
-    var recent = _mjChatLog.slice(-8);
-    for (var i = 0; i < recent.length; i++) {
-        var r = recent[i];
-        msgs.push({ role: r.isUser ? 'user' : 'assistant', content: (r.name || '') + ': ' + r.text });
-    }
-    msgs.push({ role: 'user', content: s.players[0].name + '说: ' + userMsg + ' (请以' + pl.name + '的身份回复)' });
-
-    var url = apiConfig.url.replace(/\/+$/, '') + '/chat/completions';
-    fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiConfig.key },
-        body: JSON.stringify({ model: apiConfig.model, messages: msgs, temperature: 0.9, max_tokens: 60 })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-        var reply = '...';
-        if (d.choices && d.choices[0] && d.choices[0].message) {
-            reply = d.choices[0].message.content || '...';
-            // 去掉可能的角色名前缀
-            reply = reply.replace(/^[^:：]*[:：]\s*/, '');
-        }
-        _mjChatLog.push({ name: pl.name, avatar: pl.avatar, text: reply, isUser: false });
-        _mjRenderChatOnly();
-        setTimeout(function () { _mjAiChatReplyChain(userMsg, charIdx + 1, done); }, 400);
-    }).catch(function () {
-        _mjChatLog.push({ name: pl.name, avatar: pl.avatar, text: '(网络错误)', isUser: false });
-        _mjRenderChatOnly();
-        setTimeout(function () { _mjAiChatReplyChain(userMsg, charIdx + 1, done); }, 200);
-    });
-}
-
-/* 只刷新聊天区(不重绘整个界面，保留input焦点) */
+/* 局部刷新聊天框 */
 function _mjRenderChatOnly() {
     var box = document.getElementById('mjChatBox');
     if (!box) return;
     var h = '';
-    var show = _mjChatLog.slice(-12);
+    var show = _mjChatLog.slice(-15);
     for (var i = 0; i < show.length; i++) {
         var m = show[i];
         h += '<div style="display:flex;align-items:flex-start;gap:4px;margin-bottom:3px;' + (m.isUser ? 'flex-direction:row-reverse' : '') + '">';
         h += '<div style="width:18px;height:18px;border-radius:50%;overflow:hidden;background:rgba(160,140,150,.08);flex-shrink:0">';
         if (m.avatar) h += '<img src="' + _gEsc(m.avatar) + '" style="width:100%;height:100%;object-fit:cover">';
         h += '</div>';
-        h += '<div style="max-width:65%;padding:3px 7px;border-radius:8px;font-size:8px;line-height:1.4;' + (m.isUser ? 'background:rgba(143,181,160,.15);color:#4a6a52' : 'background:rgba(255,255,255,.6);color:#5a4a52') + '">';
+        h += '<div style="max-width:70%;padding:3px 7px;border-radius:8px;font-size:8px;line-height:1.4;' + (m.isUser ? 'background:rgba(143,181,160,.15);color:#4a6a52' : 'background:rgba(255,255,255,.6);color:#5a4a52') + '">';
         h += '<div style="font-size:6.5px;color:rgba(120,100,112,.35);margin-bottom:1px">' + _gEsc(m.name) + '</div>';
-        h += _gEsc(m.text);
+        // 支持换行显示（外国角色翻译会换行）
+        var lines = m.text.split('\n');
+        for (var li = 0; li < lines.length; li++) {
+            h += (li > 0 ? '<br>' : '') + _gEsc(lines[li]);
+        }
         h += '</div></div>';
     }
     box.innerHTML = h;
@@ -574,31 +560,6 @@ function _mjRender() {
     var ls = Math.max(0, s.logs.length - 2);
     for (var li = ls; li < s.logs.length; li++)h += '<div style="font-size:7px;color:rgba(90,74,82,.4);background:rgba(255,255,255,.3);border-radius:4px;padding:1px 5px;margin-bottom:1px;width:fit-content;max-width:80%">' + _gEsc(s.logs[li]) + '</div>';
     h += '</div>';
-
-    // 聊天区
-    h += '<div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:0 6px">';
-    h += '<div id="mjChatBox" style="flex:1;overflow-y:auto;padding:2px 0;-webkit-overflow-scrolling:touch">';
-    // 聊天内容
-    var show2 = _mjChatLog.slice(-12);
-    for (var ci = 0; ci < show2.length; ci++) {
-        var m = show2[ci];
-        h += '<div style="display:flex;align-items:flex-start;gap:4px;margin-bottom:3px;' + (m.isUser ? 'flex-direction:row-reverse' : '') + '">';
-        h += '<div style="width:18px;height:18px;border-radius:50%;overflow:hidden;background:rgba(160,140,150,.08);flex-shrink:0">';
-        if (m.avatar) h += '<img src="' + _gEsc(m.avatar) + '" style="width:100%;height:100%;object-fit:cover">';
-        h += '</div>';
-        h += '<div style="max-width:65%;padding:3px 7px;border-radius:8px;font-size:8px;line-height:1.4;' + (m.isUser ? 'background:rgba(143,181,160,.15);color:#4a6a52' : 'background:rgba(255,255,255,.6);color:#5a4a52') + '">';
-        h += '<div style="font-size:6.5px;color:rgba(120,100,112,.35);margin-bottom:1px">' + _gEsc(m.name) + '</div>';
-        h += _gEsc(m.text);
-        h += '</div></div>';
-    }
-    h += '</div>';
-    // 输入框
-    h += '<div style="display:flex;gap:4px;padding:3px 0 4px;flex-shrink:0">';
-    h += '<input id="mjChatInput" type="text" placeholder="说点什么..." style="flex:1;height:26px;border:1px solid rgba(160,140,150,.12);border-radius:8px;padding:0 8px;font-size:9px;background:rgba(255,255,255,.5);outline:none;color:#5a4a52">';
-    h += '<div data-mj-action="sendchat" style="width:26px;height:26px;border-radius:8px;background:rgba(143,181,160,.2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#4a6a52" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>';
-    h += '</div>';
-    h += '</div>'; // /聊天区
-    h += '</div>'; // /中部
 
     // ── 操作按钮 ──
     if (s.pendingAction && s.pendingAction.type === 'canHu' && s.pendingAction.pIdx === 0) {
@@ -680,9 +641,6 @@ function _mjRender() {
     }
 
     el.innerHTML = h;
-    // 滚动聊天到底部
-    var chatBox = document.getElementById('mjChatBox');
-    if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 /* ==========================================
@@ -713,3 +671,691 @@ function _unoColorCN(c) { return { red: '红色', yellow: '黄色', blue: '蓝�
 function _unoLog(msg) { if (!_unoState) return; _unoState.logs.push(msg); var le = document.getElementById('unoLog'); if (le) { le.innerHTML += '<div class="uno-log-item">' + _gEsc(msg) + '</div>'; while (le.children.length > 5) le.removeChild(le.firstChild); } }
 function _unoShowShout() { var el = document.getElementById('unoShout'); if (el) { el.classList.add('show'); setTimeout(function () { if (el) el.classList.remove('show'); }, 1400); } }
 function _gEsc(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+/* ==========================================
+   斗地主引擎 DDZ (FIGHT THE LANDLORD) ENGINE
+   ========================================== */
+var _ddzState = null;
+
+// 牌面定义：54张，3最小 → 大王最大
+var DDZ_RANKS = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2'];
+var DDZ_SUITS = ['♠', '♥', '♣', '♦'];
+var DDZ_RANK_VAL = {};
+(function () { for (var i = 0; i < DDZ_RANKS.length; i++) DDZ_RANK_VAL[DDZ_RANKS[i]] = i + 3; DDZ_RANK_VAL['小王'] = 16; DDZ_RANK_VAL['大王'] = 17; })();
+
+function _ddzBuildDeck() {
+    var deck = [];
+    for (var r = 0; r < DDZ_RANKS.length; r++) {
+        for (var s = 0; s < 4; s++) {
+            deck.push({ rank: DDZ_RANKS[r], suit: DDZ_SUITS[s], val: DDZ_RANK_VAL[DDZ_RANKS[r]], id: DDZ_RANKS[r] + DDZ_SUITS[s] });
+        }
+    }
+    deck.push({ rank: '小王', suit: '', val: 16, id: '小王', isJoker: true, color: 'black' });
+    deck.push({ rank: '大王', suit: '', val: 17, id: '大王', isJoker: true, color: 'red' });
+    // 洗牌
+    for (var i = deck.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = deck[i]; deck[i] = deck[j]; deck[j] = t; }
+    return deck;
+}
+
+function _ddzSortHand(hand) {
+    hand.sort(function (a, b) { return b.val - a.val || DDZ_SUITS.indexOf(a.suit) - DDZ_SUITS.indexOf(b.suit); });
+}
+
+function _ddzCardDisplay(c) {
+    if (c.isJoker) return c.rank;
+    return c.suit + c.rank;
+}
+
+function _ddzCardColor(c) {
+    if (c.isJoker) return c.color || 'black';
+    return (c.suit === '♥' || c.suit === '♦') ? 'red' : 'black';
+}
+
+function ddzStart() {
+    var ov = document.getElementById('gameOverlay'); if (ov) ov.classList.add('landscape');
+    var persona = (typeof findPersona === 'function') ? findPersona(_gameSelectedPersona) : null;
+    var pl = [];
+    pl.push({ id: 'user', name: (persona && persona.name) || '我', avatar: (persona && persona.avatar) || '', hand: [], isUser: true, isLandlord: false, score: 0 });
+    for (var i = 0; i < _gameSelectedChars.length; i++) {
+        var r = (typeof findRole === 'function') ? findRole(_gameSelectedChars[i]) : null;
+        if (r) pl.push({ id: r.id, name: r.name || '角色', avatar: r.avatar || '', detail: r.detail || '', hand: [], isUser: false, isLandlord: false, score: 0 });
+    }
+    var deck = _ddzBuildDeck();
+    // 发牌：每人17张，留3张底牌
+    for (var p = 0; p < 3; p++) { pl[p].hand = deck.splice(0, 17); _ddzSortHand(pl[p].hand); }
+    var dizhu = deck.splice(0, 3); // 3张底牌
+
+    _ddzState = {
+        players: pl,
+        dizhuCards: dizhu,       // 底牌
+        phase: 'bid',            // bid / play / result
+        currentPlayer: Math.floor(Math.random() * 3),
+        bidCurrent: -1,          // 当前叫谁
+        bidHighest: 0,           // 最高叫分
+        bidHighestPlayer: -1,    // 最高叫分的人
+        bidCount: 0,             // 已叫次数
+        bidStartPlayer: -1,      // 叫地主起始玩家
+        landlordIdx: -1,
+        lastPlay: null,          // {cards:[], type:'', player: idx}
+        lastPlayPlayer: -1,
+        passCount: 0,
+        turnPlayer: -1,
+        multiplier: 1,
+        bombCount: 0,
+        spring: false,           // 春天
+        logs: [],
+        selectedCards: [],       // user选中的牌idx
+        gameOver: false
+    };
+    _ddzState.bidCurrent = _ddzState.currentPlayer;
+    _ddzState.bidStartPlayer = _ddzState.currentPlayer;
+    _ddzLog('新一局开始，等待叫地主...');
+    _ddzRender();
+
+    // 如果AI先叫
+    if (_ddzState.bidCurrent !== 0) {
+        setTimeout(function () { _ddzAiBid(_ddzState.bidCurrent); }, 800);
+    }
+}
+
+function _ddzLog(msg) { if (_ddzState) _ddzState.logs.push(msg); }
+
+/* ===== 叫地主/抢地主 ===== */
+function _ddzUserBid(score) {
+    // score: 0=不叫, 1/2/3
+    var s = _ddzState; if (!s || s.phase !== 'bid' || s.bidCurrent !== 0) return;
+    _ddzProcessBid(0, score);
+}
+
+function _ddzAiBid(pIdx) {
+    var s = _ddzState; if (!s || s.phase !== 'bid') return;
+    var pl = s.players[pIdx];
+    // 简单AI：根据手牌质量决定叫分
+    var bigCards = 0;
+    for (var i = 0; i < pl.hand.length; i++) {
+        if (pl.hand[i].val >= 13) bigCards++; // A/2/王
+    }
+    var score = 0;
+    if (bigCards >= 5 && s.bidHighest < 3) score = 3;
+    else if (bigCards >= 3 && s.bidHighest < 2) score = Math.max(s.bidHighest + 1, 2);
+    else if (bigCards >= 2 && s.bidHighest < 1) score = 1;
+    else score = 0; // 不叫
+    if (score <= s.bidHighest) score = 0;
+    _ddzLog(pl.name + (score > 0 ? ' 叫 ' + score + ' 分' : ' 不叫'));
+    _ddzProcessBid(pIdx, score);
+}
+
+function _ddzProcessBid(pIdx, score) {
+    var s = _ddzState;
+    if (score > s.bidHighest) {
+        s.bidHighest = score;
+        s.bidHighestPlayer = pIdx;
+    }
+    if (pIdx === 0) {
+        _ddzLog(s.players[0].name + (score > 0 ? ' 叫 ' + score + ' 分' : ' 不叫'));
+    }
+    s.bidCount++;
+
+    // 3分直接成地主
+    if (score === 3) {
+        _ddzSetLandlord(pIdx);
+        return;
+    }
+
+    // 3人都叫过了
+    if (s.bidCount >= 3) {
+        if (s.bidHighestPlayer >= 0) {
+            _ddzSetLandlord(s.bidHighestPlayer);
+        } else {
+            // 没人叫，重新发牌
+            _ddzLog('没人叫地主，重新发牌');
+            setTimeout(function () { ddzStart(); }, 1500);
+        }
+        _ddzRender();
+        return;
+    }
+
+    // 下一个人叫
+    s.bidCurrent = (pIdx + 1) % 3;
+    _ddzRender();
+    if (s.bidCurrent !== 0) {
+        setTimeout(function () { _ddzAiBid(s.bidCurrent); }, 600 + Math.random() * 400);
+    }
+}
+
+function _ddzSetLandlord(pIdx) {
+    var s = _ddzState;
+    s.landlordIdx = pIdx;
+    s.players[pIdx].isLandlord = true;
+    s.multiplier = s.bidHighest;
+    // 地主拿底牌
+    for (var i = 0; i < s.dizhuCards.length; i++) s.players[pIdx].hand.push(s.dizhuCards[i]);
+    _ddzSortHand(s.players[pIdx].hand);
+    _ddzLog(s.players[pIdx].name + ' 成为地主！底分 ' + s.bidHighest);
+    s.phase = 'play';
+    s.turnPlayer = pIdx;
+    s.lastPlay = null;
+    s.lastPlayPlayer = -1;
+    s.passCount = 0;
+    _ddzRender();
+
+    if (pIdx !== 0) {
+        setTimeout(function () { _ddzAiPlay(pIdx); }, 1000);
+    }
+}
+
+/* ===== 牌型识别 ===== */
+function _ddzAnalyze(cards) {
+    if (!cards || cards.length === 0) return null;
+    var n = cards.length;
+    var vals = cards.map(function (c) { return c.val; }).sort(function (a, b) { return a - b; });
+    var counts = {};
+    for (var i = 0; i < vals.length; i++) counts[vals[i]] = (counts[vals[i]] || 0) + 1;
+    var keys = Object.keys(counts).map(Number).sort(function (a, b) { return a - b; });
+    var maxCnt = 0; for (var k in counts) { if (counts[k] > maxCnt) maxCnt = counts[k]; }
+
+    // 火箭
+    if (n === 2 && vals[0] === 16 && vals[1] === 17) return { type: 'rocket', main: 17, len: 1 };
+
+    // 炸弹
+    if (n === 4 && keys.length === 1 && counts[keys[0]] === 4) return { type: 'bomb', main: keys[0], len: 1 };
+
+    // 单张
+    if (n === 1) return { type: 'single', main: vals[0], len: 1 };
+
+    // 对子
+    if (n === 2 && keys.length === 1) return { type: 'pair', main: keys[0], len: 1 };
+
+    // 三张
+    if (n === 3 && keys.length === 1 && counts[keys[0]] === 3) return { type: 'triple', main: keys[0], len: 1 };
+
+    // 三带一
+    if (n === 4 && keys.length === 2) {
+        for (var i = 0; i < keys.length; i++) {
+            if (counts[keys[i]] === 3) return { type: 'triple1', main: keys[i], len: 1 };
+        }
+    }
+
+    // 三带二
+    if (n === 5 && keys.length === 2) {
+        var tri = -1, pair = -1;
+        for (var i = 0; i < keys.length; i++) {
+            if (counts[keys[i]] === 3) tri = keys[i];
+            if (counts[keys[i]] === 2) pair = keys[i];
+        }
+        if (tri >= 0 && pair >= 0) return { type: 'triple2', main: tri, len: 1 };
+    }
+
+    // 顺子（>=5张连续，不含2和王）
+    if (n >= 5 && keys.length === n) {
+        var allSingle = true; for (var k in counts) { if (counts[k] !== 1) { allSingle = false; break; } }
+        if (allSingle && keys[keys.length - 1] <= 14) { // <= A
+            var isSeq = true; for (var i = 1; i < keys.length; i++) { if (keys[i] !== keys[i - 1] + 1) { isSeq = false; break; } }
+            if (isSeq) return { type: 'straight', main: keys[keys.length - 1], len: n };
+        }
+    }
+
+    // 连对（>=3对连续）
+    if (n >= 6 && n % 2 === 0) {
+        var allPair = true; for (var k in counts) { if (counts[k] !== 2) { allPair = false; break; } }
+        if (allPair && keys.length === n / 2 && keys[keys.length - 1] <= 14) {
+            var isSeq = true; for (var i = 1; i < keys.length; i++) { if (keys[i] !== keys[i - 1] + 1) { isSeq = false; break; } }
+            if (isSeq) return { type: 'pairSeq', main: keys[keys.length - 1], len: keys.length };
+        }
+    }
+
+    // 飞机（>=2组连续三张，可带翼）
+    var triKeys = [];
+    for (var k in counts) { if (counts[k] >= 3) triKeys.push(Number(k)); }
+    triKeys.sort(function (a, b) { return a - b; });
+    if (triKeys.length >= 2) {
+        // 找最长连续三张序列
+        for (var start = 0; start < triKeys.length; start++) {
+            for (var end = triKeys.length - 1; end > start; end--) {
+                var seq = true;
+                for (var i = start + 1; i <= end; i++) { if (triKeys[i] !== triKeys[i - 1] + 1 || triKeys[i] > 14) { seq = false; break; } }
+                if (!seq) continue;
+                var planeLen = end - start + 1;
+                var planeCards = planeLen * 3;
+                var wingCards = n - planeCards;
+                if (wingCards === 0) return { type: 'plane', main: triKeys[end], len: planeLen };
+                if (wingCards === planeLen) return { type: 'plane1', main: triKeys[end], len: planeLen }; // 带单
+                if (wingCards === planeLen * 2) return { type: 'plane2', main: triKeys[end], len: planeLen }; // 带对
+            }
+        }
+    }
+
+    // 四带二（4+2单 或 4+1对）
+    if (keys.length >= 2) {
+        for (var i = 0; i < keys.length; i++) {
+            if (counts[keys[i]] === 4) {
+                var rest = n - 4;
+                if (rest === 2) return { type: 'four2', main: keys[i], len: 1 };
+                if (rest === 4) {
+                    // 两对?
+                    var pairCnt = 0;
+                    for (var j = 0; j < keys.length; j++) { if (j !== i && counts[keys[j]] === 2) pairCnt++; }
+                    if (pairCnt === 2) return { type: 'four2p', main: keys[i], len: 1 };
+                }
+            }
+        }
+    }
+
+    return null; // 无效牌型
+}
+
+function _ddzCanBeat(prev, curr) {
+    if (!prev) return true;
+    if (curr.type === 'rocket') return true;
+    if (curr.type === 'bomb') {
+        if (prev.type === 'rocket') return false;
+        if (prev.type === 'bomb') return curr.main > prev.main;
+        return true;
+    }
+    // 同牌型同长度比大小
+    if (curr.type !== prev.type || curr.len !== prev.len) return false;
+    return curr.main > prev.main;
+}
+
+/* ===== 用户出牌 ===== */
+function _ddzToggleCard(idx) {
+    var s = _ddzState; if (!s || s.phase !== 'play' || s.turnPlayer !== 0) return;
+    var sel = s.selectedCards;
+    var pos = sel.indexOf(idx);
+    if (pos >= 0) sel.splice(pos, 1);
+    else sel.push(idx);
+    _ddzRender();
+}
+
+function _ddzUserPlay() {
+    var s = _ddzState; if (!s || s.phase !== 'play' || s.turnPlayer !== 0) return;
+    if (s.selectedCards.length === 0) return;
+    var pl = s.players[0];
+    var cards = [];
+    for (var i = 0; i < s.selectedCards.length; i++) {
+        cards.push(pl.hand[s.selectedCards[i]]);
+    }
+    var analysis = _ddzAnalyze(cards);
+    if (!analysis) { if (typeof showToast === 'function') showToast('无效牌型'); return; }
+
+    // 检查是否能压过上家
+    if (s.lastPlay && s.lastPlayPlayer !== 0) {
+        if (!_ddzCanBeat(s.lastPlay, analysis)) { if (typeof showToast === 'function') showToast('管不上'); return; }
+    }
+
+    _ddzDoPlay(0, cards, analysis);
+}
+
+function _ddzUserPass() {
+    var s = _ddzState; if (!s || s.phase !== 'play' || s.turnPlayer !== 0) return;
+    if (!s.lastPlay || s.lastPlayPlayer === 0) { if (typeof showToast === 'function') showToast('你是首出，必须出牌'); return; }
+    _ddzDoPass(0);
+}
+
+function _ddzDoPlay(pIdx, cards, analysis) {
+    var s = _ddzState, pl = s.players[pIdx];
+    // 从手牌移除
+    var ids = {}; for (var i = 0; i < cards.length; i++) ids[cards[i].id] = true;
+    pl.hand = pl.hand.filter(function (c) { return !ids[c.id]; });
+    s.selectedCards = [];
+
+    // 记录出牌
+    s.lastPlay = analysis;
+    s.lastPlay.cards = cards;
+    s.lastPlayPlayer = pIdx;
+    s.passCount = 0;
+
+    var typeName = { single: '单张', pair: '对子', triple: '三张', triple1: '三带一', triple2: '三带二', straight: '顺子', pairSeq: '连对', plane: '飞机', plane1: '飞机带翼', plane2: '飞机带翼', four2: '四带二', four2p: '四带二对', bomb: '炸弹', rocket: '火箭' };
+    var cardStr = cards.map(function (c) { return _ddzCardDisplay(c); }).join(' ');
+    _ddzLog(pl.name + ' 出 ' + (typeName[analysis.type] || '') + ': ' + cardStr);
+
+    // 炸弹/火箭翻倍
+    if (analysis.type === 'bomb' || analysis.type === 'rocket') {
+        s.bombCount++;
+        s.multiplier *= 2;
+    }
+
+    // 检查胜负
+    if (pl.hand.length === 0) {
+        _ddzGameOver(pIdx);
+        return;
+    }
+
+    // 下一个人
+    s.turnPlayer = (pIdx + 1) % 3;
+    _ddzRender();
+
+    if (s.turnPlayer !== 0) {
+        setTimeout(function () { _ddzAiPlay(s.turnPlayer); }, 800 + Math.random() * 600);
+    }
+}
+
+function _ddzDoPass(pIdx) {
+    var s = _ddzState;
+    _ddzLog(s.players[pIdx].name + ' 过');
+    s.passCount++;
+
+    // 连续2人过牌，轮回到出牌者，自由出
+    if (s.passCount >= 2) {
+        s.turnPlayer = s.lastPlayPlayer;
+        s.lastPlay = null;
+        s.passCount = 0;
+        _ddzRender();
+        if (s.turnPlayer !== 0) {
+            setTimeout(function () { _ddzAiPlay(s.turnPlayer); }, 800);
+        }
+        return;
+    }
+
+    s.turnPlayer = (pIdx + 1) % 3;
+    _ddzRender();
+    if (s.turnPlayer !== 0) {
+        setTimeout(function () { _ddzAiPlay(s.turnPlayer); }, 600 + Math.random() * 400);
+    }
+}
+
+/* ===== AI出牌 ===== */
+function _ddzAiPlay(pIdx) {
+    var s = _ddzState; if (!s || s.phase !== 'play' || s.turnPlayer !== pIdx) return;
+    var pl = s.players[pIdx];
+
+    if (!s.lastPlay || s.lastPlayPlayer === pIdx) {
+        // 自由出：出最小的单张
+        var card = pl.hand[pl.hand.length - 1];
+        var analysis = _ddzAnalyze([card]);
+        _ddzDoPlay(pIdx, [card], analysis);
+        return;
+    }
+
+    // 尝试找能打过上家的牌
+    var prev = s.lastPlay;
+    var found = _ddzAiFindPlay(pl.hand, prev);
+    if (found) {
+        var analysis = _ddzAnalyze(found);
+        _ddzDoPlay(pIdx, found, analysis);
+    } else {
+        _ddzDoPass(pIdx);
+    }
+}
+
+function _ddzAiFindPlay(hand, prev) {
+    var type = prev.type;
+
+    // 火箭（始终检查）
+    var xw = null, dw = null;
+    for (var i = 0; i < hand.length; i++) {
+        if (hand[i].rank === '小王') xw = hand[i];
+        if (hand[i].rank === '大王') dw = hand[i];
+    }
+
+    if (type === 'single') {
+        for (var i = hand.length - 1; i >= 0; i--) {
+            if (hand[i].val > prev.main) return [hand[i]];
+        }
+    }
+
+    if (type === 'pair') {
+        var counts = _ddzGroupByVal(hand);
+        for (var v = prev.main + 1; v <= 15; v++) {
+            if (counts[v] && counts[v].length >= 2) return counts[v].slice(0, 2);
+        }
+    }
+
+    if (type === 'triple' || type === 'triple1' || type === 'triple2') {
+        var counts = _ddzGroupByVal(hand);
+        for (var v = prev.main + 1; v <= 15; v++) {
+            if (counts[v] && counts[v].length >= 3) {
+                var tri = counts[v].slice(0, 3);
+                if (type === 'triple') return tri;
+                if (type === 'triple1') {
+                    for (var w in counts) { if (Number(w) !== v && counts[w].length >= 1) return tri.concat([counts[w][0]]); }
+                }
+                if (type === 'triple2') {
+                    for (var w in counts) { if (Number(w) !== v && counts[w].length >= 2) return tri.concat(counts[w].slice(0, 2)); }
+                }
+            }
+        }
+    }
+
+    if (type === 'straight') {
+        var len = prev.len;
+        var singles = _ddzGroupByVal(hand);
+        for (var start = prev.main - len + 2; start <= 14 - len + 1; start++) {
+            if (start + len - 1 > 14) break;
+            if (start + len - 1 <= prev.main) continue;
+            var ok = true, cards = [];
+            for (var v = start; v < start + len; v++) {
+                if (!singles[v] || singles[v].length < 1) { ok = false; break; }
+                cards.push(singles[v][0]);
+            }
+            if (ok) return cards;
+        }
+    }
+
+    if (type === 'pairSeq') {
+        var len = prev.len;
+        var groups = _ddzGroupByVal(hand);
+        for (var start = prev.main - len + 2; start <= 14 - len + 1; start++) {
+            if (start + len - 1 > 14) break;
+            if (start + len - 1 <= prev.main) continue;
+            var ok = true, cards = [];
+            for (var v = start; v < start + len; v++) {
+                if (!groups[v] || groups[v].length < 2) { ok = false; break; }
+                cards.push(groups[v][0]); cards.push(groups[v][1]);
+            }
+            if (ok) return cards;
+        }
+    }
+
+    // 炸弹压（除非上家也是炸弹且更大）
+    if (type !== 'rocket') {
+        var counts = _ddzGroupByVal(hand);
+        for (var v = (type === 'bomb' ? prev.main + 1 : 3); v <= 15; v++) {
+            if (counts[v] && counts[v].length >= 4) return counts[v].slice(0, 4);
+        }
+        // 火箭
+        if (xw && dw) return [xw, dw];
+    }
+
+    return null;
+}
+
+function _ddzGroupByVal(hand) {
+    var g = {};
+    for (var i = 0; i < hand.length; i++) {
+        var v = hand[i].val;
+        if (!g[v]) g[v] = [];
+        g[v].push(hand[i]);
+    }
+    return g;
+}
+
+/* ===== 胜负结算 ===== */
+function _ddzGameOver(winnerIdx) {
+    var s = _ddzState;
+    var landlord = s.landlordIdx;
+    var winnerIsLandlord = (winnerIdx === landlord);
+
+    // 春天检测：地主赢了且农民一张没出 / 农民赢了且地主只出了一手
+    var isSpring = false;
+    if (winnerIsLandlord) {
+        var farmersPlayed = false;
+        for (var i = 0; i < 3; i++) {
+            if (i !== landlord && s.players[i].hand.length < 17) farmersPlayed = true;
+        }
+        if (!farmersPlayed) { isSpring = true; s.multiplier *= 2; }
+    }
+
+    var baseScore = s.bidHighest * s.multiplier;
+    if (winnerIsLandlord) {
+        s.players[landlord].score += baseScore * 2;
+        for (var i = 0; i < 3; i++) { if (i !== landlord) s.players[i].score -= baseScore; }
+        _ddzLog('地主 ' + s.players[landlord].name + ' 赢了！' + (isSpring ? '(春天×2)' : '') + ' +' + (baseScore * 2) + '分');
+    } else {
+        s.players[landlord].score -= baseScore * 2;
+        for (var i = 0; i < 3; i++) { if (i !== landlord) s.players[i].score += baseScore; }
+        _ddzLog('农民赢了！' + (isSpring ? '(反春天×2)' : '') + ' 地主 -' + (baseScore * 2) + '分');
+    }
+    var scStr = ''; for (var si = 0; si < 3; si++) scStr += s.players[si].name + ':' + s.players[si].score + ' ';
+    _gameSaveRecord('landlord', s.players, winnerIsLandlord ? s.players[landlord].name + '(地主)' : '农民', scStr.trim());
+    s.phase = 'result';
+    s.gameOver = true;
+    _ddzRender();
+}
+
+/* ===== 渲染 ===== */
+function _ddzRender() {
+    var el = document.getElementById('gameOverlay'); if (!el) return;
+    var s = _ddzState; if (!s) return;
+    var h = '';
+    h += '<div class="game-header"><div class="game-back" onclick="_ddzHandleAction(\'quit\')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="game-header-title">Landlord 斗地主</div><div class="game-header-spacer"></div></div>';
+    h += '<div class="ddz-game show">';
+
+    // 对手区
+    h += '<div class="ddz-opponents">';
+    for (var i = 1; i <= 2; i++) {
+        var op = s.players[i];
+        h += '<div class="ddz-opponent">';
+        h += '<div class="ddz-opp-avatar">';
+        if (op.avatar) h += '<img src="' + _gEsc(op.avatar) + '">';
+        else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+        if (op.isLandlord) h += '<div class="ddz-crown">👑</div>';
+        h += '</div>';
+        h += '<div class="ddz-opp-name">' + _gEsc(op.name) + '</div>';
+        h += '<div class="ddz-opp-count">' + op.hand.length + '张</div>';
+        if (s.turnPlayer === i) h += '<div class="ddz-thinking">思考中...</div>';
+        h += '</div>';
+    }
+    h += '</div>';
+
+    // 牌桌中央 - 信息区
+    h += '<div class="ddz-center">';
+    // 底牌
+    if (s.phase !== 'bid' || s.landlordIdx >= 0) {
+        h += '<div class="ddz-dizhu-cards"><span class="ddz-dizhu-label">底牌</span>';
+        for (var d = 0; d < s.dizhuCards.length; d++) {
+            var dc = s.dizhuCards[d];
+            h += '<span class="ddz-mini-card ' + _ddzCardColor(dc) + '">' + _ddzCardDisplay(dc) + '</span>';
+        }
+        h += '</div>';
+    }
+
+    // 倍数&分数信息
+    h += '<div class="ddz-info">';
+    if (s.landlordIdx >= 0) h += '<span>底分 ' + s.bidHighest + '</span><span>倍数 ×' + s.multiplier + '</span>';
+    h += '</div>';
+
+    // 出牌记录区
+    h += '<div class="ddz-play-area">';
+    if (s.lastPlay && s.lastPlay.cards) {
+        h += '<div class="ddz-played"><div class="ddz-played-name">' + _gEsc(s.players[s.lastPlayPlayer].name) + '</div><div class="ddz-played-cards">';
+        for (var c = 0; c < s.lastPlay.cards.length; c++) {
+            var pc = s.lastPlay.cards[c];
+            h += '<span class="ddz-play-card ' + _ddzCardColor(pc) + '">' + _ddzCardDisplay(pc) + '</span>';
+        }
+        h += '</div></div>';
+    }
+    h += '</div>';
+
+    // 日志
+    h += '<div class="ddz-log-area">';
+    var showLogs = s.logs.slice(-3);
+    for (var l = 0; l < showLogs.length; l++) {
+        h += '<div class="ddz-log-item">' + _gEsc(showLogs[l]) + '</div>';
+    }
+    h += '</div>';
+    h += '</div>'; // ddz-center end
+
+    // 叫地主阶段
+    if (s.phase === 'bid' && s.bidCurrent === 0) {
+        h += '<div class="ddz-bid-bar">';
+        h += '<div class="ddz-bid-title">请叫地主</div>';
+        h += '<div class="ddz-bid-btns">';
+        h += '<div class="ddz-bid-btn pass" data-ddz-action="bid-0">不叫</div>';
+        if (s.bidHighest < 1) h += '<div class="ddz-bid-btn" data-ddz-action="bid-1">1分</div>';
+        if (s.bidHighest < 2) h += '<div class="ddz-bid-btn" data-ddz-action="bid-2">2分</div>';
+        if (s.bidHighest < 3) h += '<div class="ddz-bid-btn call3" data-ddz-action="bid-3">3分</div>';
+        h += '</div></div>';
+    }
+
+    // 出牌操作栏
+    if (s.phase === 'play' && s.turnPlayer === 0) {
+        h += '<div class="ddz-action-bar">';
+        if (s.lastPlay && s.lastPlayPlayer !== 0) h += '<div class="ddz-act-btn pass" data-ddz-action="pass">不出</div>';
+        h += '<div class="ddz-act-btn hint" data-ddz-action="hint">提示</div>';
+        h += '<div class="ddz-act-btn play" data-ddz-action="play">出牌</div>';
+        h += '</div>';
+    }
+
+    // 结算
+    if (s.phase === 'result') {
+        h += '<div class="ddz-result-overlay">';
+        h += '<div class="ddz-result-card">';
+        var landlordWon = s.players[s.landlordIdx].hand.length === 0;
+        h += '<div class="ddz-result-title">' + (landlordWon ? '👑 地主胜利' : '🌾 农民胜利') + '</div>';
+        for (var i = 0; i < 3; i++) {
+            var p = s.players[i];
+            h += '<div class="ddz-result-player"><div class="ddz-result-av">';
+            if (p.avatar) h += '<img src="' + _gEsc(p.avatar) + '">';
+            h += '</div><div class="ddz-result-name">' + _gEsc(p.name) + (p.isLandlord ? ' 👑' : ' 🌾') + '</div><div class="ddz-result-score ' + (p.score >= 0 ? 'pos' : 'neg') + '">' + (p.score >= 0 ? '+' : '') + p.score + '</div></div>';
+        }
+        h += '<div class="ddz-result-btns">';
+        h += '<div class="ddz-act-btn" data-ddz-action="again">再来一局</div>';
+        h += '<div class="ddz-act-btn" data-ddz-action="lobby">返回大厅</div>';
+        h += '</div></div></div>';
+    }
+
+    // 手牌区
+    h += '<div class="ddz-hand">';
+    var me = s.players[0];
+    if (me.isLandlord) h += '<div class="ddz-hand-label">👑 地主</div>';
+    else h += '<div class="ddz-hand-label">🌾 农民</div>';
+    h += '<div class="ddz-hand-cards">';
+    for (var i = 0; i < me.hand.length; i++) {
+        var c = me.hand[i], isSel = s.selectedCards.indexOf(i) >= 0;
+        h += '<div class="ddz-card ' + _ddzCardColor(c) + (isSel ? ' selected' : '') + '" data-ddz-card="' + i + '">';
+        h += '<div class="ddz-card-rank">' + (c.isJoker ? c.rank : c.rank) + '</div>';
+        if (!c.isJoker) h += '<div class="ddz-card-suit">' + c.suit + '</div>';
+        h += '</div>';
+    }
+    h += '</div></div>';
+
+    h += '</div>'; // ddz-game end
+    el.innerHTML = h;
+}
+
+/* ===== 操作处理 ===== */
+function _ddzHandleAction(act) {
+    var s = _ddzState;
+    if (act === 'quit') {
+        if (s && s.phase !== 'result') { if (!confirm('确定退出斗地主？')) return; }
+        _ddzState = null; gameBackToLobby(); return;
+    }
+    if (act === 'again') { ddzStart(); return; }
+    if (act === 'lobby') { _ddzState = null; gameBackToLobby(); return; }
+    if (act === 'play') { _ddzUserPlay(); return; }
+    if (act === 'pass') { _ddzUserPass(); return; }
+    if (act === 'hint') { _ddzHint(); return; }
+    if (act.indexOf('bid-') === 0) { _ddzUserBid(parseInt(act.substring(4))); return; }
+}
+
+function _ddzHint() {
+    var s = _ddzState; if (!s || s.turnPlayer !== 0) return;
+    var pl = s.players[0];
+    s.selectedCards = [];
+
+    if (!s.lastPlay || s.lastPlayPlayer === 0) {
+        // 自由出：选最小的单张
+        s.selectedCards = [pl.hand.length - 1];
+    } else {
+        var found = _ddzAiFindPlay(pl.hand, s.lastPlay);
+        if (found) {
+            var ids = {}; for (var i = 0; i < found.length; i++) ids[found[i].id] = true;
+            for (var i = 0; i < pl.hand.length; i++) {
+                if (ids[pl.hand[i].id]) s.selectedCards.push(i);
+            }
+        } else {
+            if (typeof showToast === 'function') showToast('没有能出的牌');
+        }
+    }
+    _ddzRender();
+}

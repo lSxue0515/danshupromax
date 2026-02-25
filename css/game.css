@@ -1376,67 +1376,6 @@
     font-weight: 700;
 }
 
-/* 刷新对话按钮 */
-.mj-chat-refresh {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: rgba(160, 140, 150, .08);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background .2s;
-    flex-shrink: 0;
-}
-
-.mj-chat-refresh:active {
-    background: rgba(160, 140, 150, .2);
-}
-
-.mj-chat-refresh svg {
-    width: 10px;
-    height: 10px;
-    stroke: rgba(120, 100, 112, .4);
-    stroke-width: 2;
-    fill: none;
-}
-
-.mj-chat-refresh.loading svg {
-    animation: mjSpin .8s linear infinite;
-}
-
-@keyframes mjSpin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* 对话气泡 */
-.mj-chat-bubble {
-    position: absolute;
-    z-index: 6;
-    pointer-events: none;
-    background: rgba(255, 255, 255, .75);
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(160, 140, 150, .08);
-    border-radius: 8px;
-    padding: 3px 7px;
-    font-size: 8.5px;
-    color: #5a4a52;
-    max-width: 110px;
-    word-break: break-all;
-    animation: mjChatIn .3s ease-out;
-    line-height: 1.4;
-}
-
-@keyframes mjChatIn {
-    from {
-        opacity: 0;
-        transform: translateY(4px);
-    }
-}
-
 /* 麻将牌 */
 .mj-tile {
     width: 26px;
@@ -1886,4 +1825,593 @@
 .mj-dingque-btn-sub {
     font-size: 7px;
     opacity: .5;
+}
+
+/* ==========================================
+   斗地主 DDZ — 低饱和蓝灰 INS 风
+   ========================================== */
+.game-start-btn.landlord {
+    background: linear-gradient(135deg, #8fa8c5, #afc4da);
+    box-shadow: 0 2px 10px rgba(143, 168, 197, .25);
+}
+
+.ddz-game {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    background: linear-gradient(170deg, #f0eff4 0%, #e8e5ed 40%, #edeaf0 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.ddz-game.show {
+    display: flex;
+}
+
+/* 对手区 */
+.ddz-opponents {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    padding: 8px 16px 4px;
+    flex-shrink: 0;
+}
+
+.ddz-opponent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    position: relative;
+}
+
+.ddz-opp-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(143, 168, 197, .1);
+    border: 2px solid rgba(143, 168, 197, .15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.ddz-opp-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ddz-opp-avatar svg {
+    width: 16px;
+    height: 16px;
+    stroke: rgba(143, 168, 197, .4);
+    stroke-width: 1.8;
+    fill: none;
+}
+
+.ddz-crown {
+    position: absolute;
+    top: -8px;
+    right: -4px;
+    font-size: 11px;
+}
+
+.ddz-opp-name {
+    font-size: 9px;
+    color: #6a6a78;
+    font-weight: 600;
+    max-width: 72px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ddz-opp-count {
+    font-size: 7.5px;
+    color: rgba(106, 106, 120, .4);
+    background: rgba(143, 168, 197, .08);
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.ddz-thinking {
+    font-size: 7px;
+    color: #8fa8c5;
+    animation: ddzPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes ddzPulse {
+
+    0%,
+    100% {
+        opacity: .4;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* 中央区 */
+.ddz-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 12px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.ddz-dizhu-cards {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, .5);
+    padding: 3px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(143, 168, 197, .1);
+}
+
+.ddz-dizhu-label {
+    font-size: 7.5px;
+    color: rgba(106, 106, 120, .35);
+    margin-right: 2px;
+}
+
+.ddz-mini-card {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 3px;
+    border-radius: 3px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, .06);
+}
+
+.ddz-mini-card.red {
+    color: #c4766a;
+}
+
+.ddz-mini-card.black {
+    color: #4a4a5a;
+}
+
+.ddz-info {
+    display: flex;
+    gap: 8px;
+    font-size: 8px;
+    color: rgba(106, 106, 120, .35);
+}
+
+/* 出牌展示区 */
+.ddz-play-area {
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ddz-played {
+    text-align: center;
+}
+
+.ddz-played-name {
+    font-size: 7.5px;
+    color: rgba(106, 106, 120, .4);
+    margin-bottom: 3px;
+}
+
+.ddz-played-cards {
+    display: flex;
+    gap: 2px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.ddz-play-card {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 34px;
+    border-radius: 5px;
+    background: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    border: 1px solid rgba(0, 0, 0, .08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+}
+
+.ddz-play-card.red {
+    color: #c4766a;
+}
+
+.ddz-play-card.black {
+    color: #3a3a4a;
+}
+
+/* 日志 */
+.ddz-log-area {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    max-height: 36px;
+    overflow: hidden;
+}
+
+.ddz-log-item {
+    font-size: 7px;
+    color: rgba(106, 106, 120, .3);
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* 叫地主 */
+.ddz-bid-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, .6);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(143, 168, 197, .08);
+    flex-shrink: 0;
+}
+
+.ddz-bid-title {
+    font-size: 10px;
+    color: #6a6a78;
+    font-weight: 600;
+}
+
+.ddz-bid-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.ddz-bid-btn {
+    padding: 7px 16px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .18s;
+    background: rgba(143, 168, 197, .12);
+    color: #6a7a8a;
+}
+
+.ddz-bid-btn:active {
+    transform: scale(.94);
+}
+
+.ddz-bid-btn.pass {
+    background: rgba(160, 150, 155, .1);
+    color: rgba(106, 106, 120, .4);
+}
+
+.ddz-bid-btn.call3 {
+    background: linear-gradient(135deg, #8fa8c5, #afc4da);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(143, 168, 197, .3);
+}
+
+/* 操作栏 */
+.ddz-action-bar {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    padding: 6px 16px;
+    background: rgba(255, 255, 255, .5);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(143, 168, 197, .08);
+    flex-shrink: 0;
+}
+
+.ddz-act-btn {
+    padding: 7px 18px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .18s;
+    background: rgba(143, 168, 197, .12);
+    color: #6a7a8a;
+}
+
+.ddz-act-btn:active {
+    transform: scale(.94);
+}
+
+.ddz-act-btn.pass {
+    background: rgba(160, 150, 155, .08);
+    color: rgba(106, 106, 120, .4);
+}
+
+.ddz-act-btn.play {
+    background: linear-gradient(135deg, #8fa8c5, #afc4da);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(143, 168, 197, .3);
+}
+
+.ddz-act-btn.hint {
+    background: rgba(143, 168, 197, .08);
+    color: rgba(143, 168, 197, .6);
+}
+
+/* 手牌区 */
+.ddz-hand {
+    flex-shrink: 0;
+    padding: 4px 8px 16px;
+    background: rgba(255, 255, 255, .55);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(143, 168, 197, .08);
+}
+
+.ddz-hand-label {
+    font-size: 8px;
+    color: rgba(106, 106, 120, .35);
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+.ddz-hand-cards {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+
+.ddz-hand-cards::-webkit-scrollbar {
+    height: 0;
+}
+
+.ddz-card {
+    width: 30px;
+    min-width: 30px;
+    height: 42px;
+    border-radius: 6px;
+    background: #fff;
+    border: 1.5px solid rgba(0, 0, 0, .08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all .15s;
+    margin-left: -8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+    position: relative;
+}
+
+.ddz-card:first-child {
+    margin-left: 0;
+}
+
+.ddz-card:active {
+    transform: scale(.95);
+}
+
+.ddz-card.selected {
+    transform: translateY(-8px);
+    border-color: #8fa8c5;
+    box-shadow: 0 3px 10px rgba(143, 168, 197, .25);
+    z-index: 2;
+}
+
+.ddz-card.red {
+    color: #c4766a;
+}
+
+.ddz-card.black {
+    color: #3a3a4a;
+}
+
+.ddz-card-rank {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.ddz-card-suit {
+    font-size: 8px;
+    line-height: 1;
+    opacity: .7;
+}
+
+/* 结算弹窗 */
+.ddz-result-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, .35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    backdrop-filter: blur(6px);
+}
+
+.ddz-result-card {
+    background: rgba(255, 255, 255, .92);
+    border-radius: 20px;
+    padding: 20px 24px;
+    width: 260px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, .12);
+}
+
+.ddz-result-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #4a4a5a;
+    text-align: center;
+    margin-bottom: 14px;
+}
+
+.ddz-result-player {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, .04);
+}
+
+.ddz-result-av {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(143, 168, 197, .08);
+}
+
+.ddz-result-av img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ddz-result-name {
+    flex: 1;
+    font-size: 11px;
+    font-weight: 600;
+    color: #5a5a68;
+}
+
+.ddz-result-score {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.ddz-result-score.pos {
+    color: #7aaa82;
+}
+
+.ddz-result-score.neg {
+    color: #c4766a;
+}
+
+.ddz-result-btns {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    justify-content: center;
+}
+
+/* 游戏记录列表 */
+.game-recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.game-recent-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 11px;
+    background: rgba(255, 255, 255, .55);
+    border-radius: 11px;
+    border: 1px solid rgba(160, 140, 150, .06);
+}
+
+.game-recent-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.game-recent-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.game-recent-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: #5a4a52;
+}
+
+.game-recent-time {
+    font-size: 8.5px;
+    font-weight: 400;
+    color: rgba(120, 100, 112, .3);
+    margin-left: 4px;
+}
+
+.game-recent-detail {
+    font-size: 9px;
+    color: rgba(120, 100, 112, .35);
+    margin-top: 2px;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 横屏旋转 */
+/* 横屏模式 — 在框内横向布局 */
+.game-overlay.landscape .game-header {
+    padding-top: 14px;
+    padding-bottom: 8px;
+}
+
+.game-overlay.landscape .mj-game {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.game-overlay.landscape .ddz-game {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.game-overlay.landscape .ddz-opponents {
+    flex-direction: column;
+    width: 60px;
+    gap: 12px;
+    padding: 8px 4px;
+    flex-shrink: 0;
+}
+
+.game-overlay.landscape .ddz-center {
+    flex: 1;
+    min-width: 0;
+}
+
+.game-overlay.landscape .ddz-hand {
+    width: 100%;
+    order: 10;
+}
+
+.game-overlay.landscape .ddz-bid-bar,
+.game-overlay.landscape .ddz-action-bar {
+    width: 100%;
+    order: 9;
+}
+
+.game-overlay.landscape .ddz-hand-cards {
+    overflow-x: auto;
+}
+
+.game-overlay.landscape .ddz-card {
+    min-width: 26px;
+    width: 26px;
+    height: 38px;
+    margin-left: -6px;
+}
+
+.game-overlay.landscape .ddz-card-rank {
+    font-size: 10px;
+}
+
+.game-overlay.landscape .ddz-card-suit {
+    font-size: 7px;
 }
