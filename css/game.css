@@ -1106,3 +1106,784 @@
         transform: scale(.8);
     }
 }
+
+/* ============================================
+   Mahjong 麻将 — 追加样式
+   ============================================ */
+
+/* 麻将设置页：地区+局数选择 */
+.mj-config-sec {
+    background: rgba(255, 255, 255, .65);
+    border-radius: 14px;
+    padding: 13px;
+    border: 1px solid rgba(160, 140, 150, .08);
+    box-shadow: 0 1px 4px rgba(160, 140, 150, .04);
+    margin-bottom: 0;
+}
+
+.mj-config-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(120, 100, 112, .45);
+    letter-spacing: .5px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mj-config-label svg {
+    width: 11px;
+    height: 11px;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    fill: none;
+}
+
+.mj-region-list {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.mj-region-item {
+    padding: 7px 12px;
+    border-radius: 10px;
+    background: rgba(245, 240, 242, .6);
+    border: 1.5px solid rgba(160, 140, 150, .1);
+    font-size: 11px;
+    color: #5a4a52;
+    cursor: pointer;
+    transition: all .18s;
+    font-weight: 500;
+}
+
+.mj-region-item.active {
+    border-color: #8fb5a0;
+    background: rgba(143, 181, 160, .1);
+    box-shadow: 0 0 0 2px rgba(143, 181, 160, .1);
+}
+
+.mj-region-item:active {
+    transform: scale(.95);
+}
+
+.mj-region-desc {
+    font-size: 9px;
+    color: rgba(120, 100, 112, .3);
+    margin-top: 6px;
+    line-height: 1.5;
+    padding: 6px 8px;
+    background: rgba(245, 240, 242, .4);
+    border-radius: 8px;
+}
+
+.mj-round-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mj-round-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(245, 240, 242, .6);
+    border: 1px solid rgba(160, 140, 150, .1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: #6a5560;
+    font-weight: 600;
+}
+
+.mj-round-btn:active {
+    background: rgba(160, 140, 150, .12);
+}
+
+.mj-round-val {
+    font-size: 16px;
+    font-weight: 700;
+    color: #4a3a42;
+    min-width: 30px;
+    text-align: center;
+}
+
+.mj-round-unit {
+    font-size: 10px;
+    color: rgba(120, 100, 112, .35);
+}
+
+/* 麻将牌桌 */
+.mj-game {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(168deg, #eae6e2 0%, #e2ddd8 50%, #ece8e4 100%);
+}
+
+.mj-game.show {
+    display: flex;
+}
+
+.mj-table {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 50% 50%, #e8e4e0 0%, #ddd8d4 70%);
+}
+
+.mj-table::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 140px;
+    height: 140px;
+    transform: translate(-50%, -50%);
+    border: 1.5px solid rgba(160, 140, 150, .08);
+    border-radius: 6px;
+    pointer-events: none;
+}
+
+/* 信息栏 */
+.mj-info-bar {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90px;
+    height: 90px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .5);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(160, 140, 150, .08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    gap: 2px;
+}
+
+.mj-info-wind {
+    font-size: 16px;
+    font-weight: 800;
+    color: #6a5560;
+}
+
+.mj-info-remain {
+    font-size: 9px;
+    color: rgba(120, 100, 112, .4);
+}
+
+.mj-info-round {
+    font-size: 8px;
+    color: rgba(120, 100, 112, .3);
+}
+
+/* 玩家位置 */
+.mj-seat {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 2;
+}
+
+.mj-seat-bottom {
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+.mj-seat-top {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.mj-seat-left {
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.mj-seat-right {
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* 玩家信息条 */
+.mj-player-info {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .45);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(160, 140, 150, .06);
+}
+
+.mj-player-info.active {
+    background: rgba(143, 181, 160, .15);
+    border-color: rgba(143, 181, 160, .2);
+}
+
+.mj-player-av {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(160, 140, 150, .06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.mj-player-av img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mj-player-name {
+    font-size: 9px;
+    color: #5a4a52;
+    font-weight: 600;
+    max-width: 50px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mj-player-wind {
+    font-size: 7px;
+    color: rgba(120, 100, 112, .35);
+    font-weight: 600;
+}
+
+.mj-player-score {
+    font-size: 8px;
+    color: #8fb5a0;
+    font-weight: 700;
+}
+
+/* 刷新对话按钮 */
+.mj-chat-refresh {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(160, 140, 150, .08);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .2s;
+    flex-shrink: 0;
+}
+
+.mj-chat-refresh:active {
+    background: rgba(160, 140, 150, .2);
+}
+
+.mj-chat-refresh svg {
+    width: 10px;
+    height: 10px;
+    stroke: rgba(120, 100, 112, .4);
+    stroke-width: 2;
+    fill: none;
+}
+
+.mj-chat-refresh.loading svg {
+    animation: mjSpin .8s linear infinite;
+}
+
+@keyframes mjSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 对话气泡 */
+.mj-chat-bubble {
+    position: absolute;
+    z-index: 6;
+    pointer-events: none;
+    background: rgba(255, 255, 255, .75);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(160, 140, 150, .08);
+    border-radius: 8px;
+    padding: 3px 7px;
+    font-size: 8.5px;
+    color: #5a4a52;
+    max-width: 110px;
+    word-break: break-all;
+    animation: mjChatIn .3s ease-out;
+    line-height: 1.4;
+}
+
+@keyframes mjChatIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+}
+
+/* 麻将牌 */
+.mj-tile {
+    width: 26px;
+    height: 36px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #fefefe 0%, #f0ece8 100%);
+    border: 1px solid rgba(160, 140, 150, .18);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+    transition: transform .12s;
+    position: relative;
+}
+
+.mj-tile:active {
+    transform: scale(.94);
+}
+
+.mj-tile.playable {
+    box-shadow: 0 0 6px rgba(143, 181, 160, .25);
+}
+
+.mj-tile.playable:hover {
+    transform: translateY(-6px);
+}
+
+.mj-tile-val {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.mj-tile-suit {
+    font-size: 6px;
+    color: rgba(120, 100, 112, .4);
+    margin-top: -1px;
+}
+
+/* 花色颜色 */
+.mj-tile.wan .mj-tile-val {
+    color: #c27068;
+}
+
+.mj-tile.tiao .mj-tile-val {
+    color: #6a9a72;
+}
+
+.mj-tile.tong .mj-tile-val {
+    color: #6a8eb8;
+}
+
+.mj-tile.feng .mj-tile-val {
+    color: #5a4a52;
+}
+
+.mj-tile.jian .mj-tile-val {
+    color: #c27068;
+}
+
+/* 牌背 */
+.mj-tile-back {
+    width: 20px;
+    height: 28px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #b8c8be 0%, #9aaa9e 100%);
+    border: 1px solid rgba(160, 140, 150, .12);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
+    flex-shrink: 0;
+}
+
+/* 手牌区 */
+.mj-hand-area {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 4px 6px 12px;
+    z-index: 4;
+    background: linear-gradient(to top, rgba(230, 226, 222, .85) 0%, transparent 100%);
+}
+
+.mj-hand-scroll {
+    display: flex;
+    gap: 1px;
+    overflow-x: auto;
+    padding: 2px 0;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.mj-hand-scroll::-webkit-scrollbar {
+    height: 0;
+}
+
+/* 对手手牌(牌背) */
+.mj-opp-tiles {
+    display: flex;
+    gap: 0;
+    justify-content: center;
+}
+
+.mj-opp-tiles .mj-tile-back {
+    margin-left: -4px;
+}
+
+.mj-opp-tiles .mj-tile-back:first-child {
+    margin-left: 0;
+}
+
+/* 操作按钮 */
+.mj-action-bar {
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 5px;
+    z-index: 5;
+    padding: 4px 8px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .7);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(160, 140, 150, .08);
+}
+
+.mj-action-btn {
+    padding: 4px 10px;
+    border-radius: 7px;
+    border: none;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.mj-action-btn:active {
+    transform: scale(.93);
+}
+
+.mj-action-btn.primary {
+    background: rgba(143, 181, 160, .2);
+    color: #4a6a52;
+    border: 1px solid rgba(143, 181, 160, .2);
+}
+
+.mj-action-btn.danger {
+    background: rgba(194, 112, 104, .15);
+    color: #8a4a42;
+    border: 1px solid rgba(194, 112, 104, .15);
+}
+
+.mj-action-btn.gray {
+    background: rgba(160, 140, 150, .08);
+    color: #6a5560;
+    border: 1px solid rgba(160, 140, 150, .08);
+}
+
+/* 出牌区(河) */
+.mj-discard-zone {
+    position: absolute;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1px;
+    max-width: 120px;
+}
+
+.mj-discard-zone.bottom {
+    bottom: 55px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.mj-discard-zone.top {
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.mj-discard-zone.left {
+    left: 50px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.mj-discard-zone.right {
+    right: 50px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.mj-discard-tile {
+    width: 18px;
+    height: 24px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #f8f6f4 0%, #eae6e2 100%);
+    border: 1px solid rgba(160, 140, 150, .12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    font-weight: 700;
+}
+
+.mj-discard-tile.wan {
+    color: #c27068;
+}
+
+.mj-discard-tile.tiao {
+    color: #6a9a72;
+}
+
+.mj-discard-tile.tong {
+    color: #6a8eb8;
+}
+
+.mj-discard-tile.feng {
+    color: #5a4a52;
+}
+
+.mj-discard-tile.jian {
+    color: #c27068;
+}
+
+/* 副露(吃碰杠) */
+.mj-meld-zone {
+    display: flex;
+    gap: 2px;
+    margin-top: 2px;
+}
+
+.mj-meld-group {
+    display: flex;
+    gap: 0;
+    padding: 1px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, .3);
+}
+
+.mj-meld-tile {
+    width: 16px;
+    height: 22px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #faf8f6 0%, #ece8e4 100%);
+    border: 1px solid rgba(160, 140, 150, .1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 6px;
+    font-weight: 700;
+}
+
+/* 结算 */
+.mj-result {
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+    background: rgba(234, 230, 226, .92);
+    backdrop-filter: blur(8px);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.mj-result.show {
+    display: flex;
+}
+
+.mj-result-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #4a3a42;
+}
+
+.mj-result-sub {
+    font-size: 10px;
+    color: rgba(120, 100, 112, .4);
+}
+
+.mj-result-scores {
+    width: 85%;
+    max-width: 250px;
+    margin-top: 6px;
+}
+
+.mj-result-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 7px;
+    margin-bottom: 3px;
+    background: rgba(255, 255, 255, .4);
+}
+
+.mj-result-row.winner {
+    background: rgba(143, 181, 160, .12);
+}
+
+.mj-result-av {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(160, 140, 150, .06);
+}
+
+.mj-result-av img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mj-result-name {
+    flex: 1;
+    font-size: 10px;
+    color: #5a4a52;
+    font-weight: 500;
+}
+
+.mj-result-pts {
+    font-size: 12px;
+    font-weight: 700;
+    color: #8fb5a0;
+}
+
+.mj-result-pts.neg {
+    color: #c27068;
+}
+
+.mj-result-btns {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.mj-result-btn {
+    padding: 8px 20px;
+    border-radius: 9px;
+    border: none;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mj-result-btn.primary {
+    background: linear-gradient(135deg, #8fb5a0, #b0cebe);
+    color: #fff;
+}
+
+.mj-result-btn.secondary {
+    background: rgba(160, 140, 150, .1);
+    color: #6a5560;
+}
+
+.mj-result-btn:active {
+    opacity: .7;
+}
+
+/* 定缺弹窗(四川麻将) */
+.mj-dingque-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: rgba(234, 230, 226, .85);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.mj-dingque-overlay.show {
+    display: flex;
+}
+
+.mj-dingque-box {
+    padding: 18px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .7);
+    border: 1px solid rgba(160, 140, 150, .08);
+    text-align: center;
+}
+
+.mj-dingque-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #4a3a42;
+    margin-bottom: 4px;
+}
+
+.mj-dingque-sub {
+    font-size: 9px;
+    color: rgba(120, 100, 112, .35);
+    margin-bottom: 12px;
+}
+
+.mj-dingque-opts {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.mj-dingque-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    border: 2px solid rgba(160, 140, 150, .12);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    transition: all .15s;
+    background: rgba(255, 255, 255, .5);
+}
+
+.mj-dingque-btn:active {
+    transform: scale(.9);
+}
+
+.mj-dingque-btn.wan {
+    color: #c27068;
+}
+
+.mj-dingque-btn.tiao {
+    color: #6a9a72;
+}
+
+.mj-dingque-btn.tong {
+    color: #6a8eb8;
+}
+
+.mj-dingque-btn-label {
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.mj-dingque-btn-sub {
+    font-size: 7px;
+    opacity: .5;
+}
