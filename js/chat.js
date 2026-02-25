@@ -1278,7 +1278,7 @@ function openConversation(rid) {
     h += '<div class="chat-conv-tool" onclick="chatPickAlbum()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>相册</span></div>';
     h += '<div class="chat-conv-tool" onclick="openTransferPanel()"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>转账</span></div>';
     h += '<div class="chat-conv-tool" onclick="openGiftShop()"><svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg><span>礼物</span></div>';
-    h += '<div class="chat-conv-tool" onclick="showToast(\'定位\')"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>定位</span></div>';
+    h += '<div class="chat-conv-tool" onclick="openLocationPanel()"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>定位</span></div>';
     h += '</div>';
 
     // 引用预览条
@@ -1347,6 +1347,7 @@ function renderBubbleRow(m, idx, myAv, roleAv) {
     if (m.image) return renderImageBubbleRow(m, idx, myAv, roleAv);
     if (m.sticker) return renderStickerBubbleRow(m, idx, myAv, roleAv);
     if (m.transfer) return renderTransferBubbleRow(m, idx, myAv, roleAv);
+    if (m.location) return renderLocationBubbleRow(m, idx, myAv, roleAv);
     if (m.giftCard) return renderGiftCardBubbleRow(m, idx, myAv, roleAv);
 
     var h = '';
@@ -2433,6 +2434,23 @@ function continueChat() {
                     delete msgObj.translation;
                 }
 
+                // ★ 检测AI发送位置的标记 [send_location:charPlace|userPlace]
+                var locMatch = txt.match(/\[send_location:([^\]]+)\]/);
+                if (locMatch) {
+                    var locParts = locMatch[1].split('|');
+                    var charPlace = (locParts[0] || '').trim();
+                    var userPlace = (locParts[1] || '').trim();
+                    // 从回复文本中移除标记
+                    txt = txt.replace(/\[send_location:[^\]]+\]/g, '').trim();
+                    msgObj.text = txt;
+                    // 延迟一点发送位置气泡
+                    if (charPlace) {
+                        setTimeout(function () {
+                            locCharSendLocation(charPlace, userPlace);
+                        }, 1200);
+                    }
+                }
+
                 // ★ 检测AI对转账的决策标记 [accept_transfer:txId] 或 [refuse_transfer:txId]
                 var acceptMatch = txt.match(/\[accept_transfer:([^\]]+)\]/);
                 var refuseMatch = txt.match(/\[refuse_transfer:([^\]]+)\]/);
@@ -2836,6 +2854,14 @@ function buildChatMessages(role) {
             }
         }
 
+        // ★ 位置消息 → 告知AI用户分享了位置
+        if (m.location) {
+            if (m.from === 'self') {
+                content = '【SYSTEM: The user shared their location with you. User is at: "' + (m.locUserPlace || 'unknown') + '". Your location is set to: "' + (m.locCharPlace || 'unknown') + '". The distance between you two is approximately ' + (m.locDist ? m.locDist.toFixed(1) : '?') + ' km' + (m.locCar ? ', driving would take about ' + m.locCar + ' minutes' : '') + (m.locFlight ? ', or a flight would take about ' + m.locFlight + ' minutes' : '') + '. React naturally to this location share based on your character personality and your relationship with the user. Consider the distance — are you close enough to meet? Is one of you far away? Comment on the places, the commute, express feelings about the distance, suggest meeting plans if appropriate. If you want to share your own location back, put the tag [send_location:YOUR_PLACE|USER_PLACE] on the very last line (e.g. [send_location:Tokyo|Shanghai]). Only do this if it makes sense in context. Your spoken reply text MUST stay in the same language you have been using in this conversation — do NOT switch languages.】';
+            } else {
+                content = m.text || '[Location shared / 位置共享]';
+            }
+        }
         // 图片消息 — 多模态格式，让AI真正看到图片内容
         if (m.image && m.imageData && m.from === 'self') {
             var imgText = '';

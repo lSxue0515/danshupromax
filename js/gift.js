@@ -12,31 +12,52 @@ let giftCurrentCat = '全部';
 let giftDetailIdx = -1;
 let giftOrderCount = 0;
 
-/* ===== 钱包系统 ===== */
+/* ===== 钱包系统 — 桥接到 chat.js 的 _chatWallet ===== */
+function _ensureChatWallet() {
+    if (typeof _chatWallet === 'undefined' || !_chatWallet) {
+        try {
+            window._chatWallet = JSON.parse(localStorage.getItem('ds_chat_wallet') || '{"balance":10000,"transactions":[]}');
+        } catch (e) {
+            window._chatWallet = { balance: 10000, transactions: [] };
+        }
+    }
+    if (typeof _chatWallet.balance !== 'number') _chatWallet.balance = 10000;
+    if (!Array.isArray(_chatWallet.transactions)) _chatWallet.transactions = [];
+}
+function _saveChatWalletBridge() {
+    try { localStorage.setItem('ds_chat_wallet', JSON.stringify(_chatWallet)); } catch (e) { }
+}
 function getWalletBalance() {
-    const b = localStorage.getItem('ds_wallet_balance');
-    return b ? parseFloat(b) : 9999.00;
+    _ensureChatWallet();
+    return _chatWallet.balance;
 }
 function setWalletBalance(val) {
-    localStorage.setItem('ds_wallet_balance', val.toFixed(2));
+    _ensureChatWallet();
+    _chatWallet.balance = val;
+    _saveChatWalletBridge();
 }
 function getWalletBills() {
-    const s = localStorage.getItem('ds_wallet_bills');
-    try { return s ? JSON.parse(s) : []; } catch (e) { return []; }
+    _ensureChatWallet();
+    return _chatWallet.transactions || [];
 }
 function saveWalletBills(bills) {
-    localStorage.setItem('ds_wallet_bills', JSON.stringify(bills));
+    // transactions 是 _chatWallet 的一部分，不需要单独保存
 }
 function addWalletBill(type, desc, amount, orderNo) {
-    const bills = getWalletBills();
-    bills.unshift({
-        type: type,
-        desc: desc,
-        amount: amount,
-        orderNo: orderNo || '',
-        time: Date.now()
+    _ensureChatWallet();
+    var txId = 'gift' + Date.now() + Math.random().toString(36).substr(2, 4);
+    var isOut = amount < 0;
+    _chatWallet.transactions.unshift({
+        id: txId,
+        type: isOut ? 'transfer_out' : (type === '充值' ? 'recharge' : 'transfer_in'),
+        amount: Math.abs(amount),
+        remark: desc,
+        target: '礼物商城',
+        time: new Date().toLocaleString(),
+        status: 'accepted',
+        orderNo: orderNo || ''
     });
-    saveWalletBills(bills);
+    _saveChatWalletBridge();
 }
 
 /* ===== 数据初始化 ===== */
@@ -54,7 +75,7 @@ function initGiftData() {
     const savedWall = localStorage.getItem('ds_gift_wall');
     if (savedWall) { try { giftWallItems = JSON.parse(savedWall); } catch (e) { giftWallItems = []; } }
     const savedCats = localStorage.getItem('ds_gift_cats');
-    if (savedCats) { try { const c = JSON.parse(savedCats); if (c.length) giftCategories = c; } catch (e) {} }
+    if (savedCats) { try { const c = JSON.parse(savedCats); if (c.length) giftCategories = c; } catch (e) { } }
     if (giftCategories[0] !== '全部') giftCategories.unshift('全部');
     const savedOrders = localStorage.getItem('ds_gift_orders');
     if (savedOrders) { try { giftOrders = JSON.parse(savedOrders); } catch (e) { giftOrders = []; } }
@@ -69,7 +90,10 @@ function createDefaultGift(idx) {
 function saveGifts() { localStorage.setItem('ds_gift_items', JSON.stringify(giftItems)); }
 function saveWall() { localStorage.setItem('ds_gift_wall', JSON.stringify(giftWallItems)); }
 function saveCats() { localStorage.setItem('ds_gift_cats', JSON.stringify(giftCategories)); }
-function saveOrders() { localStorage.setItem('ds_gift_orders', JSON.stringify(giftOrders)); }
+function saveOrders() {
+    localStorage.setItem('ds_gift_orders', JSON.stringify(giftOrders));
+    updateP2OrderCount();
+}
 function saveOrderCount() { localStorage.setItem('ds_gift_order_count', String(giftOrderCount)); }
 
 function giftPlaceholderHTML(size) {
@@ -294,7 +318,7 @@ function uploadGiftImg(id) {
     document.body.appendChild(inp);
     inp.addEventListener('change', function () {
         const file = this.files && this.files[0];
-        try { document.body.removeChild(inp); } catch (e) {}
+        try { document.body.removeChild(inp); } catch (e) { }
         if (!file) return;
         const reader = new FileReader();
         reader.onload = function (ev) {
@@ -716,9 +740,7 @@ function openMyOrders() {
         ov = document.createElement('div');
         ov.id = 'giftMyOrdersOverlay';
         ov.className = 'gift-orders-overlay';
-        const parent = document.getElementById('giftShopOverlay');
-        if (parent && parent.parentElement) parent.parentElement.appendChild(ov);
-        else document.querySelector('.phone-frame').appendChild(ov);
+        document.querySelector('.phone-frame').appendChild(ov);
     }
     renderMyOrders(ov);
     requestAnimationFrame(() => { ov.classList.add('show'); });
@@ -840,77 +862,41 @@ function refundOrder(idx) {
 }
 
 /* ==========================================================
-   钱包账单详情
+   钱包账单详情 — 直接打开 chat.js 的钱包页面
    ========================================================== */
 function openWalletDetail() {
-    let ov = document.getElementById('giftWalletOverlay');
-    if (!ov) {
-        ov = document.createElement('div');
-        ov.id = 'giftWalletOverlay';
-        ov.className = 'gift-orders-overlay';
-        const parent = document.getElementById('giftMyOrdersOverlay');
-        if (parent && parent.parentElement) parent.parentElement.appendChild(ov);
-        else document.querySelector('.phone-frame').appendChild(ov);
-    }
-
-    const bal = getWalletBalance();
-    const bills = getWalletBills();
-
-    let html = `
-    <div class="gift-orders-header">
-        <div class="gift-orders-back" onclick="closeWalletDetail()">
-            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-        </div>
-        <div class="gift-orders-title">钱包</div>
-        <div style="width:32px;"></div>
-    </div>
-    <div class="gift-wallet-balance-card">
-        <div class="gift-wallet-bal-label">余额</div>
-        <div class="gift-wallet-bal-num">${bal.toFixed(2)}</div>
-        <div class="gift-wallet-recharge" onclick="rechargeWallet()">充值</div>
-    </div>
-    <div class="gift-orders-body">
-        <div style="padding:0 4px 6px;font-size:13px;font-weight:600;color:rgba(50,40,55,0.5);">账单记录</div>`;
-
-    if (!bills.length) {
-        html += `<div style="text-align:center;padding:40px 0;font-size:12px;color:rgba(50,40,55,0.3);">暂无账单</div>`;
+    // 桥接到 chat.js 的钱包页面
+    if (typeof openWalletPage === 'function') {
+        openWalletPage();
     } else {
-        bills.forEach(b => {
-            const isPositive = b.amount >= 0;
-            html += `
-            <div class="gift-order-card" style="padding:12px 14px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;">
-                    <div>
-                        <div style="font-size:13px;font-weight:600;color:rgba(50,40,55,0.75);">${escGift(b.desc)}</div>
-                        <div style="font-size:10px;color:rgba(50,40,55,0.3);margin-top:3px;">${formatOrderDate(b.time)}${b.orderNo ? ' | No.' + b.orderNo : ''}</div>
-                    </div>
-                    <div style="font-size:15px;font-weight:700;color:${isPositive ? 'rgba(80,160,100,0.85)' : 'rgba(255,110,140,0.9)'};">
-                        ${isPositive ? '+' : ''}${b.amount.toFixed(2)}
-                    </div>
-                </div>
-            </div>`;
-        });
+        if (typeof showToast === 'function') showToast('请先打开聊天应用');
     }
-    html += `</div>`;
-    ov.innerHTML = html;
-    requestAnimationFrame(() => { ov.classList.add('show'); });
 }
 
 function closeWalletDetail() {
-    const ov = document.getElementById('giftWalletOverlay');
-    if (ov) { ov.classList.remove('show'); setTimeout(() => { ov.innerHTML = ''; }, 300); }
+    // 兼容旧调用
+    if (typeof closeWalletPage === 'function') closeWalletPage();
 }
 
 function rechargeWallet() {
-    const amount = prompt('输入充值金额:');
-    if (!amount) return;
-    const num = parseFloat(amount);
-    if (isNaN(num) || num <= 0) { alert('请输入有效金额'); return; }
-    const bal = getWalletBalance();
-    setWalletBalance(bal + num);
-    addWalletBill('充值', '钱包充值', num, '');
-    if (typeof showToast === 'function') showToast('充值成功 +' + num.toFixed(2));
-    openWalletDetail();
+    // 桥接到 chat.js 的充值
+    if (typeof walletRecharge === 'function') {
+        walletRecharge();
+    } else {
+        var amount = prompt('输入充值金额:');
+        if (!amount) return;
+        var num = parseFloat(amount);
+        if (isNaN(num) || num <= 0) { alert('请输入有效金额'); return; }
+        _ensureChatWallet();
+        _chatWallet.balance += num;
+        _chatWallet.transactions.unshift({
+            id: 'rc' + Date.now(), type: 'recharge', amount: num,
+            remark: '账户充值', target: '系统',
+            time: new Date().toLocaleString(), status: 'accepted'
+        });
+        _saveChatWalletBridge();
+        if (typeof showToast === 'function') showToast('充值成功 +' + num.toFixed(2));
+    }
 }
 
 /* ===== 搜索 ===== */
@@ -1043,32 +1029,24 @@ function closeGiftCardDetail() {
 
 /* ==========================================================
    ★ "我"页面渲染订单入口（供 chat.js 的 renderMe 调用）
-   在 chat.js 的 renderMe() 里加一行：
-   h += renderMeOrdersSection();
+   订单入口同时显示在 p2 页面
    ========================================================== */
 function renderMeOrdersSection() {
+    return '';
+}
+
+/* ===== 更新 p2 订单计数 ===== */
+function updateP2OrderCount() {
     initGiftData();
-    var cnt = giftOrders.length;
-    var shipped = 0;
-    for (var i = 0; i < giftOrders.length; i++) {
-        if (giftOrders[i].status === '已发货') shipped++;
+    var el = document.getElementById('p2OrderCount');
+    if (el) {
+        var cnt = giftOrders.length;
+        var shipped = 0;
+        for (var i = 0; i < giftOrders.length; i++) {
+            if (giftOrders[i].status === '已发货') shipped++;
+        }
+        el.textContent = cnt + '单' + (shipped > 0 ? ' · ' + shipped + '已发货' : '');
     }
-    return '<div class="chat-me-cell" onclick="openMyOrders()" style="cursor:pointer;">'
-        + '<div style="display:flex;align-items:center;gap:10px;">'
-        + '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="rgba(255,140,170,0.7)" stroke-width="1.8">'
-        + '<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/>'
-        + '<line x1="12" y1="22" x2="12" y2="7"/>'
-        + '<path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>'
-        + '<path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>'
-        + '</svg>'
-        + '<span style="font-size:14px;font-weight:600;color:rgba(50,40,55,0.8);">我的订单</span>'
-        + '</div>'
-        + '<div style="display:flex;align-items:center;gap:6px;">'
-        + (shipped > 0 ? '<span style="font-size:11px;color:rgba(80,160,100,0.8);background:rgba(80,160,100,0.08);padding:1px 6px;border-radius:6px;">' + shipped + '已发货</span>' : '')
-        + '<span style="font-size:12px;color:rgba(50,40,55,0.3);">' + cnt + '单</span>'
-        + '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="rgba(50,40,55,0.3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>'
-        + '</div>'
-        + '</div>';
 }
 
 /* ===== 工具 ===== */
