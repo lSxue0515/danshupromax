@@ -189,7 +189,7 @@ function locQuickSelect(el, name) {
     var input = document.getElementById('locInput' + _locQuickTarget);
     if (input) input.value = name;
     var tags = document.querySelectorAll('.loc-quick-tag');
-    for (var i = 0; i < tags.length; i++)tags[i].classList.remove('active');
+    for (var i = 0; i < tags.length; i++) tags[i].classList.remove('active');
     el.classList.add('active');
     locRefresh();
 }
@@ -203,18 +203,16 @@ function locHaversine(lat1, lon1, lat2, lon2) {
 
 /* ===== 真实路程距离（直线 × 路程系数）===== */
 function locRoadDist(straightKm) {
-    // 模拟真实道路比直线距离长 ~20-40%
     if (straightKm < 5) return straightKm * 1.3;
     if (straightKm < 50) return straightKm * 1.25;
     if (straightKm < 300) return straightKm * 1.2;
-    return straightKm; // 长距离/航空用直线距离
+    return straightKm;
 }
 
 /* ===== 地名 → 坐标 ===== */
 function locResolveCoords(text) {
     if (!text) return null; text = text.trim();
     if (LOC_COORDS[text]) return LOC_COORDS[text];
-    // 模糊匹配
     var bestK = '', bestLen = 0;
     for (var k in LOC_COORDS) {
         if ((text.indexOf(k) !== -1 || k.indexOf(text) !== -1) && k.length > bestLen) {
@@ -222,7 +220,6 @@ function locResolveCoords(text) {
         }
     }
     if (bestK) return LOC_COORDS[bestK];
-    // 未找到 → 哈希伪坐标
     var h = locHash(text);
     return [((h % 12000) / 100) - 60, ((h * 7 % 36000) / 100) - 180];
 }
@@ -243,7 +240,6 @@ function locRefresh() {
         roadDist = locRoadDist(straightDist);
     }
 
-    // 交通时间（基于路程距离）
     var walk = 0, bike = 0, car = 0, sub = 0, flight = 0, hsr = 0;
     var isCross = roadDist > 300, isLong = roadDist > 1000;
     if (ok) {
@@ -255,7 +251,6 @@ function locRefresh() {
         flight = isLong ? Math.round(straightDist / 850 * 60 + 90) : (straightDist > 300 ? Math.round(straightDist / 700 * 60 + 60) : 0);
     }
 
-    // Distance badge 距离徽章
     var dEl = document.getElementById('locDist');
     if (dEl) {
         if (!ok) dEl.textContent = '\u2014';
@@ -264,7 +259,6 @@ function locRefresh() {
         else dEl.textContent = Math.round(roadDist) + ' km';
     }
 
-    // Chips 芯片
     var chips = document.getElementById('locChips');
     if (chips) {
         if (!ok) { chips.innerHTML = '<div class="loc-chip">Set both locations / \u8bf7\u5148\u8bbe\u7f6e\u53cc\u65b9\u4f4d\u7f6e</div>'; }
@@ -277,7 +271,6 @@ function locRefresh() {
         }
     }
 
-    // Commute 通勤
     var com = document.getElementById('locCommute'), fill = document.getElementById('locComFill'), val = document.getElementById('locComVal');
     if (com) {
         if (!ok) { com.style.display = 'none'; }
@@ -308,7 +301,7 @@ function locBuildStations(ok, uT, cT) {
     var sh = '';
     for (var i = 0; i < sts.length; i++) { var dm = (seed * (i + 3) * 17) % 1800 + 150; var ds = dm >= 1000 ? (dm / 1000).toFixed(1) + 'km' : dm + 'm'; sh += '<div class="loc-st-item"><div class="loc-st-icon ' + sts[i][0] + '">' + icons[sts[i][0]] + '</div><div class="loc-st-name">' + locE(sts[i][1]) + '</div><div class="loc-st-dist">' + ds + '</div></div>'; }
     list.innerHTML = sh;
-    var dots = document.getElementById('locStDots'); if (dots) { var dh = ''; for (var j = 0; j < 4; j++)dh += '<div class="loc-st-dot" style="left:' + (15 + (seed * (j + 2) * 31) % 70) + '%;top:' + (15 + (seed * (j + 3) * 43) % 70) + '%"></div>'; dots.innerHTML = dh; }
+    var dots = document.getElementById('locStDots'); if (dots) { var dh = ''; for (var j = 0; j < 4; j++) dh += '<div class="loc-st-dot" style="left:' + (15 + (seed * (j + 2) * 31) % 70) + '%;top:' + (15 + (seed * (j + 3) * 43) % 70) + '%"></div>'; dots.innerHTML = dh; }
 }
 
 /* ===== Plans 路线方案 ===== */
@@ -330,7 +323,7 @@ function locBuildPlans(ok, dist, walk, bike, car, sub, hsr, flight) {
 function locPickPlan(el, idx) {
     _locActivePlan = idx;
     var items = el.parentNode.querySelectorAll('.loc-plan');
-    for (var i = 0; i < items.length; i++)items[i].classList.toggle('active', i === idx);
+    for (var i = 0; i < items.length; i++) items[i].classList.toggle('active', i === idx);
     var uT = (document.getElementById('locInputU') || {}).value || '', cT = (document.getElementById('locInputC') || {}).value || '';
     if (uT.trim() && cT.trim()) { var uC = locResolveCoords(uT), cC = locResolveCoords(cT); locUpdateMap(true, uC, cC, locHaversine(uC[0], uC[1], cC[0], cC[1])); }
 }
@@ -372,7 +365,7 @@ function locCoordsToMapPos(uC, cC) {
     return { ux: ux.toFixed(1), uy: uy.toFixed(1), cx: cx.toFixed(1), cy: cy.toFixed(1) };
 }
 
-/* ===== Send to chat 发送至聊天 ===== */
+/* ===== 用户发送位置到聊天 ===== */
 function locSendToChat() {
     var uText = (document.getElementById('locInputU') || {}).value || '';
     var cText = (document.getElementById('locInputC') || {}).value || '';
@@ -384,8 +377,9 @@ function locSendToChat() {
     var flight = sDist > 1000 ? Math.round(sDist / 850 * 60 + 90) : (sDist > 300 ? Math.round(sDist / 700 * 60 + 60) : 0);
     var role = typeof findRole === 'function' ? findRole(_chatCurrentConv) : null;
     if (!role) { if (typeof showToast === 'function') showToast('No active chat'); return; }
-    if (!role.history) role.history = [];
-    role.history.push({
+    // ★★★ 关键修复：用 role.msgs 而不是 role.history ★★★
+    if (!role.msgs) role.msgs = [];
+    role.msgs.push({
         from: 'self', text: '', time: new Date().toLocaleTimeString().slice(0, 5),
         location: true, locUserPlace: uText.trim(), locCharPlace: cText.trim(),
         locDist: rDist, locStraight: sDist, locCar: car, locFlight: flight,
@@ -399,13 +393,20 @@ function locSendToChat() {
     if (typeof saveChatRoles === 'function') saveChatRoles();
     if (typeof _chatCurrentTab !== 'undefined') {
         var body = document.getElementById('chatConvBody');
-        if (body) { var myAv = ''; var p = typeof getActivePersona === 'function' ? getActivePersona() : null; if (p && p.avatar) myAv = p.avatar; var idx = role.history.length - 1; body.insertAdjacentHTML('beforeend', renderLocationBubbleRow(role.history[idx], idx, myAv, role.avatar || '')); body.scrollTop = body.scrollHeight; }
+        if (body) {
+            var myAv = ''; var p = typeof getActivePersona === 'function' ? getActivePersona() : null;
+            if (p && p.avatar) myAv = p.avatar;
+            // ★★★ 关键修复：用 role.msgs ★★★
+            var idx = role.msgs.length - 1;
+            body.insertAdjacentHTML('beforeend', renderLocationBubbleRow(role.msgs[idx], idx, myAv, role.avatar || ''));
+            body.scrollTop = body.scrollHeight;
+        }
     }
     closeLocationPanel();
     if (typeof showToast === 'function') showToast('Location sent / \u4f4d\u7f6e\u5df2\u53d1\u9001');
 }
 
-/* ===== Chat bubble render 聊天气泡渲染 ===== */
+/* ===== 聊天气泡渲染 ===== */
 function renderLocationBubbleRow(m, idx, myAv, roleAv) {
     var isSelf = m.from === 'self';
     var av = isSelf ? myAv : roleAv;
@@ -446,21 +447,13 @@ function renderLocationBubbleRow(m, idx, myAv, roleAv) {
     return h;
 }
 
-/* ===== Utils 工具函数 ===== */
-function locHash(s) { var h = 0; for (var i = 0; i < s.length; i++)h = ((h << 5) - h + s.charCodeAt(i)) | 0; return Math.abs(h); }
-function locScore(d) { if (d <= 3) return 92; if (d <= 8) return 80; if (d <= 20) return 65; if (d <= 50) return 50; if (d <= 150) return 35; if (d <= 500) return 20; if (d <= 2000) return 10; return 5; }
-function locStName(seed, idx) { var pre = ['Central', 'East Lake', 'New Town', 'Sunshine', 'Riverside', 'Park', 'North', 'South Gate', 'West', 'Harbor', 'Green', 'Olympic', 'Tech', 'Culture', 'Station']; var suf = [' Rd', ' Square', ' Center', ' Park', ' Ave', ' Bridge', ' Bay', ' St']; return pre[(seed + idx * 7) % pre.length] + suf[(seed + idx * 3) % suf.length]; }
-function locFmtTime(m) { if (m < 60) return m + 'min'; var h = Math.floor(m / 60), r = m % 60; if (h >= 24) { var d = Math.floor(h / 24); h = h % 24; return d + 'd' + (h > 0 ? ' ' + h + 'h' : ''); } return h + 'h' + (r > 0 ? ' ' + r + 'm' : ''); }
-function locFmtDist(d) { if (d < 1) return Math.round(d * 1000) + 'm'; if (d < 100) return d.toFixed(1) + 'km'; return Math.round(d) + 'km'; }
-function locE(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-
-/* ===== Char sends location 角色主动发送位置 ===== */
+/* ===== 角色主动发送位置（AI触发）===== */
 function locCharSendLocation(charPlace, userPlace) {
     var role = typeof findRole === 'function' ? findRole(_chatCurrentConv) : null;
     if (!role) return;
-    if (!role.history) role.history = [];
+    // ★★★ 关键修复：用 role.msgs 而不是 role.history ★★★
+    if (!role.msgs) role.msgs = [];
     if (!userPlace) {
-        // 尝试从保存的数据中获取用户位置
         var saved = (locLoad()[locRoleId()] || {});
         userPlace = saved.uText || locGetUserName();
     }
@@ -473,9 +466,8 @@ function locCharSendLocation(charPlace, userPlace) {
     var car = Math.round(rDist / (rDist > 300 ? 90 : 35) * 60); if (car < 1) car = 1;
     var flight = sDist > 1000 ? Math.round(sDist / 850 * 60 + 90) : (sDist > 300 ? Math.round(sDist / 700 * 60 + 60) : 0);
 
-    // 注意：char发的位置，from是'other'，但位置字段含义不变
-    // locUserPlace = charPlace (发送者的位置), locCharPlace = userPlace (对方的位置)
-    role.history.push({
+    // ★★★ 关键修复：用 role.msgs ★★★
+    role.msgs.push({
         from: 'other',
         text: '',
         time: new Date().toLocaleTimeString().slice(0, 5),
@@ -496,14 +488,22 @@ function locCharSendLocation(charPlace, userPlace) {
     role.lastTime = new Date().toLocaleTimeString().slice(0, 5);
     if (typeof saveChatRoles === 'function') saveChatRoles();
 
-    // 渲染到聊天界面
     var body = document.getElementById('chatConvBody');
     if (body) {
-        var idx = role.history.length - 1;
+        // ★★★ 关键修复：用 role.msgs ★★★
+        var idx = role.msgs.length - 1;
         var myAv = '';
         var p = typeof getActivePersona === 'function' ? getActivePersona() : null;
         if (p && p.avatar) myAv = p.avatar;
-        body.insertAdjacentHTML('beforeend', renderLocationBubbleRow(role.history[idx], idx, myAv, role.avatar || ''));
+        body.insertAdjacentHTML('beforeend', renderLocationBubbleRow(role.msgs[idx], idx, myAv, role.avatar || ''));
         body.scrollTop = body.scrollHeight;
     }
 }
+
+/* ===== 工具函数 ===== */
+function locHash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return Math.abs(h); }
+function locScore(d) { if (d <= 3) return 92; if (d <= 8) return 80; if (d <= 20) return 65; if (d <= 50) return 50; if (d <= 150) return 35; if (d <= 500) return 20; if (d <= 2000) return 10; return 5; }
+function locStName(seed, idx) { var pre = ['Central', 'East Lake', 'New Town', 'Sunshine', 'Riverside', 'Park', 'North', 'South Gate', 'West', 'Harbor', 'Green', 'Olympic', 'Tech', 'Culture', 'Station']; var suf = [' Rd', ' Square', ' Center', ' Park', ' Ave', ' Bridge', ' Bay', ' St']; return pre[(seed + idx * 7) % pre.length] + suf[(seed + idx * 3) % suf.length]; }
+function locFmtTime(m) { if (m < 60) return m + 'min'; var h = Math.floor(m / 60), r = m % 60; if (h >= 24) { var d = Math.floor(h / 24); h = h % 24; return d + 'd' + (h > 0 ? ' ' + h + 'h' : ''); } return h + 'h' + (r > 0 ? ' ' + r + 'm' : ''); }
+function locFmtDist(d) { if (d < 1) return Math.round(d * 1000) + 'm'; if (d < 100) return d.toFixed(1) + 'km'; return Math.round(d) + 'km'; }
+function locE(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
