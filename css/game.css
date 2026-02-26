@@ -192,27 +192,6 @@
     background: linear-gradient(135deg, #a895be 0%, #c4b5d5 100%);
 }
 
-.game-recent {
-    margin-top: 20px;
-}
-
-.game-recent-title {
-    font-size: 10px;
-    font-weight: 600;
-    color: rgba(120, 100, 112, .35);
-    margin-bottom: 7px;
-    letter-spacing: .7px;
-}
-
-.game-recent-empty {
-    font-size: 10.5px;
-    color: rgba(120, 100, 112, .22);
-    text-align: center;
-    padding: 16px;
-    background: rgba(160, 140, 150, .03);
-    border-radius: 12px;
-}
-
 /* Setup */
 .game-setup {
     flex: 1;
@@ -2303,59 +2282,6 @@
     justify-content: center;
 }
 
-/* 游戏记录列表 */
-.game-recent-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.game-recent-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 9px 11px;
-    background: rgba(255, 255, 255, .55);
-    border-radius: 11px;
-    border: 1px solid rgba(160, 140, 150, .06);
-}
-
-.game-recent-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-top: 3px;
-    flex-shrink: 0;
-}
-
-.game-recent-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.game-recent-name {
-    font-size: 11px;
-    font-weight: 600;
-    color: #5a4a52;
-}
-
-.game-recent-time {
-    font-size: 8.5px;
-    font-weight: 400;
-    color: rgba(120, 100, 112, .3);
-    margin-left: 4px;
-}
-
-.game-recent-detail {
-    font-size: 9px;
-    color: rgba(120, 100, 112, .35);
-    margin-top: 2px;
-    line-height: 1.4;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
 /* ===== 横屏旋转容器 ===== */
 .ls-wrap {
     position: absolute;
@@ -2717,4 +2643,448 @@
 
 .ddz-hand-ls .ddz-card-suit {
     font-size: 6px;
+}
+
+
+/* ==========================================
+   羊了个羊 SHEEP
+   ========================================== */
+
+.game-card.sheep {
+    background: linear-gradient(135deg, #f5e6d0 0%, #ede0d4 100%);
+    border: 1px solid rgba(200, 180, 160, .15);
+}
+
+.game-card.sheep .game-card-icon svg {
+    stroke: #c4a882;
+    fill: none;
+    stroke-width: 1.5;
+}
+
+.game-card.crush {
+    background: linear-gradient(135deg, #e8d5f0 0%, #dcc8e8 100%);
+    border: 1px solid rgba(180, 150, 200, .15);
+}
+
+.game-card.crush .game-card-icon svg {
+    stroke: #b08ec4;
+    fill: none;
+    stroke-width: 1.5;
+}
+
+.game-card.link {
+    background: linear-gradient(135deg, #d0eae0 0%, #c4e0d6 100%);
+    border: 1px solid rgba(140, 190, 170, .15);
+}
+
+.game-card.link .game-card-icon svg {
+    stroke: #7ab89e;
+    fill: none;
+    stroke-width: 1.5;
+}
+
+/* 游戏主体 */
+.sheep-game {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: linear-gradient(180deg, #faf7f4 0%, #f2ede8 100%);
+}
+
+/* 信息栏 */
+.sheep-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    flex-shrink: 0;
+}
+
+.sheep-remaining {
+    font-size: 11px;
+    color: rgba(90, 74, 82, .5);
+    font-weight: 500;
+}
+
+.sheep-remaining span {
+    font-weight: 800;
+    color: #6a5560;
+    font-size: 14px;
+}
+
+.sheep-btns {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.sheep-help-btn {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    color: #8a7580;
+    padding: 5px 10px;
+    border-radius: 14px;
+    background: rgba(160, 140, 150, .08);
+    cursor: pointer;
+    transition: background .2s;
+}
+
+.sheep-help-btn:active {
+    background: rgba(160, 140, 150, .18);
+}
+
+.sheep-help-btn svg {
+    width: 12px;
+    height: 12px;
+    stroke: #8a7580;
+    stroke-width: 2;
+    fill: none;
+}
+
+.sheep-help-used {
+    font-size: 9px;
+    color: rgba(120, 100, 112, .3);
+    padding: 5px 10px;
+}
+
+.sheep-restart-btn {
+    font-size: 10px;
+    color: #8a7580;
+    padding: 5px 10px;
+    border-radius: 14px;
+    background: rgba(160, 140, 150, .08);
+    cursor: pointer;
+}
+
+.sheep-restart-btn:active {
+    background: rgba(160, 140, 150, .18);
+}
+
+/* 牌桌 */
+.sheep-board {
+    flex: 1;
+    position: relative;
+    margin: 0 auto;
+    width: 298px;
+    min-height: 320px;
+    overflow: hidden;
+}
+
+.sheep-tile {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #fffefa;
+    border: 1.5px solid rgba(160, 140, 150, .12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    transition: transform .12s, opacity .15s;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.sheep-tile:active:not(.blocked) {
+    transform: scale(.88);
+}
+
+.sheep-tile.blocked {
+    cursor: default;
+    background: #f0ebe6;
+    border-color: rgba(160, 140, 150, .06);
+}
+
+/* 卡槽 */
+.sheep-slot {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    padding: 10px 16px 28px;
+    flex-shrink: 0;
+    background: linear-gradient(to top, rgba(240, 236, 232, .95), rgba(240, 236, 232, 0));
+}
+
+.sheep-slot-cell {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: rgba(255, 255, 254, .6);
+    border: 1.5px dashed rgba(160, 140, 150, .15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: all .2s;
+}
+
+.sheep-slot-cell.filled {
+    background: #fffefa;
+    border-style: solid;
+    border-color: rgba(160, 140, 150, .12);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .04);
+    animation: sheepSlotIn .25s ease-out;
+}
+
+@keyframes sheepSlotIn {
+    from {
+        transform: scale(.6) translateY(-10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+/* 遮罩弹窗 */
+.sheep-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(250, 247, 248, .85);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: sheepFadeIn .25s ease-out;
+}
+
+@keyframes sheepFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* 角色选择弹窗 */
+.sheep-modal {
+    width: 85%;
+    max-width: 320px;
+    background: #fff;
+    border-radius: 20px;
+    padding: 24px 18px 18px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, .06);
+}
+
+.sheep-modal-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #4a3a42;
+    text-align: center;
+    margin-bottom: 2px;
+}
+
+.sheep-modal-sub {
+    font-size: 10px;
+    color: rgba(120, 100, 112, .35);
+    text-align: center;
+    margin-bottom: 14px;
+}
+
+.sheep-char-list {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.sheep-char-list::-webkit-scrollbar {
+    width: 0;
+}
+
+.sheep-char-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 6px 2px;
+    border-radius: 12px;
+    transition: background .2s;
+}
+
+.sheep-char-item:active {
+    background: rgba(160, 140, 150, .1);
+}
+
+.sheep-char-av {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(160, 140, 150, .06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sheep-char-av img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sheep-char-av svg {
+    width: 20px;
+    height: 20px;
+    stroke: rgba(120, 100, 112, .25);
+    stroke-width: 1.5;
+    fill: none;
+}
+
+.sheep-char-name {
+    font-size: 9px;
+    color: #6a5560;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 56px;
+}
+
+.sheep-modal-cancel {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(120, 100, 112, .4);
+    margin-top: 12px;
+    cursor: pointer;
+    padding: 6px;
+}
+
+/* 帮助消息气泡 */
+.sheep-help-bubble {
+    width: 80%;
+    max-width: 280px;
+    background: #fff;
+    border-radius: 20px;
+    padding: 24px 20px 18px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, .06);
+    text-align: center;
+}
+
+.sheep-help-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin: 0 auto 8px;
+    background: rgba(160, 140, 150, .06);
+}
+
+.sheep-help-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sheep-help-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #4a3a42;
+    margin-bottom: 8px;
+}
+
+.sheep-help-msg {
+    font-size: 14px;
+    color: #6a5560;
+    line-height: 1.6;
+    margin-bottom: 8px;
+    font-style: italic;
+}
+
+.sheep-help-effect {
+    font-size: 9px;
+    color: rgba(120, 100, 112, .35);
+    margin-bottom: 12px;
+}
+
+.sheep-help-close {
+    display: inline-block;
+    font-size: 11px;
+    color: #8a7580;
+    padding: 6px 18px;
+    border-radius: 14px;
+    background: rgba(160, 140, 150, .08);
+    cursor: pointer;
+}
+
+.sheep-help-close:active {
+    background: rgba(160, 140, 150, .18);
+}
+
+/* 结算弹窗 */
+.sheep-result {
+    width: 80%;
+    max-width: 280px;
+    background: #fff;
+    border-radius: 22px;
+    padding: 28px 20px 22px;
+    box-shadow: 0 4px 28px rgba(0, 0, 0, .06);
+    text-align: center;
+}
+
+.sheep-result-icon {
+    font-size: 42px;
+    margin-bottom: 6px;
+}
+
+.sheep-result-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #4a3a42;
+    margin-bottom: 4px;
+}
+
+.sheep-result-sub {
+    font-size: 11px;
+    color: rgba(120, 100, 112, .4);
+    margin-bottom: 18px;
+}
+
+.sheep-result-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sheep-result-btn {
+    padding: 10px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: background .2s;
+}
+
+.sheep-result-btn.primary {
+    background: rgba(196, 168, 130, .15);
+    color: #8a7050;
+    border: 1px solid rgba(196, 168, 130, .2);
+}
+
+.sheep-result-btn.primary:active {
+    background: rgba(196, 168, 130, .3);
+}
+
+.sheep-result-btn.secondary {
+    background: rgba(160, 140, 150, .06);
+    color: #8a7580;
+    border: 1px solid rgba(160, 140, 150, .08);
+}
+
+.sheep-result-btn.secondary:active {
+    background: rgba(160, 140, 150, .15);
 }

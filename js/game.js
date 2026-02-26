@@ -2,7 +2,6 @@
    game.js — 游戏大厅 + UNO + 麻将(四地区)
    ============================================ */
 var _gameView = 'lobby', _gameType = '', _gameSelectedPersona = '', _gameSelectedChars = [];
-var _gameRecords = JSON.parse(localStorage.getItem('_gameRecords') || '[]');
 var _unoState = null, _mjState = null;
 var _mjRegion = 'northeast', _mjRounds = 4;
 
@@ -14,7 +13,7 @@ function openGameApp() {
 function closeGameApp() {
     var el = document.getElementById('gameOverlay');
     if (el) el.classList.remove('show');
-    _unoState = null; _mjState = null; _ddzState = null;
+    _unoState = null; _mjState = null; _ddzState = null; _sheepState = null;
 }
 
 /* ===== 大厅 ===== */
@@ -25,41 +24,17 @@ function gameBuildLobby() {
     h += '<div class="game-card mahjong" onclick="gamePickType(\'mahjong\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="9" rx="1.5"/><rect x="3" y="15" width="7" height="6" rx="1.5"/><rect x="14" y="15" width="7" height="6" rx="1.5"/></svg></div><div class="game-card-name">Mahjong 麻将</div><div class="game-card-desc">四地区玩法 Regional Rules</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>4人</div></div>';
     h += '<div class="game-card landlord" onclick="gamePickType(\'landlord\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div><div class="game-card-name">Landlord 斗地主</div><div class="game-card-desc">经典扑克 Classic Poker</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>3人</div></div>';
     h += '<div class="game-card guess" onclick="gamePickType(\'guess\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg></div><div class="game-card-name">Charades 你说我猜</div><div class="game-card-desc">开发中 Coming Soon</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>3-10人</div></div>';
-    h += '</div><div class="game-recent"><div class="game-recent-title">Recent 近期记录</div>';
-    // 渲染记录
-    if (!_gameRecords || !_gameRecords.length) {
-        h += '<div class="game-recent-empty">暂无游戏记录</div>';
-    } else {
-        h += '<div class="game-recent-list">';
-        var typeNames = { uno: 'UNO', mahjong: '麻将', landlord: '斗地主' };
-        var typeColors = { uno: '#c9908e', mahjong: '#8fb5a0', landlord: '#8fa8c5' };
-        for (var ri = 0; ri < Math.min(_gameRecords.length, 10); ri++) {
-            var rec = _gameRecords[ri];
-            var ago = _gameTimeAgo(rec.time);
-            h += '<div class="game-recent-item">';
-            h += '<div class="game-recent-dot" style="background:' + (typeColors[rec.type] || '#aaa') + '"></div>';
-            h += '<div class="game-recent-info">';
-            h += '<div class="game-recent-name">' + _gEsc(typeNames[rec.type] || rec.type) + ' <span class="game-recent-time">' + ago + '</span></div>';
-            h += '<div class="game-recent-detail">🏆 ' + _gEsc(rec.winner || '???') + ' &nbsp;·&nbsp; ' + _gEsc(rec.players.join(', '));
-            if (rec.scores) h += ' &nbsp;·&nbsp; ' + rec.scores;
-            h += '</div></div></div>';
-        }
-        h += '</div>';
-    }
+    h += '<div class="game-card sheep" onclick="gamePickType(\'sheep\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><path d="M12 2C9 2 7 4 7 6c-2 0-4 2-4 4s2 4 4 4h1v4a2 2 0 002 2h4a2 2 0 002-2v-4h1c2 0 4-2 4-4s-2-4-4-4c0-2-2-4-5-4z"/></svg></div><div class="game-card-name">Sheep 羊了个羊</div><div class="game-card-desc">三消闯关 Tile Match</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>单人</div></div>';
+    h += '<div class="game-card crush" onclick="gamePickType(\'crush\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div><div class="game-card-name">Crush 消消乐</div><div class="game-card-desc">开发中 Coming Soon</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>单人</div></div>';
+    h += '<div class="game-card link" onclick="gamePickType(\'link\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></div><div class="game-card-name">Link 连连看</div><div class="game-card-desc">开发中 Coming Soon</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>单人</div></div>';
+
     h += '</div></div>';
+
     return h;
 }
 
-function _gameTimeAgo(ts) {
-    var d = Date.now() - ts, m = Math.floor(d / 60000);
-    if (m < 1) return '刚刚';
-    if (m < 60) return m + '分钟前';
-    var hr = Math.floor(m / 60);
-    if (hr < 24) return hr + '小时前';
-    return Math.floor(hr / 24) + '天前';
-}
-
 function gamePickType(type) {
+    if (type === 'sheep') { _gameType = 'sheep'; _gameView = 'sheep'; sheepStart(); return; }
     if (type !== 'uno' && type !== 'mahjong' && type !== 'landlord') { if (typeof showToast === 'function') showToast('开发中，敬请期待'); return; }
     _gameType = type; _gameSelectedPersona = ''; _gameSelectedChars = []; _gameView = 'setup';
     var el = document.getElementById('gameOverlay'); if (el) el.innerHTML = _gameBuildSetup();
@@ -174,20 +149,6 @@ function _gameToggleChar(id) {
     _gameRefreshSetup();
 }
 function gameStart() { if (_gameType === 'uno') unoStart(); if (_gameType === 'mahjong') mjStart(); if (_gameType === 'landlord') ddzStart(); }
-
-function _gameSaveRecord(type, players, winnerName, scores) {
-    var names = [];
-    for (var i = 0; i < players.length; i++) names.push(players[i].name);
-    _gameRecords.unshift({
-        type: type,
-        players: names,
-        winner: winnerName,
-        scores: scores,
-        time: Date.now()
-    });
-    if (_gameRecords.length > 20) _gameRecords = _gameRecords.slice(0, 20);
-    try { localStorage.setItem('_gameRecords', JSON.stringify(_gameRecords)); } catch (e) { }
-}
 
 /* ==========================================
    麻将引擎 MAHJONG ENGINE
@@ -430,7 +391,6 @@ function _mjDoHu(winnerIdx, huTile, fromIdx) {
     if (s.roundNum >= s.totalRounds) {
         s.phase = 'result'; s.gameOver = true;
         var scStr = ''; for (var si = 0; si < 4; si++) scStr += s.players[si].name + ':' + s.players[si].score + ' ';
-        _gameSaveRecord('mahjong', s.players, pl.name, scStr.trim());
     }
     else { s.roundNum++; setTimeout(function () { _mjNextRound(); }, 2000); }
     _mjRender();
@@ -440,7 +400,6 @@ function _mjDraw() {
     if (s.roundNum >= s.totalRounds) {
         s.phase = 'result'; s.gameOver = true;
         var scStr = ''; for (var si = 0; si < 4; si++) scStr += s.players[si].name + ':' + s.players[si].score + ' ';
-        _gameSaveRecord('mahjong', s.players, '流局', scStr.trim());
     }
     else { s.roundNum++; setTimeout(function () { _mjNextRound(); }, 2000); }
     _mjRender();
@@ -1161,7 +1120,6 @@ function _ddzGameOver(winnerIdx) {
         _ddzLog('农民赢了！' + (isSpring ? '(反春天×2)' : '') + ' 地主 -' + (baseScore * 2) + '分');
     }
     var scStr = ''; for (var si = 0; si < 3; si++) scStr += s.players[si].name + ':' + s.players[si].score + ' ';
-    _gameSaveRecord('landlord', s.players, winnerIsLandlord ? s.players[landlord].name + '(地主)' : '农民', scStr.trim());
     s.phase = 'result';
     s.gameOver = true;
     _ddzRender();
@@ -1339,3 +1297,375 @@ function _ddzHint() {
 
     _ddzRender();
 }
+
+
+/* ==========================================
+   羊了个羊 SHEEP ENGINE
+   ========================================== */
+var _sheepState = null;
+
+function sheepStart() {
+    var el = document.getElementById('gameOverlay');
+    if (!el) return;
+    _sheepState = _sheepInitLevel();
+    _sheepRender();
+}
+
+function _sheepInitLevel() {
+    // 12种图案，每种9张=108张，3张消除
+    var ICONS = ['🍎', '🍊', '🍋', '🍇', '🍓', '🌸', '🍰', '☕', '🎀', '💎', '🌙', '⭐'];
+    var pool = [];
+    for (var i = 0; i < ICONS.length; i++) {
+        for (var j = 0; j < 9; j++) pool.push(ICONS[i]);
+    }
+    // 洗牌
+    for (var k = pool.length - 1; k > 0; k--) {
+        var r = Math.floor(Math.random() * (k + 1));
+        var tmp = pool[k]; pool[k] = pool[r]; pool[r] = tmp;
+    }
+    // 分配成4层，每层排列在网格上，有重叠
+    var layers = [];
+    var idx = 0;
+    // 第1层(底): 6x6=36张
+    var L0 = [];
+    for (var r0 = 0; r0 < 6; r0++) for (var c0 = 0; c0 < 6; c0++) {
+        if (idx < pool.length) { L0.push({ icon: pool[idx++], row: r0, col: c0, layer: 0, id: idx }); }
+    }
+    layers.push(L0);
+    // 第2层: 5x5=25张 偏移0.5
+    var L1 = [];
+    for (var r1 = 0; r1 < 5; r1++) for (var c1 = 0; c1 < 5; c1++) {
+        if (idx < pool.length) { L1.push({ icon: pool[idx++], row: r1 + 0.5, col: c1 + 0.5, layer: 1, id: idx }); }
+    }
+    layers.push(L1);
+    // 第3层: 4x4=16张 偏移1
+    var L2 = [];
+    for (var r2 = 0; r2 < 4; r2++) for (var c2 = 0; c2 < 4; c2++) {
+        if (idx < pool.length) { L2.push({ icon: pool[idx++], row: r2 + 1, col: c2 + 1, layer: 2, id: idx }); }
+    }
+    layers.push(L2);
+    // 第4层(顶): 把剩余牌散布在中间区域
+    var L3 = [];
+    var remaining = pool.length - idx;
+    var positions3 = [];
+    for (var r3 = 0; r3 < 5; r3++) for (var c3 = 0; c3 < 6; c3++) positions3.push({ row: r3 + 0.5, col: c3 });
+    // 洗positions3
+    for (var p3 = positions3.length - 1; p3 > 0; p3--) {
+        var rr = Math.floor(Math.random() * (p3 + 1));
+        var tt = positions3[p3]; positions3[p3] = positions3[rr]; positions3[rr] = tt;
+    }
+    for (var q = 0; q < remaining && q < positions3.length; q++) {
+        if (idx < pool.length) { L3.push({ icon: pool[idx++], row: positions3[q].row, col: positions3[q].col, layer: 3, id: idx }); }
+    }
+    layers.push(L3);
+
+    // 合并所有牌
+    var allTiles = [];
+    for (var li = 0; li < layers.length; li++) {
+        for (var ti = 0; ti < layers[li].length; ti++) {
+            allTiles.push(layers[li][ti]);
+        }
+    }
+
+    return {
+        tiles: allTiles,
+        slot: [],           // 卡槽，最多7张
+        maxSlot: 7,
+        helpUsed: false,     // 是否已用过帮助
+        helpChar: null,      // 帮助的角色
+        helpMsg: '',         // 角色说的话
+        showHelp: false,     // 是否显示帮助弹窗
+        showCharPick: false, // 是否显示角色选择
+        gameOver: false,
+        win: false
+    };
+}
+
+function _sheepIsTileBlocked(tile, allTiles) {
+    // 被更高层的牌遮挡 = 有重叠区域的更高层牌
+    for (var i = 0; i < allTiles.length; i++) {
+        var t = allTiles[i];
+        if (t.id === tile.id) continue;
+        if (t.layer <= tile.layer) continue;
+        // 检查是否有重叠(每张牌占1x1的格子)
+        if (Math.abs(t.row - tile.row) < 1 && Math.abs(t.col - tile.col) < 1) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function _sheepClickTile(tileId) {
+    if (!_sheepState || _sheepState.gameOver) return;
+    var s = _sheepState;
+    // 找到这张牌
+    var tileIdx = -1;
+    for (var i = 0; i < s.tiles.length; i++) {
+        if (s.tiles[i].id === tileId) { tileIdx = i; break; }
+    }
+    if (tileIdx === -1) return;
+    var tile = s.tiles[tileIdx];
+    // 检查是否被遮挡
+    if (_sheepIsTileBlocked(tile, s.tiles)) return;
+    // 从场上移除
+    s.tiles.splice(tileIdx, 1);
+    // 加入卡槽（插入到同icon的旁边）
+    var insertPos = s.slot.length;
+    for (var j = 0; j < s.slot.length; j++) {
+        if (s.slot[j].icon === tile.icon) {
+            // 找到同类，插到后面
+            insertPos = j + 1;
+            while (insertPos < s.slot.length && s.slot[insertPos].icon === tile.icon) insertPos++;
+            break;
+        }
+    }
+    s.slot.splice(insertPos, 0, tile);
+    // 检查消除：找3张相同的
+    _sheepCheckEliminate();
+    // 检查胜负
+    if (s.tiles.length === 0 && s.slot.length === 0) {
+        s.gameOver = true; s.win = true;
+    } else if (s.slot.length >= s.maxSlot) {
+        // 再检查一次是否有可消除的
+        _sheepCheckEliminate();
+        if (s.slot.length >= s.maxSlot) {
+            s.gameOver = true; s.win = false;
+        }
+    }
+    _sheepRender();
+}
+
+function _sheepCheckEliminate() {
+    var s = _sheepState;
+    var changed = true;
+    while (changed) {
+        changed = false;
+        var counts = {};
+        for (var i = 0; i < s.slot.length; i++) {
+            var icon = s.slot[i].icon;
+            if (!counts[icon]) counts[icon] = [];
+            counts[icon].push(i);
+        }
+        for (var key in counts) {
+            if (counts[key].length >= 3) {
+                // 移除前3个
+                var toRemove = counts[key].slice(0, 3);
+                toRemove.sort(function (a, b) { return b - a; });
+                for (var r = 0; r < toRemove.length; r++) {
+                    s.slot.splice(toRemove[r], 1);
+                }
+                changed = true;
+                break;
+            }
+        }
+    }
+}
+
+function _sheepUseHelp() {
+    if (!_sheepState || _sheepState.helpUsed) return;
+    _sheepState.showCharPick = true;
+    _sheepRender();
+}
+
+function _sheepPickHelpChar(charId) {
+    if (!_sheepState) return;
+    var s = _sheepState;
+    var roles = (typeof _chatRoles !== 'undefined' && _chatRoles) ? _chatRoles : [];
+    var char = null;
+    for (var i = 0; i < roles.length; i++) {
+        if (roles[i].id === charId) { char = roles[i]; break; }
+    }
+    if (!char) return;
+    s.helpUsed = true;
+    s.helpChar = char;
+    s.showCharPick = false;
+
+    // 根据人设随机生成一句话
+    var encouraging = [
+        '加油哦，我相信你可以的~',
+        '别着急，慢慢来！',
+        '你比你想的厉害多了！',
+        '坚持住，胜利就在眼前！',
+        '我看好你，冲！',
+        '深呼吸，你能行的~',
+        '这关不难的，放轻松~'
+    ];
+    var sarcastic = [
+        '就这？你认真的吗...',
+        '这都过不了也太菜了吧',
+        '我要是你就不玩了',
+        '哈哈哈你是故意输的吧',
+        '需要我帮你按吗？',
+        '算了，帮帮你这个笨蛋',
+        '你的手是用来干嘛的？'
+    ];
+    var calm = [
+        '先看看有没有三张一样的',
+        '试试从顶层开始消',
+        '注意卡槽别满了',
+        '同一种图案尽量一起拿',
+        '别乱点，想好再拿',
+        '优先消掉层数多的那堆',
+        '留意被压住的牌'
+    ];
+    // 混合所有语句，随机选
+    var allMsgs = encouraging.concat(sarcastic).concat(calm);
+    var msg = allMsgs[Math.floor(Math.random() * allMsgs.length)];
+
+    // 如果角色有detail/description，加个性化前缀
+    var name = char.name || '???';
+    s.helpMsg = msg;
+    s.showHelp = true;
+
+    // 帮助效果：移除卡槽中最左边的一张牌（放回场上顶层随机位置）
+    if (s.slot.length > 0) {
+        var removed = s.slot.shift();
+        removed.layer = 4;
+        removed.row = 1 + Math.random() * 4;
+        removed.col = Math.random() * 5;
+        removed.id = Date.now();
+        s.tiles.push(removed);
+    }
+
+    _sheepRender();
+}
+
+function _sheepCloseHelp() {
+    if (!_sheepState) return;
+    _sheepState.showHelp = false;
+    _sheepRender();
+}
+
+function _sheepRestart() {
+    _sheepState = _sheepInitLevel();
+    _sheepRender();
+}
+
+function _sheepBackToLobby() {
+    _sheepState = null;
+    _gameView = 'lobby';
+    var el = document.getElementById('gameOverlay');
+    if (el) el.innerHTML = gameBuildLobby();
+}
+
+function _sheepRender() {
+    var el = document.getElementById('gameOverlay');
+    if (!el || !_sheepState) return;
+    var s = _sheepState;
+    var h = '';
+    // header
+    h += '<div class="game-header"><div class="game-back" onclick="_sheepBackToLobby()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="game-header-title">SHEEP 羊了个羊</div><div class="game-header-spacer"></div></div>';
+
+    h += '<div class="sheep-game">';
+
+    // 顶部信息栏
+    h += '<div class="sheep-info">';
+    h += '<div class="sheep-remaining">剩余 <span>' + s.tiles.length + '</span> 张</div>';
+    h += '<div class="sheep-btns">';
+    if (!s.helpUsed && !s.gameOver) {
+        h += '<div class="sheep-help-btn" onclick="_sheepUseHelp()"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>求助角色</div>';
+    } else if (s.helpUsed) {
+        h += '<div class="sheep-help-used">已求助 ✓</div>';
+    }
+    h += '<div class="sheep-restart-btn" onclick="_sheepRestart()">重来</div>';
+    h += '</div></div>';
+
+    // 牌桌区
+    h += '<div class="sheep-board" id="sheepBoard">';
+    // 计算格子大小 — 6列，适配宽度
+    // 排序：先画底层再画顶层
+    var sorted = s.tiles.slice().sort(function (a, b) {
+        if (a.layer !== b.layer) return a.layer - b.layer;
+        if (a.row !== b.row) return a.row - b.row;
+        return a.col - b.col;
+    });
+    for (var i = 0; i < sorted.length; i++) {
+        var t = sorted[i];
+        var blocked = _sheepIsTileBlocked(t, s.tiles);
+        var topPx = t.row * 46 + 4;
+        var leftPx = t.col * 48 + 4;
+        var zIdx = t.layer * 100 + Math.floor(t.row * 10) + Math.floor(t.col);
+        var shadow = t.layer === 0 ? 'none' : '0 ' + (t.layer * 1) + 'px ' + (t.layer * 3) + 'px rgba(0,0,0,.08)';
+        var brightness = blocked ? '0.7' : '1';
+        h += '<div class="sheep-tile' + (blocked ? ' blocked' : '') + '" ';
+        h += 'style="top:' + topPx + 'px;left:' + leftPx + 'px;z-index:' + zIdx + ';box-shadow:' + shadow + ';filter:brightness(' + brightness + ')" ';
+        if (!blocked) h += 'onclick="_sheepClickTile(' + t.id + ')" ';
+        h += '>' + t.icon + '</div>';
+    }
+    h += '</div>';
+
+    // 卡槽
+    h += '<div class="sheep-slot">';
+    for (var j = 0; j < s.maxSlot; j++) {
+        if (j < s.slot.length) {
+            var sc = s.slot[j];
+            h += '<div class="sheep-slot-cell filled">' + sc.icon + '</div>';
+        } else {
+            h += '<div class="sheep-slot-cell empty"></div>';
+        }
+    }
+    h += '</div>';
+
+    h += '</div>'; // /sheep-game
+
+    // 角色选择弹窗
+    if (s.showCharPick) {
+        h += '<div class="sheep-overlay">';
+        h += '<div class="sheep-modal">';
+        h += '<div class="sheep-modal-title">选择求助角色</div>';
+        h += '<div class="sheep-modal-sub">选一个角色帮你~每局只能求助一次</div>';
+        h += '<div class="sheep-char-list">';
+        var roles = (typeof _chatRoles !== 'undefined' && _chatRoles) ? _chatRoles : [];
+        if (!roles.length) {
+            h += '<div style="font-size:11px;color:rgba(120,100,112,.35);padding:16px;text-align:center">暂无角色<br>请先在聊天App中创建</div>';
+        }
+        for (var ci = 0; ci < roles.length; ci++) {
+            var cr = roles[ci];
+            h += '<div class="sheep-char-item" onclick="_sheepPickHelpChar(\'' + _gEsc(cr.id) + '\')">';
+            h += '<div class="sheep-char-av">';
+            if (cr.avatar) h += '<img src="' + _gEsc(cr.avatar) + '">';
+            else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+            h += '</div><div class="sheep-char-name">' + _gEsc(cr.name || '???') + '</div></div>';
+        }
+        h += '</div>';
+        h += '<div class="sheep-modal-cancel" onclick="_sheepState.showCharPick=false;_sheepRender()">取消</div>';
+        h += '</div></div>';
+    }
+
+    // 帮助消息弹窗
+    if (s.showHelp && s.helpChar) {
+        h += '<div class="sheep-overlay" onclick="_sheepCloseHelp()">';
+        h += '<div class="sheep-help-bubble" onclick="event.stopPropagation()">';
+        h += '<div class="sheep-help-avatar">';
+        if (s.helpChar.avatar) h += '<img src="' + _gEsc(s.helpChar.avatar) + '">';
+        h += '</div>';
+        h += '<div class="sheep-help-name">' + _gEsc(s.helpChar.name || '???') + '</div>';
+        h += '<div class="sheep-help-msg">"' + _gEsc(s.helpMsg) + '"</div>';
+        h += '<div class="sheep-help-effect">已将卡槽最左边的牌放回场上~</div>';
+        h += '<div class="sheep-help-close" onclick="_sheepCloseHelp()">知道了</div>';
+        h += '</div></div>';
+    }
+
+    // 胜负弹窗
+    if (s.gameOver) {
+        h += '<div class="sheep-overlay">';
+        h += '<div class="sheep-result">';
+        if (s.win) {
+            h += '<div class="sheep-result-icon">🎉</div>';
+            h += '<div class="sheep-result-title">通关成功！</div>';
+            h += '<div class="sheep-result-sub">你真厉害~所有牌都消完了</div>';
+        } else {
+            h += '<div class="sheep-result-icon">😢</div>';
+            h += '<div class="sheep-result-title">挑战失败</div>';
+            h += '<div class="sheep-result-sub">卡槽满了...再试一次吧</div>';
+        }
+        h += '<div class="sheep-result-btns">';
+        h += '<div class="sheep-result-btn primary" onclick="_sheepRestart()">再来一局</div>';
+        h += '<div class="sheep-result-btn secondary" onclick="_sheepBackToLobby()">返回大厅</div>';
+        h += '</div></div></div>';
+    }
+
+    el.innerHTML = h;
+}
+
+// 事件委托已在上方统一处理，sheep使用onclick直接绑定
