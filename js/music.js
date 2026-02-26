@@ -19,26 +19,14 @@ var _muParsedSongs = [];
 var _muPickDaily = false;
 
 /* ===== 一起听 状态 ===== */
-var _muListenData = JSON.parse(localStorage.getItem('_muListenData') || 'null') || {
-    charName: '',
-    charAvatar: '',
-    userListenAvatar: '',
-    likes: {},
-    comments: {}
-};
-var _muListenFeed = [];
-var _muListenCommentTarget = '';
-var _muListenCommentText = '';
-var _muListenCharTyping = false;
-var _muListenEditModal = '';
-
-// Char昵称候选池（从人设风格随机）
-var _muCharNamePool = [
-    '小星星 ✦', '月见 つきみ', 'Lumi', '阿绵', 'Rin りん',
-    '暮雨', 'Ciel', '柚子', 'Nora', '鹿鸣',
-    '樱落', 'Aria', '浅川', 'Mika', '落雪',
-    '千织', 'Yuki', '琥珀', 'Sora', '晴空'
-];
+var _muLtCharId = '';
+var _muLtMessages = [];
+var _muLtFeed = [];
+var _muLtShowPicker = false;
+var _muLtCommentTarget = '';
+var _muLtCommentText = '';
+var _muLtComments = JSON.parse(localStorage.getItem('_muLtComments') || '{}');
+var _muLtLikes = JSON.parse(localStorage.getItem('_muLtLikes') || '{}');
 
 var _muSongs = JSON.parse(localStorage.getItem('_muSongs') || '[]');
 var _muPlaylists = JSON.parse(localStorage.getItem('_muPlaylists') || '[]');
@@ -73,7 +61,8 @@ function _muSave() {
         localStorage.setItem('_muPlaylists', JSON.stringify(plClean));
         localStorage.setItem('_muProfile', JSON.stringify(_muProfile));
         localStorage.setItem('_muDailyList', JSON.stringify(_muDailyList));
-        localStorage.setItem('_muListenData', JSON.stringify(_muListenData));
+        localStorage.setItem('_muLtComments', JSON.stringify(_muLtComments));
+        localStorage.setItem('_muLtLikes', JSON.stringify(_muLtLikes));
     } catch (e) { console.warn('Save error', e); }
 }
 
@@ -219,472 +208,444 @@ function _muGetFilteredSongs() {
 }
 
 /* ============================================
-   ★★★ 一起听 Listen Together — INS风
+   一起听 Listen Together v4 — 最终版
    ============================================ */
+function _muGetChatRoles() {
+    try { return JSON.parse(localStorage.getItem('ds_chat_roles') || '[]'); }
+    catch (e) { return []; }
+}
+function _muFindChatRole(id) {
+    var roles = _muGetChatRoles();
+    for (var i = 0; i < roles.length; i++) if (roles[i].id === id) return roles[i];
+    return null;
+}
+
 function _muRenderListen() {
-    // 初始化char昵称
-    if (!_muListenData.charName) {
-        _muListenData.charName = _muCharNamePool[Math.floor(Math.random() * _muCharNamePool.length)];
-        _muSave();
-    }
-    // 生成feed（如果为空则刷新）
-    if (!_muListenFeed.length) _muRefreshListenFeed();
+    var roles = _muGetChatRoles();
+    var charRole = _muLtCharId ? _muFindChatRole(_muLtCharId) : null;
+    if (!_muLtFeed.length) _muLtRefreshFeed();
 
     var h = '<div class="mu-lt">';
 
-    // ★ 悬浮式顶栏
-    h += '<div class="mu-lt-topbar">';
-    h += '<div class="mu-lt-topbar-title">♪ 一起听</div>';
-    h += '<div class="mu-lt-topbar-sub">Listen Together</div>';
-    h += '</div>';
+    /* ---- 顶栏 ---- */
+    h += '<div class="mu-lt-topbar"><div class="mu-lt-topbar-bg"></div>';
+    h += '<div class="mu-lt-topbar-inner">';
+    h += '<div class="mu-lt-topbar-t">一起听</div>';
+    h += '<div class="mu-lt-topbar-s">Listen Together</div>';
+    h += '</div></div>';
 
-    // ★ 双头像 + 耳机线
-    h += '<div class="mu-lt-pair">';
-    // 左边 user
+    /* ---- 双头像 + 耳机线（白色底） ---- */
+    h += '<div class="mu-lt-pair-wrap"><div class="mu-lt-pair">';
+
+    // 左 user
     h += '<div class="mu-lt-person">';
-    h += '<div class="mu-lt-avatar user" onclick="_muPickListenAvatar(\'user\')">';
-    if (_muListenData.userListenAvatar) h += '<img src="' + _muEsc(_muListenData.userListenAvatar) + '">';
-    else if (_muProfile.avatar) h += '<img src="' + _muEsc(_muProfile.avatar) + '">';
+    h += '<div class="mu-lt-hp-tag">9 9</div>';
+    h += '<div class="mu-lt-av-ring"><div class="mu-lt-av">';
+    if (_muProfile.avatar) h += '<img src="' + _muEsc(_muProfile.avatar) + '">';
     else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-    h += '</div>';
-    h += '<div class="mu-lt-name">' + _muEsc(_muProfile.name || 'Me') + '</div>';
+    h += '</div></div>';
+    h += '<div class="mu-lt-pname">' + _muEsc(_muProfile.name || '未设置昵称') + '</div>';
     h += '</div>';
 
-    // 中间耳机线 SVG
+    // 中间耳机线
     h += '<div class="mu-lt-cable">';
-    h += '<svg viewBox="0 0 120 60" class="mu-lt-cable-svg">';
+    h += '<svg viewBox="0 0 160 60" class="mu-lt-wire-svg">';
     // 左耳机
-    h += '<circle cx="14" cy="22" r="8" fill="none" stroke="#d4a0b0" stroke-width="2"/>';
-    h += '<rect x="8" y="12" width="12" height="6" rx="3" fill="#d4a0b0"/>';
-    h += '<path d="M14 14 C14 4, 60 0, 60 10" stroke="#d4a0b0" stroke-width="2" fill="none" stroke-linecap="round"/>';
+    h += '<path d="M18 28 a8 8 0 1 1 0 -0.01" fill="none" stroke="#d5d5d5" stroke-width="1.8"/>';
+    h += '<rect x="12" y="14" width="12" height="7" rx="3.5" fill="#d5d5d5"/>';
+    // 左线
+    h += '<path d="M18 14 C18 0, 80 -4, 80 10" stroke="#d5d5d5" stroke-width="1.5" fill="none" stroke-linecap="round"/>';
     // 右耳机
-    h += '<circle cx="106" cy="22" r="8" fill="none" stroke="#b0c4d4" stroke-width="2"/>';
-    h += '<rect x="100" y="12" width="12" height="6" rx="3" fill="#b0c4d4"/>';
-    h += '<path d="M106 14 C106 4, 60 0, 60 10" stroke="#b0c4d4" stroke-width="2" fill="none" stroke-linecap="round"/>';
-    // 中间节点
-    h += '<circle cx="60" cy="10" r="3" fill="#e8d0d8"/>';
+    h += '<path d="M142 28 a8 8 0 1 1 0 -0.01" fill="none" stroke="#d5d5d5" stroke-width="1.8"/>';
+    h += '<rect x="136" y="14" width="12" height="7" rx="3.5" fill="#d5d5d5"/>';
+    // 右线
+    h += '<path d="M142 14 C142 0, 80 -4, 80 10" stroke="#d5d5d5" stroke-width="1.5" fill="none" stroke-linecap="round"/>';
     h += '</svg>';
     if (_muCurrentSong && _muPlaying) {
-        h += '<div class="mu-lt-now-playing">♫ ' + _muEsc(_muCurrentSong.name) + '</div>';
+        h += '<div class="mu-lt-cable-txt playing">选首歌, 一起听吧~</div>';
     } else {
-        h += '<div class="mu-lt-now-playing idle">选首歌一起听吧~</div>';
+        h += '<div class="mu-lt-cable-txt">选首歌, 一起听吧~</div>';
     }
     h += '</div>';
 
-    // 右边 char
-    h += '<div class="mu-lt-person">';
-    h += '<div class="mu-lt-avatar char" onclick="_muPickListenAvatar(\'char\')">';
-    if (_muListenData.charAvatar) h += '<img src="' + _muEsc(_muListenData.charAvatar) + '">';
-    else h += '<span class="mu-lt-avatar-emoji">🎧</span>';
-    h += '</div>';
-    h += '<div class="mu-lt-name" onclick="_muEditCharName()">' + _muEsc(_muListenData.charName) + ' <span style="font-size:8px;opacity:.4">✎</span></div>';
-    h += '</div>';
-    h += '</div>';
-
-    // ★ 分割线 + 刷新
-    h += '<div class="mu-lt-feed-header">';
-    h += '<div class="mu-lt-feed-title">' + _muEsc(_muListenData.charName) + ' 的分享</div>';
-    h += '<div class="mu-lt-refresh-btn" onclick="_muRefreshListenFeed();_muRender()">';
-    h += '<svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>';
-    h += '换一批</div>';
+    // 右 char
+    h += '<div class="mu-lt-person" onclick="_muLtShowPicker=true;_muRender()">';
+    h += '<div class="mu-lt-hp-tag">9 9</div>';
+    h += '<div class="mu-lt-av-ring"><div class="mu-lt-av">';
+    if (charRole && charRole.avatar) h += '<img src="' + _muEsc(charRole.avatar) + '">';
+    else h += '<span class="mu-lt-av-plus">+</span>';
+    h += '</div></div>';
+    h += '<div class="mu-lt-pname">' + (charRole ? _muEsc(charRole.nickname || charRole.name) : '<span style="color:#ccc">选择角色</span>') + '</div>';
     h += '</div>';
 
-    // ★ INS风 Feed 卡片
-    h += '<div class="mu-lt-feed">';
-    if (!_muListenFeed.length) {
-        h += '<div class="mu-lt-feed-empty">还没有歌曲~<br>先去「发现」导入一些吧</div>';
-    } else {
-        for (var fi = 0; fi < _muListenFeed.length; fi++) {
-            h += _muRenderFeedCard(fi);
+    h += '</div></div>';
+
+    /* ---- 当前播放卡片 ---- */
+    if (_muCurrentSong) {
+        var cur = 0, dur = 0, pct = 0;
+        if (_muPlayer) { cur = _muPlayer.currentTime || 0; dur = _muPlayer.duration || 0; if (dur > 0) pct = cur / dur * 100; }
+        h += '<div class="mu-lt-now">';
+        h += '<div class="mu-lt-now-name">' + _muEsc(_muCurrentSong.name) + '</div>';
+        h += '<div class="mu-lt-now-artist">' + _muEsc(_muCurrentSong.artist || '未知') + '</div>';
+        if (_muPlaying) h += '<div class="mu-lt-now-wave"><span></span><span></span><span></span><span></span></div>';
+        h += '<div class="mu-lt-now-prog">';
+        h += '<div class="mu-lt-now-t">' + _muFmtTime(cur) + '</div>';
+        h += '<div class="mu-lt-now-bar"><div class="mu-lt-now-fill" style="width:' + pct + '%"></div></div>';
+        h += '<div class="mu-lt-now-t">-' + _muFmtTime(Math.max(0, dur - cur)) + '</div>';
+        h += '</div>';
+        h += '<div class="mu-lt-now-btns">';
+        h += '<div class="mu-lt-btn" onclick="_muPrev()"><svg viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg></div>';
+        h += '<div class="mu-lt-btn big" onclick="_muTogglePlay()"><svg viewBox="0 0 24 24">';
+        if (_muPlaying) h += '<line x1="10" y1="5" x2="10" y2="19"/><line x1="14" y1="5" x2="14" y2="19"/>';
+        else h += '<polygon points="5 3 19 12 5 21 5 3"/>';
+        h += '</svg></div>';
+        h += '<div class="mu-lt-btn" onclick="_muNext()"><svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg></div>';
+        h += '</div></div>';
+    }
+
+    /* ---- 对话框 ---- */
+    if (charRole) {
+        h += '<div class="mu-lt-chat">';
+        h += '<div class="mu-lt-chat-hd">和 ' + _muEsc(charRole.nickname || charRole.name) + ' 聊聊这首歌</div>';
+        h += '<div class="mu-lt-chat-box" id="muLtChatBox">';
+        if (!_muLtMessages.length) h += '<div class="mu-lt-chat-hint">问问ta对这首歌的感受吧~</div>';
+        for (var mi = 0; mi < _muLtMessages.length; mi++) {
+            var m = _muLtMessages[mi];
+            h += '<div class="mu-lt-msg ' + (m.isUser ? 'user' : 'char') + '">';
+            if (!m.isUser) {
+                h += '<div class="mu-lt-msg-av">';
+                if (charRole.avatar) h += '<img src="' + _muEsc(charRole.avatar) + '">';
+                else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+                h += '</div>';
+            }
+            h += '<div class="mu-lt-msg-bbl">';
+            if (m.typing) h += '<span class="mu-lt-typing">思考中...</span>';
+            else h += _muEsc(m.text);
+            h += '</div></div>';
         }
-    }
-    h += '</div>';
-    h += '</div>';
-
-    // 评论输入弹窗
-    if (_muListenCommentTarget) {
-        h += _muRenderCommentModal();
-    }
-    // 编辑弹窗
-    if (_muListenEditModal) {
-        h += _muRenderListenEditModal();
+        h += '</div>';
+        h += '<div class="mu-lt-chat-irow">';
+        h += '<input class="mu-lt-chat-inp" id="muLtInput" placeholder="说点什么..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();_muLtSendChat()}">';
+        h += '<div class="mu-lt-chat-send" onclick="_muLtSendChat()">发送</div>';
+        h += '</div></div>';
     }
 
+    /* ---- Feed ---- */
+    h += '<div class="mu-lt-feed">';
+    h += '<div class="mu-lt-feed-hd"><span>角色推荐</span>';
+    h += '<div class="mu-lt-feed-ref" onclick="_muLtRefreshFeed();_muRender()"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15A9 9 0 115.64 5.64L1 10"/></svg>换一批</div></div>';
+    if (!_muLtFeed.length) {
+        h += '<div class="mu-lt-feed-empty">还没有歌曲，先去导入一些吧</div>';
+    } else {
+        for (var fi = 0; fi < _muLtFeed.length; fi++) h += _muLtRenderCard(fi);
+    }
+    h += '</div>';
+
+    // 弹窗
+    if (_muLtShowPicker) h += _muLtRenderPicker(roles);
+    if (_muLtCommentTarget) h += _muLtRenderCommentModal();
+
+    h += '</div>';
     return h;
 }
 
-/* ===== Feed卡片渲染 ===== */
-function _muRenderFeedCard(idx) {
-    var song = _muListenFeed[idx];
-    if (!song) return '';
-    var likes = _muListenData.likes[song.id] || 0;
-    var comments = _muListenData.comments[song.id] || [];
-    var captions = [
-        '最近单曲循环这首 🔁',
-        '深夜emo必听 🌙',
-        '这首歌让我想起了很多…',
-        '超好听！强烈推荐 ♡',
-        '今天的BGM 🎧',
-        '第一次听就爱上了',
-        '分享给你听 ♪',
-        '这个旋律太治愈了~',
-        '一个人的时候就听这首',
-        '越听越上头 ✦',
-        '宝藏歌曲！',
-        '配上雨天刚好 🌧',
-        '从前奏就爱了',
-        '听到副歌直接起鸡皮疙瘩',
-        '这首歌陪我度过了很多夜晚 🌃'
-    ];
-    // 用song.id做种子，保证同一首歌的caption固定
-    var capIdx = 0;
-    for (var ci = 0; ci < song.id.length; ci++) capIdx += song.id.charCodeAt(ci);
-    var caption = captions[capIdx % captions.length];
-
-    var timeLabels = ['刚刚', '3分钟前', '12分钟前', '半小时前', '1小时前', '2小时前', '昨天'];
-    var timeLabel = timeLabels[idx % timeLabels.length];
+/* ===== Feed 卡片 ===== */
+function _muLtRenderCard(idx) {
+    var item = _muLtFeed[idx];
+    if (!item) return '';
+    var song = item.song, role = item.role;
+    var likes = _muLtLikes[song.id] || 0;
+    var comments = _muLtComments[song.id] || [];
+    var caps = ['最近单曲循环这首', '深夜必听', '这首歌让我想起了很多',
+        '超好听，强烈推荐', '今天的BGM', '第一次听就爱上了',
+        '分享给你听', '旋律太治愈了', '越听越上头',
+        '宝藏歌曲', '从前奏就爱了', '听到副歌直接起鸡皮疙瘩'];
+    var ci = 0;
+    for (var c = 0; c < (song.id || '').length; c++) ci += (song.id || '').charCodeAt(c);
+    var cap = caps[ci % caps.length];
+    var times = ['刚刚', '3分钟前', '12分钟前', '半小时前', '1小时前', '昨天'];
+    var rn = role ? _muEsc(role.nickname || role.name) : '未知';
 
     var h = '<div class="mu-lt-card">';
-    // 卡片头部 — char头像 + 名字 + 时间
-    h += '<div class="mu-lt-card-header">';
-    h += '<div class="mu-lt-card-avatar">';
-    if (_muListenData.charAvatar) h += '<img src="' + _muEsc(_muListenData.charAvatar) + '">';
-    else h += '🎧';
+    // header
+    h += '<div class="mu-lt-card-hd"><div class="mu-lt-card-hav">';
+    if (role && role.avatar) h += '<img src="' + _muEsc(role.avatar) + '">';
+    else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+    h += '</div><div class="mu-lt-card-hi"><div class="mu-lt-card-hn">' + rn + '</div>';
+    h += '<div class="mu-lt-card-ht">' + times[idx % times.length] + '</div></div>';
+    h += '<div class="mu-lt-card-hm">...</div></div>';
+
+    // song row (not full-width cover)
+    h += '<div class="mu-lt-card-song" onclick="_muPlaySong(\'' + song.id + '\')">';
+    h += '<div class="mu-lt-card-scv">';
+    if (song.cover) h += '<img src="' + _muEsc(song.cover) + '">';
+    else h += '<div class="mu-lt-card-scvph">&#9835;</div>';
     h += '</div>';
-    h += '<div class="mu-lt-card-user">';
-    h += '<div class="mu-lt-card-username">' + _muEsc(_muListenData.charName) + '</div>';
-    h += '<div class="mu-lt-card-time">' + timeLabel + '</div>';
+    h += '<div class="mu-lt-card-sinfo">';
+    h += '<div class="mu-lt-card-sn">' + _muEsc(song.name) + '</div>';
+    h += '<div class="mu-lt-card-sa">' + _muEsc(song.artist || '未知') + '</div>';
     h += '</div>';
-    h += '<div class="mu-lt-card-more">···</div>';
+    h += '<div class="mu-lt-card-splay"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>';
     h += '</div>';
 
-    // 卡片主体 — 歌曲封面
-    h += '<div class="mu-lt-card-cover" onclick="_muPlaySong(\'' + song.id + '\')">';
-    if (song.cover) {
-        h += '<img src="' + _muEsc(song.cover) + '">';
-    } else {
-        h += '<div class="mu-lt-card-cover-placeholder">';
-        h += '<div class="mu-lt-card-cover-note">♫</div>';
-        h += '<div class="mu-lt-card-cover-name">' + _muEsc(song.name) + '</div>';
-        h += '</div>';
-    }
-    h += '<div class="mu-lt-card-play-overlay"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>';
-    h += '</div>';
+    // caption
+    h += '<div class="mu-lt-card-cap"><span class="mu-lt-card-capn">' + rn + '</span> ' + cap + '</div>';
 
-    // 卡片底部 — 互动区
-    h += '<div class="mu-lt-card-actions">';
-    h += '<div class="mu-lt-card-action-left">';
-    // 点赞
-    h += '<div class="mu-lt-card-btn' + (likes > 0 ? ' liked' : '') + '" onclick="event.stopPropagation();_muToggleLike(\'' + song.id + '\')">';
-    h += '<svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>';
+    // actions
+    h += '<div class="mu-lt-card-acts">';
+    h += '<div class="mu-lt-card-abtn' + (likes > 0 ? ' liked' : '') + '" onclick="event.stopPropagation();_muLtToggleLike(\'' + song.id + '\')"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></div>';
+    h += '<div class="mu-lt-card-abtn" onclick="event.stopPropagation();_muLtOpenComment(\'' + song.id + '\',\'' + (role ? role.id : '') + '\')"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>';
     h += '</div>';
-    // 评论
-    h += '<div class="mu-lt-card-btn" onclick="event.stopPropagation();_muOpenComment(\'' + song.id + '\')">';
-    h += '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>';
-    h += '</div>';
-    // 播放
-    h += '<div class="mu-lt-card-btn" onclick="event.stopPropagation();_muPlaySong(\'' + song.id + '\')">';
-    h += '<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
-    h += '</div>';
-    h += '</div>';
-    h += '</div>';
+    if (likes > 0) h += '<div class="mu-lt-card-lk">' + likes + ' 个赞</div>';
 
-    // 点赞数
-    if (likes > 0) {
-        h += '<div class="mu-lt-card-likes">' + likes + ' 个赞</div>';
-    }
-
-    // 标题
-    h += '<div class="mu-lt-card-caption">';
-    h += '<span class="mu-lt-card-caption-user">' + _muEsc(_muListenData.charName) + '</span> ';
-    h += caption;
-    h += '</div>';
-
-    // 歌曲信息
-    h += '<div class="mu-lt-card-song-info">';
-    h += '<span class="mu-lt-card-song-icon">♪</span> ';
-    h += _muEsc(song.name) + ' — ' + _muEsc(song.artist || '未知');
-    h += '</div>';
-
-    // 评论列表
-    if (comments.length > 0) {
-        h += '<div class="mu-lt-card-comments">';
-        for (var ci2 = 0; ci2 < comments.length; ci2++) {
-            var c = comments[ci2];
-            h += '<div class="mu-lt-comment-item">';
-            h += '<span class="mu-lt-comment-name' + (c.isChar ? ' char' : '') + '">' + _muEsc(c.name) + '</span> ';
-            h += '<span class="mu-lt-comment-text">' + _muEsc(c.text) + '</span>';
-            if (c.isChar && c.thinking) h += ' <span class="mu-lt-typing-dot">…</span>';
+    // comments preview
+    if (comments.length) {
+        h += '<div class="mu-lt-card-cmts">';
+        var mx = Math.min(comments.length, 2);
+        for (var j = 0; j < mx; j++) {
+            var cm = comments[j];
+            h += '<div class="mu-lt-card-cmt"><span class="mu-lt-card-cmn' + (cm.isChar ? ' char' : '') + '">' + _muEsc(cm.name) + '</span> ';
+            if (cm.typing) h += '<span class="mu-lt-typing">思考中...</span>';
+            else h += _muEsc(cm.text);
             h += '</div>';
         }
+        if (comments.length > 2) h += '<div class="mu-lt-card-cmmore" onclick="event.stopPropagation();_muLtOpenComment(\'' + song.id + '\',\'' + (role ? role.id : '') + '\')">查看全部' + comments.length + '条评论</div>';
         h += '</div>';
     }
-
-    // 评论入口
-    h += '<div class="mu-lt-card-comment-btn" onclick="_muOpenComment(\'' + song.id + '\')">添加评论...</div>';
-
+    h += '<div class="mu-lt-card-addcm" onclick="_muLtOpenComment(\'' + song.id + '\',\'' + (role ? role.id : '') + '\')">添加评论...</div>';
     h += '</div>';
     return h;
 }
 
-/* ===== Feed刷新 ===== */
-function _muRefreshListenFeed() {
-    var all = _muGetAllSongs();
-    if (!all.length) { _muListenFeed = []; return; }
-    // 随机选3~5首
-    var shuffled = all.slice();
-    for (var i = shuffled.length - 1; i > 0; i--) {
+/* ===== Feed 刷新 ===== */
+function _muLtRefreshFeed() {
+    var allSongs = _muGetAllSongs();
+    var roles = _muGetChatRoles();
+    if (!allSongs.length) { _muLtFeed = []; return; }
+    var sh = allSongs.slice();
+    for (var i = sh.length - 1; i > 0; i--) {
         var j = Math.floor(Math.random() * (i + 1));
-        var tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp;
+        var t = sh[i]; sh[i] = sh[j]; sh[j] = t;
     }
-    _muListenFeed = shuffled.slice(0, Math.min(shuffled.length, 3 + Math.floor(Math.random() * 3)));
-}
-
-/* ===== 头像编辑 ===== */
-function _muPickListenAvatar(who) {
-    var inp = document.createElement('input');
-    inp.type = 'file'; inp.accept = 'image/*';
-    inp.onchange = function () {
-        if (!inp.files || !inp.files[0]) return;
-        var r = new FileReader();
-        r.onload = function (e) {
-            if (who === 'char') _muListenData.charAvatar = e.target.result;
-            else _muListenData.userListenAvatar = e.target.result;
-            _muSave(); _muRender();
-        };
-        r.readAsDataURL(inp.files[0]);
-    };
-    inp.click();
-}
-
-/* ===== Char昵称编辑 ===== */
-function _muEditCharName() {
-    _muListenEditModal = 'charname';
-    _muRender();
-}
-
-function _muRenderListenEditModal() {
-    var h = '<div class="mu-edit-overlay" onclick="_muListenEditModal=\'\';_muRender()">';
-    h += '<div class="mu-edit-modal" onclick="event.stopPropagation()">';
-    if (_muListenEditModal === 'charname') {
-        h += '<div class="mu-edit-title">修改昵称</div>';
-        h += '<input class="mu-edit-input" id="muCharNameInput" value="' + _muEsc(_muListenData.charName) + '" placeholder="输入昵称">';
-        h += '<div class="mu-lt-name-hints">';
-        for (var ni = 0; ni < Math.min(6, _muCharNamePool.length); ni++) {
-            var rIdx = (Date.now() + ni * 7) % _muCharNamePool.length;
-            h += '<span class="mu-lt-name-hint" onclick="document.getElementById(\'muCharNameInput\').value=\'' + _muEsc(_muCharNamePool[rIdx]) + '\'">' + _muEsc(_muCharNamePool[rIdx]) + '</span>';
-        }
-        h += '</div>';
-        h += '<div class="mu-edit-btns"><div class="mu-edit-btn cancel" onclick="_muListenEditModal=\'\';_muRender()">取消</div><div class="mu-edit-btn ok" onclick="_muSaveCharName()">保存</div></div>';
+    var cnt = Math.min(sh.length, 3 + Math.floor(Math.random() * 3));
+    _muLtFeed = [];
+    for (var k = 0; k < cnt; k++) {
+        var role = roles.length ? roles[Math.floor(Math.random() * roles.length)] : null;
+        _muLtFeed.push({ song: sh[k], role: role });
     }
-    h += '</div></div>';
-    return h;
-}
-
-function _muSaveCharName() {
-    var inp = document.getElementById('muCharNameInput');
-    if (inp && inp.value.trim()) {
-        _muListenData.charName = inp.value.trim();
-        _muSave();
-    }
-    _muListenEditModal = '';
-    _muRender();
 }
 
 /* ===== 点赞 ===== */
-function _muToggleLike(songId) {
-    if (!_muListenData.likes) _muListenData.likes = {};
-    if (_muListenData.likes[songId]) {
-        _muListenData.likes[songId] = 0;
-    } else {
-        _muListenData.likes[songId] = 1;
-    }
+function _muLtToggleLike(songId) {
+    _muLtLikes[songId] = _muLtLikes[songId] ? 0 : 1;
     _muSave(); _muRender();
 }
 
-/* ===== 评论 ===== */
-function _muOpenComment(songId) {
-    _muListenCommentTarget = songId;
-    _muListenCommentText = '';
+/* ===== 评论弹窗（独立，不连对话框） ===== */
+var _muLtCommentRoleId = '';
+function _muLtOpenComment(songId, roleId) {
+    _muLtCommentTarget = songId;
+    _muLtCommentRoleId = roleId || '';
+    _muLtCommentText = '';
     _muRender();
-    setTimeout(function () {
-        var inp = document.getElementById('muCommentInput');
-        if (inp) inp.focus();
-    }, 100);
+    setTimeout(function () { var inp = document.getElementById('muLtCmtInp'); if (inp) inp.focus(); }, 100);
 }
 
-function _muRenderCommentModal() {
-    var h = '<div class="mu-lt-comment-overlay" onclick="_muListenCommentTarget=\'\';_muRender()">';
-    h += '<div class="mu-lt-comment-modal" onclick="event.stopPropagation()">';
-    h += '<div class="mu-lt-comment-modal-title">评论</div>';
-
-    // 已有评论
-    var comments = _muListenData.comments[_muListenCommentTarget] || [];
-    if (comments.length > 0) {
-        h += '<div class="mu-lt-comment-list">';
+function _muLtRenderCommentModal() {
+    var comments = _muLtComments[_muLtCommentTarget] || [];
+    var h = '<div class="mu-lt-cmt-ov" onclick="_muLtCommentTarget=\'\';_muRender()">';
+    h += '<div class="mu-lt-cmt-modal" onclick="event.stopPropagation()">';
+    h += '<div class="mu-lt-cmt-ti">评论</div>';
+    if (comments.length) {
+        h += '<div class="mu-lt-cmt-list">';
         for (var i = 0; i < comments.length; i++) {
             var c = comments[i];
-            h += '<div class="mu-lt-comment-row">';
-            h += '<div class="mu-lt-comment-row-avatar">';
-            if (c.isChar) {
-                if (_muListenData.charAvatar) h += '<img src="' + _muEsc(_muListenData.charAvatar) + '">';
-                else h += '🎧';
-            } else {
-                if (_muListenData.userListenAvatar || _muProfile.avatar) h += '<img src="' + _muEsc(_muListenData.userListenAvatar || _muProfile.avatar) + '">';
-                else h += '👤';
-            }
-            h += '</div>';
-            h += '<div class="mu-lt-comment-row-body">';
-            h += '<span class="mu-lt-comment-row-name' + (c.isChar ? ' char' : '') + '">' + _muEsc(c.name) + '</span> ';
-            h += '<span>' + _muEsc(c.text) + '</span>';
+            h += '<div class="mu-lt-cmt-row">';
+            h += '<div class="mu-lt-cmt-rav">';
+            if (c.avatar) h += '<img src="' + _muEsc(c.avatar) + '">';
+            else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+            h += '</div><div class="mu-lt-cmt-rb">';
+            h += '<span class="mu-lt-cmt-rn' + (c.isChar ? ' char' : '') + '">' + _muEsc(c.name) + '</span> ';
+            if (c.typing) h += '<span class="mu-lt-typing">思考中...</span>';
+            else h += _muEsc(c.text);
             h += '</div></div>';
         }
         h += '</div>';
     }
+    h += '<div class="mu-lt-cmt-irow">';
+    h += '<input class="mu-lt-cmt-inp" id="muLtCmtInp" placeholder="说点什么..." value="' + _muEsc(_muLtCommentText) + '" oninput="_muLtCommentText=this.value" onkeydown="if(event.key===\'Enter\'){event.preventDefault();_muLtSendComment()}">';
+    h += '<div class="mu-lt-cmt-send" onclick="_muLtSendComment()">发送</div>';
+    h += '</div></div></div>';
+    return h;
+}
 
-    // 输入区
-    h += '<div class="mu-lt-comment-input-row">';
-    h += '<input class="mu-lt-comment-input" id="muCommentInput" placeholder="说点什么..." value="' + _muEsc(_muListenCommentText) + '" oninput="_muListenCommentText=this.value" onkeydown="if(event.key===\'Enter\'){event.preventDefault();_muSendComment()}">';
-    h += '<div class="mu-lt-comment-send" onclick="_muSendComment()">发送</div>';
-    h += '</div>';
+function _muLtSendComment() {
+    if (!_muLtCommentText.trim()) return;
+    var songId = _muLtCommentTarget;
+    if (!_muLtComments[songId]) _muLtComments[songId] = [];
+    _muLtComments[songId].push({
+        name: _muProfile.name || 'Me',
+        text: _muLtCommentText.trim(),
+        isChar: false,
+        avatar: _muProfile.avatar || ''
+    });
+    var userText = _muLtCommentText.trim();
+    _muLtCommentText = '';
+    _muSave(); _muRender();
+
+    // 找到这首歌对应的角色
+    var role = _muLtCommentRoleId ? _muFindChatRole(_muLtCommentRoleId) : null;
+    if (!role) {
+        // 从feed里找
+        for (var i = 0; i < _muLtFeed.length; i++) {
+            if (_muLtFeed[i].song.id === songId && _muLtFeed[i].role) { role = _muLtFeed[i].role; break; }
+        }
+    }
+    if (role) _muLtCommentReply(songId, userText, role);
+}
+
+/* ===== 评论 — char API回复（贴人设） ===== */
+function _muLtCommentReply(songId, userText, role) {
+    if (!_muLtComments[songId]) _muLtComments[songId] = [];
+    _muLtComments[songId].push({
+        name: role.nickname || role.name,
+        text: '', isChar: true, typing: true,
+        avatar: role.avatar || ''
+    });
+    _muRender();
+
+    var song = _muFindSongById(songId);
+    _muLtCallAPI(role, song, userText, null, function (reply) {
+        _muLtComments[songId] = (_muLtComments[songId] || []).filter(function (c) { return !c.typing; });
+        var clean = (reply || '').replace(/^\s*["'"]/, '').replace(/["'"]\s*$/, '').trim();
+        if (!clean) clean = '~';
+        if (clean.length > 150) clean = clean.substring(0, 150) + '...';
+        _muLtComments[songId].push({
+            name: role.nickname || role.name,
+            text: clean, isChar: true,
+            avatar: role.avatar || ''
+        });
+        _muSave(); _muRender();
+    });
+}
+
+/* ===== 对话 ===== */
+function _muLtSendChat() {
+    var inp = document.getElementById('muLtInput');
+    if (!inp || !inp.value.trim()) return;
+    var text = inp.value.trim();
+    _muLtMessages.push({ isUser: true, text: text });
+    inp.value = '';
+    _muRender();
+
+    var charRole = _muFindChatRole(_muLtCharId);
+    if (!charRole) return;
+    _muLtMessages.push({ isUser: false, text: '', typing: true });
+    _muRender(); _muLtScrollChat();
+
+    _muLtCallAPI(charRole, _muCurrentSong, text, _muLtMessages, function (reply) {
+        _muLtMessages = _muLtMessages.filter(function (m) { return !m.typing; });
+        var clean = (reply || '').replace(/^\s*["'"]/, '').replace(/["'"]\s*$/, '').trim();
+        if (!clean) clean = '~';
+        if (clean.length > 200) clean = clean.substring(0, 200) + '...';
+        _muLtMessages.push({ isUser: false, text: clean });
+        _muRender(); _muLtScrollChat();
+    });
+}
+
+function _muLtScrollChat() {
+    setTimeout(function () {
+        var box = document.getElementById('muLtChatBox');
+        if (box) box.scrollTop = box.scrollHeight;
+    }, 80);
+}
+
+/* ===== 统一API调用（贴人设） ===== */
+function _muLtCallAPI(role, song, userText, history, callback) {
+    var songInfo = '';
+    if (song) {
+        songInfo = '\n[当前歌曲: "' + song.name + '" - ' + (song.artist || '未知') + ']';
+        if (song.lyrics) {
+            var lrc = song.lyrics.replace(/\[\d+:\d+[\.\d]*\]/g, '').trim();
+            if (lrc.length > 400) lrc = lrc.substring(0, 400) + '...';
+            songInfo += '\n[歌词内容: ' + lrc + ']';
+        }
+    }
+    var sys = '你是"' + (role.nickname || role.name) + '"。\n';
+    if (role.detail) sys += '你的人设信息：' + role.detail + '\n';
+    sys += '\n你正在音乐APP的"一起听"功能中。' + songInfo;
+    sys += '\n要求：\n1. 完全贴合你的人设性格、喜好、个人习惯、说话方式\n2. 根据你的人设特点来评价这首歌\n3. 保持简短自然(1-3句话)\n4. 只输出纯对话文字，不要括号动作描述\n5. 如果能识别到歌曲和歌词内容，结合内容回复';
+
+    var msgs = [{ role: 'system', content: sys }];
+    if (history) {
+        var recent = history.filter(function (m) { return !m.typing && m.text; });
+        var start = Math.max(0, recent.length - 6);
+        for (var i = start; i < recent.length; i++)
+            msgs.push({ role: recent[i].isUser ? 'user' : 'assistant', content: recent[i].text });
+    }
+    msgs.push({ role: 'user', content: userText });
+
+    var apiCfg = null;
+    try { apiCfg = getActiveApiConfig(); } catch (e) { }
+    if (apiCfg && apiCfg.url && apiCfg.key && apiCfg.model) {
+        var url = apiCfg.url.replace(/\/+$/, '') + '/chat/completions';
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiCfg.key },
+            body: JSON.stringify({ model: apiCfg.model, messages: msgs, temperature: 0.85, top_p: 0.95, max_tokens: 512 })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            var reply = '';
+            if (data.choices && data.choices[0] && data.choices[0].message) reply = data.choices[0].message.content || '';
+            callback(reply);
+        }).catch(function () { callback(_muLtFallback(userText, song)); });
+    } else {
+        setTimeout(function () { callback(_muLtFallback(userText, song)); }, 1000 + Math.random() * 1500);
+    }
+}
+
+function _muLtFallback(userText, song) {
+    var sn = song ? song.name : '这首歌';
+    var pool = ['这首歌真的很好听呢', '旋律太治愈了', '能和你一起听好开心',
+        sn + ' 对我来说很特别呢...', '歌词写得特别好', '深夜听这首特别有感觉',
+        '看来我们品味很像呢', '每次听到副歌都会起鸡皮疙瘩', '下次一起听更多好歌吧'];
+    var lower = userText.toLowerCase();
+    if (lower.indexOf('好听') >= 0 || lower.indexOf('喜欢') >= 0) return '我也超喜欢，品味一样呢~';
+    if (lower.indexOf('难过') >= 0 || lower.indexOf('emo') >= 0) return '抱抱你...让音乐治愈你';
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/* ===== 角色选择器 ===== */
+function _muLtRenderPicker(roles) {
+    var h = '<div class="mu-lt-pick-ov" onclick="_muLtShowPicker=false;_muRender()">';
+    h += '<div class="mu-lt-pick-md" onclick="event.stopPropagation()">';
+    h += '<div class="mu-lt-pick-ti">选择一起听的角色</div>';
+    if (!roles.length) {
+        h += '<div class="mu-lt-pick-empty">还没有角色~<br>先去消息App创建角色吧</div>';
+    } else {
+        h += '<div class="mu-lt-pick-list">';
+        for (var i = 0; i < roles.length; i++) {
+            var r = roles[i], act = _muLtCharId === r.id;
+            h += '<div class="mu-lt-pick-item' + (act ? ' active' : '') + '" onclick="_muLtSelectChar(\'' + r.id + '\')">';
+            h += '<div class="mu-lt-pick-av">';
+            if (r.avatar) h += '<img src="' + _muEsc(r.avatar) + '">';
+            else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+            h += '</div>';
+            h += '<div class="mu-lt-pick-nm">' + _muEsc(r.nickname || r.name) + '</div>';
+            if (act) h += '<div class="mu-lt-pick-ck">&#10003;</div>';
+            h += '</div>';
+        }
+        h += '</div>';
+    }
+    h += '<div class="mu-lt-pick-cancel" onclick="_muLtShowPicker=false;_muRender()">取消</div>';
     h += '</div></div>';
     return h;
 }
 
-function _muSendComment() {
-    if (!_muListenCommentText.trim()) return;
-    var songId = _muListenCommentTarget;
-    if (!_muListenData.comments) _muListenData.comments = {};
-    if (!_muListenData.comments[songId]) _muListenData.comments[songId] = [];
-
-    // 添加用户评论
-    _muListenData.comments[songId].push({
-        name: _muProfile.name || 'Me',
-        text: _muListenCommentText.trim(),
-        isChar: false,
-        time: Date.now()
-    });
-    _muSave();
-
-    var userMsg = _muListenCommentText.trim();
-    _muListenCommentText = '';
+function _muLtSelectChar(id) {
+    _muLtCharId = id;
+    _muLtMessages = [];
+    _muLtShowPicker = false;
     _muRender();
-
-    // ★ 触发Char回复
-    _muTriggerCharReply(songId, userMsg);
-}
-
-/* ===== Char AI 回复 ===== */
-function _muTriggerCharReply(songId, userMsg) {
-    var song = _muFindSongById(songId);
-    var songName = song ? song.name : '未知';
-    var songArtist = song ? (song.artist || '未知') : '未知';
-
-    // 构造prompt注入到对话中
-    var contextPrompt = '[系统提示：用户正在音乐APP「一起听」功能中，对你分享的歌曲「' + songName + '」(' + songArtist + ') 发表了评论："' + userMsg + '"。请你以角色身份简短回复这条评论(1-2句话)，要贴合你的人设性格，可以聊聊对这首歌的感受。不要使用括号描述动作，只需要纯对话文字回复。]';
-
-    // 尝试使用SillyTavern API
-    var replied = false;
-
-    // 方法1: SillyTavern context API
-    if (typeof SillyTavern !== 'undefined' && SillyTavern.getContext) {
-        try {
-            var ctx = SillyTavern.getContext();
-            if (ctx && typeof ctx.generate === 'function') {
-                _muShowCharTyping(songId);
-                ctx.generate(contextPrompt).then(function (reply) {
-                    _muAddCharComment(songId, reply);
-                }).catch(function () {
-                    _muAddCharComment(songId, _muGetFallbackReply(userMsg, songName));
-                });
-                replied = true;
-            }
-        } catch (e) { }
-    }
-
-    // 方法2: 全局generate函数
-    if (!replied && typeof generateQuietPrompt === 'function') {
-        try {
-            _muShowCharTyping(songId);
-            generateQuietPrompt(contextPrompt).then(function (reply) {
-                _muAddCharComment(songId, reply);
-            }).catch(function () {
-                _muAddCharComment(songId, _muGetFallbackReply(userMsg, songName));
-            });
-            replied = true;
-        } catch (e) { }
-    }
-
-    // 方法3: 降级到预设回复
-    if (!replied) {
-        _muShowCharTyping(songId);
-        setTimeout(function () {
-            _muAddCharComment(songId, _muGetFallbackReply(userMsg, songName));
-        }, 1200 + Math.random() * 1800);
-    }
-}
-
-function _muShowCharTyping(songId) {
-    if (!_muListenData.comments[songId]) _muListenData.comments[songId] = [];
-    _muListenData.comments[songId].push({
-        name: _muListenData.charName,
-        text: '正在输入',
-        isChar: true,
-        thinking: true,
-        time: Date.now()
-    });
-    _muRender();
-}
-
-function _muAddCharComment(songId, text) {
-    if (!_muListenData.comments[songId]) _muListenData.comments[songId] = [];
-    // 移除typing占位
-    _muListenData.comments[songId] = _muListenData.comments[songId].filter(function (c) { return !c.thinking; });
-    // 清理回复文本
-    var clean = (text || '').replace(/^\s*["「]|["」]\s*$/g, '').trim();
-    if (!clean) clean = '嗯嗯~';
-    // 限制长度
-    if (clean.length > 100) clean = clean.substring(0, 100) + '…';
-
-    _muListenData.comments[songId].push({
-        name: _muListenData.charName,
-        text: clean,
-        isChar: true,
-        time: Date.now()
-    });
-    _muSave(); _muRender();
-}
-
-function _muGetFallbackReply(userMsg, songName) {
-    var pool = [
-        '这首歌真的很好听呢~每次听都有不同的感觉 ♪',
-        '嗯！我也超喜欢这首！旋律太治愈了~',
-        '哈哈，被你发现了，我最近一直在循环这首',
-        '能和你一起听这首歌好开心 ♡',
-        songName + ' 这首歌对我来说很特别呢…',
-        '谢谢你的评论！下次给你分享更多好听的~',
-        '这首歌的歌词写得特别好，你有注意到吗？',
-        '深夜听这首特别有感觉~',
-        '嘿嘿，看来我们品味很像呢 ✦',
-        '每次听到副歌部分都会起鸡皮疙瘩！',
-        '你说得对！我也有同感~',
-        '这首歌让我想起了很多回忆…',
-        '下次一起听更多好歌吧 🎵'
-    ];
-
-    // 根据用户消息做简单匹配
-    var lower = userMsg.toLowerCase();
-    if (lower.indexOf('好听') >= 0 || lower.indexOf('喜欢') >= 0 || lower.indexOf('爱') >= 0) {
-        return ['嘿嘿，我也超喜欢！品味一样呢~', '对吧对吧！越听越上头 ♪', '谢谢你也喜欢！好开心~'][Math.floor(Math.random() * 3)];
-    }
-    if (lower.indexOf('推荐') >= 0 || lower.indexOf('还有') >= 0) {
-        return ['下次给你分享更多宝藏歌曲！', '我歌单里还有很多好听的，下次分享给你~'][Math.floor(Math.random() * 2)];
-    }
-    if (lower.indexOf('难过') >= 0 || lower.indexOf('emo') >= 0 || lower.indexOf('哭') >= 0) {
-        return ['抱抱你…这首歌也陪我度过了很多低落的时刻', '别难过啦，让音乐治愈你 ♡'][Math.floor(Math.random() * 2)];
-    }
-
-    return pool[Math.floor(Math.random() * pool.length)];
 }
 
 /* ===== 我 ===== */
@@ -1620,24 +1581,3 @@ function _muDeleteAudioFromDB(songId) {
     });
 }
 
-/* ===== 页面加载时预热：恢复本地歌曲的blob URL ===== */
-(function () {
-    setTimeout(function () {
-        _muOpenDB(function (db) {
-            var tx = db.transaction('audioFiles', 'readonly');
-            var store = tx.objectStore('audioFiles');
-            var allKeys = store.getAllKeys();
-            allKeys.onsuccess = function (e) {
-                var keys = e.target.result || [];
-                // 把所有有IndexedDB记录的歌曲预加载到缓存
-                for (var i = 0; i < keys.length; i++) {
-                    (function (key) {
-                        _muLoadAudioFromDB(key, function (url) {
-                            if (url) _muBlobCache[key] = url;
-                        });
-                    })(keys[i]);
-                }
-            };
-        });
-    }, 300);
-})();
