@@ -1316,8 +1316,8 @@
 }
 
 .mj-player-av {
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     overflow: hidden;
     background: rgba(160, 140, 150, .06);
@@ -1334,10 +1334,10 @@
 }
 
 .mj-player-name {
-    font-size: 9px;
+    font-size: 11px;
     color: #5a4a52;
     font-weight: 600;
-    max-width: 50px;
+    max-width: 56px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1357,23 +1357,25 @@
 
 /* 麻将牌 */
 .mj-tile {
-    width: 26px;
-    height: 36px;
-    border-radius: 4px;
+    width: 32px;
+    height: 44px;
+    border-radius: 5px;
     background: linear-gradient(180deg, #fefefe 0%, #f0ece8 100%);
     border: 1px solid rgba(160, 140, 150, .18);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .07);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
+    font-size: 9px;
     font-weight: 700;
     cursor: pointer;
     user-select: none;
     flex-shrink: 0;
     transition: transform .12s;
     position: relative;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 .mj-tile:active {
@@ -1381,20 +1383,20 @@
 }
 
 .mj-tile.playable {
-    box-shadow: 0 0 6px rgba(143, 181, 160, .25);
+    box-shadow: 0 0 8px rgba(143, 181, 160, .3);
 }
 
 .mj-tile.playable:hover {
-    transform: translateY(-6px);
+    transform: translateY(-8px);
 }
 
 .mj-tile-val {
-    font-size: 14px;
+    font-size: 17px;
     line-height: 1;
 }
 
 .mj-tile-suit {
-    font-size: 6px;
+    font-size: 8px;
     color: rgba(120, 100, 112, .4);
     margin-top: -1px;
 }
@@ -1845,8 +1847,8 @@
 }
 
 .ddz-opp-avatar {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     overflow: hidden;
     background: rgba(143, 168, 197, .1);
@@ -1864,8 +1866,8 @@
 }
 
 .ddz-opp-avatar svg {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     stroke: rgba(143, 168, 197, .4);
     stroke-width: 1.8;
     fill: none;
@@ -1879,10 +1881,10 @@
 }
 
 .ddz-opp-name {
-    font-size: 9px;
+    font-size: 11px;
     color: #6a6a78;
     font-weight: 600;
-    max-width: 72px;
+    max-width: 80px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1996,14 +1998,14 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 34px;
-    border-radius: 5px;
+    width: 32px;
+    height: 42px;
+    border-radius: 6px;
     background: #fff;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 700;
     border: 1px solid rgba(0, 0, 0, .08);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .06);
 }
 
 .ddz-play-card.red {
@@ -2126,17 +2128,17 @@
 /* 手牌区 */
 .ddz-hand {
     flex-shrink: 0;
-    padding: 4px 8px 16px;
+    padding: 6px 10px 18px;
     background: rgba(255, 255, 255, .55);
     backdrop-filter: blur(14px);
     border-top: 1px solid rgba(143, 168, 197, .08);
 }
 
 .ddz-hand-label {
-    font-size: 8px;
+    font-size: 9px;
     color: rgba(106, 106, 120, .35);
     text-align: center;
-    margin-bottom: 4px;
+    margin-bottom: 5px;
 }
 
 .ddz-hand-cards {
@@ -2145,7 +2147,8 @@
     gap: 0;
     flex-wrap: nowrap;
     overflow-x: auto;
-    padding-bottom: 2px;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
 }
 
 .ddz-hand-cards::-webkit-scrollbar {
@@ -2153,10 +2156,10 @@
 }
 
 .ddz-card {
-    width: 30px;
-    min-width: 30px;
-    height: 42px;
-    border-radius: 6px;
+    width: 38px;
+    min-width: 38px;
+    height: 52px;
+    border-radius: 7px;
     background: #fff;
     border: 1.5px solid rgba(0, 0, 0, .08);
     display: flex;
@@ -2165,9 +2168,47 @@
     justify-content: center;
     cursor: pointer;
     transition: all .15s;
-    margin-left: -8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+    margin-left: -10px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .07);
     position: relative;
+    z-index: 1;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.ddz-card:first-child {
+    margin-left: 0;
+}
+
+.ddz-card:active {
+    transform: scale(.95);
+}
+
+.ddz-card.selected {
+    transform: translateY(-10px);
+    border-color: #8fa8c5;
+    box-shadow: 0 4px 12px rgba(143, 168, 197, .3);
+    z-index: 3;
+}
+
+.ddz-card.red {
+    color: #c4766a;
+}
+
+.ddz-card.black {
+    color: #3a3a4a;
+}
+
+.ddz-card-rank {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.ddz-card-suit {
+    font-size: 10px;
+    line-height: 1;
+    opacity: .7;
 }
 
 .ddz-card:first-child {
@@ -2327,8 +2368,8 @@
 }
 
 .mj-seat .mj-seat-av {
-    width: 22px;
-    height: 22px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     overflow: hidden;
     border: 1.5px solid rgba(143, 181, 160, .25);
@@ -2338,6 +2379,16 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.mj-seat .mj-seat-name {
+    font-size: 7px;
+    color: #5a4a52;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 44px;
+    text-align: center;
 }
 
 .mj-seat .mj-seat-name {
@@ -2437,17 +2488,17 @@
 }
 
 .mj-hand-ls .mj-tile {
-    min-width: 18px;
-    width: 18px;
-    height: 28px;
+    min-width: 24px;
+    width: 24px;
+    height: 34px;
 }
 
 .mj-hand-ls .mj-tile-val {
-    font-size: 10px;
+    font-size: 13px;
 }
 
 .mj-hand-ls .mj-tile-suit {
-    font-size: 4px;
+    font-size: 5px;
 }
 
 .mj-hand-ls .mj-meld-tile {
@@ -2491,8 +2542,8 @@
 }
 
 .ddz-seat .ddz-seat-av {
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     overflow: hidden;
     border: 1.5px solid rgba(143, 168, 197, .25);
@@ -2505,7 +2556,7 @@
 }
 
 .ddz-seat .ddz-seat-name {
-    font-size: 7px;
+    font-size: 8px;
     color: #5a4a52;
     white-space: nowrap;
     overflow: hidden;
@@ -2584,9 +2635,9 @@
 }
 
 .ddz-center-played .ddz-card {
-    min-width: 22px;
-    width: 22px;
-    height: 32px;
+    min-width: 26px;
+    width: 26px;
+    height: 38px;
 }
 
 /* 底部操作+手牌 */
@@ -2621,12 +2672,15 @@
 }
 
 .ddz-hand-ls .ddz-card {
-    min-width: 22px;
-    width: 22px;
-    height: 34px;
-    margin-left: -4px;
+    min-width: 28px;
+    width: 28px;
+    height: 40px;
+    margin-left: -5px;
     cursor: pointer;
     transition: transform .15s;
+    z-index: 1;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 .ddz-hand-ls .ddz-card:first-child {
@@ -2634,17 +2688,17 @@
 }
 
 .ddz-hand-ls .ddz-card.selected {
-    transform: translateY(-6px);
+    transform: translateY(-8px);
+    z-index: 3;
 }
 
 .ddz-hand-ls .ddz-card-rank {
-    font-size: 9px;
+    font-size: 11px;
 }
 
 .ddz-hand-ls .ddz-card-suit {
-    font-size: 6px;
+    font-size: 7px;
 }
-
 
 /* ==========================================
    羊了个羊 SHEEP
