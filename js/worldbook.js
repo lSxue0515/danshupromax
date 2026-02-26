@@ -237,7 +237,7 @@ function openWbEditor(id) {
             if (_wbData[i].id === _wbEditingId) { entry = _wbData[i]; break; }
         }
         if (entry) {
-            if (titleEl) titleEl.textContent = '编辑世界书';
+            if (titleEl) titleEl.textContent = 'Edit · 编辑';
             if (nameInput) nameInput.value = entry.name || '';
             if (groupSelect) groupSelect.value = entry.group || '默认';
             if (contentArea) contentArea.value = entry.content || '';
@@ -253,7 +253,7 @@ function openWbEditor(id) {
     }
 
     // 新建
-    if (titleEl) titleEl.textContent = '新建世界书';
+    if (titleEl) titleEl.textContent = 'New Entry · 新建';
     if (nameInput) nameInput.value = '';
     if (groupSelect) groupSelect.value = '默认';
     if (contentArea) contentArea.value = '';

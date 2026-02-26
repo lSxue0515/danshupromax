@@ -691,7 +691,7 @@
 
             <!-- 消息 -->
             <div class="app-cell" onclick="openChatApp()">
-                <div class="app-icon glass-icon dock-icon">
+                <div class="app-icon glass-icon dock-icon" id="icon_dock_msg">
                     <svg viewBox="0 0 24 24">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
@@ -701,12 +701,10 @@
 
             <!-- 柿子小说 -->
             <div class="app-cell" onclick="openNovelApp()">
-                <div class="app-icon glass-icon dock-icon">
+                <div class="app-icon glass-icon dock-icon" id="icon_dock_note">
                     <svg viewBox="0 0 24 24">
                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
                         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                        <line x1="9" y1="7" x2="16" y2="7" />
-                        <line x1="9" y1="11" x2="14" y2="11" />
                     </svg>
                 </div>
                 <div class="app-name">柿子小说</div>
@@ -714,7 +712,7 @@
 
             <!-- 世界书 -->
             <div class="app-cell" onclick="openWorldBookApp()">
-                <div class="app-icon glass-icon dock-icon">
+                <div class="app-icon glass-icon dock-icon" id="icon_dock_worldbook">
                     <svg viewBox="0 0 24 24">
                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
                         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
@@ -722,6 +720,7 @@
                 </div>
                 <div class="app-name">世界书</div>
             </div>
+
         </div>
 
         <!-- 底部横条 -->
@@ -1248,7 +1247,7 @@
                             <polyline points="15 18 9 12 15 6" />
                         </svg>
                     </div>
-                    <div class="wb-app-title">世界书</div>
+                    <div class="wb-app-title">World Book · 世界书</div>
                     <div class="wb-app-header-add" onclick="openWbEditor()">
                         <svg viewBox="0 0 24 24">
                             <line x1="12" y1="5" x2="12" y2="19" />
@@ -1258,8 +1257,8 @@
                 </div>
                 <div class="wb-group-bar" id="wbGroupBar"></div>
                 <div class="wb-tab-bar" id="wbTabBar">
-                    <div class="wb-tab active" data-tab="global" onclick="switchWbTab('global')">全局世界书</div>
-                    <div class="wb-tab" data-tab="role" onclick="switchWbTab('role')">角色世界书</div>
+                    <div class="wb-tab active" data-tab="global" onclick="switchWbTab('global')">Global · 全局</div>
+                    <div class="wb-tab" data-tab="role" onclick="switchWbTab('role')">Character · 角色</div>
                 </div>
                 <div class="wb-app-body" id="wbAppBody"></div>
             </div><!-- /wb-app-panel -->
@@ -1273,18 +1272,18 @@
                                 <polyline points="15 18 9 12 15 6" />
                             </svg>
                         </div>
-                        <div class="wb-app-title" id="wbEditorTitle">新建世界书</div>
-                        <div class="wb-editor-save" onclick="saveWbEntry()">保存</div>
+                        <div class="wb-app-title" id="wbEditorTitle">New Entry · 新建</div>
+                        <div class="wb-editor-save" onclick="saveWbEntry()">Save</div>
                     </div>
                     <div class="wb-editor-body">
                         <!-- 名称 -->
                         <div class="wb-editor-field">
-                            <div class="wb-editor-label">条目名称</div>
+                            <div class="wb-editor-label">NAME · 名称</div>
                             <input type="text" id="wbEdName" class="wb-editor-input" placeholder="给这条世界书起个名字">
                         </div>
                         <!-- 分组 -->
                         <div class="wb-editor-field">
-                            <div class="wb-editor-label">分组</div>
+                            <div class="wb-editor-label">GROUP · 分组</div>
                             <select id="wbEdGroup" class="wb-editor-input">
                                 <option value="默认">默认</option>
                                 <option value="角色">角色</option>
@@ -1296,12 +1295,12 @@
                         </div>
                         <!-- 关键词 -->
                         <div class="wb-editor-field">
-                            <div class="wb-editor-label">关键词（可选，逗号分隔）</div>
+                            <div class="wb-editor-label">KEYWORDS · 关键词（逗号分隔）</div>
                             <input type="text" id="wbEdKeywords" class="wb-editor-input" placeholder="森林, 魔法, 古堡">
                         </div>
                         <!-- 内容 -->
                         <div class="wb-editor-field">
-                            <div class="wb-editor-label">详细内容</div>
+                            <div class="wb-editor-label">CONTENT · 内容</div>
                             <textarea id="wbEdContent" class="wb-editor-textarea" rows="8"
                                 placeholder="在这里编写世界观设定、角色描述、规则等..."></textarea>
                         </div>
@@ -1310,7 +1309,7 @@
                             <div class="wb-inject-section" id="wbInjectSection">
                                 <div class="wb-inject-trigger" onclick="toggleWbInjectDropdown()">
                                     <div class="wb-inject-trigger-left">
-                                        <span class="wb-inject-trigger-label">注入位置</span>
+                                        <span class="wb-inject-trigger-label">INJECT · 注入位置</span>
                                         <span class="wb-inject-trigger-value" id="wbInjectDisplay">前</span>
                                     </div>
                                     <div class="wb-inject-arrow">

@@ -13,7 +13,7 @@ var ICON_LIST = [
     { id: 'icon_music', name: '音乐' },
     { id: 'icon_album', name: '相册' },
     { id: 'icon_dock_msg', name: '消息' },
-    { id: 'icon_dock_note', name: '手账' },
+    { id: 'icon_dock_note', name: '柿子小说' },
     { id: 'icon_dock_worldbook', name: '世界书' },
     { id: 'icon_game', name: '游戏' },
     { id: 'icon_catnip', name: '猫尾薄荷' },
@@ -92,14 +92,15 @@ function triggerAppearWpUpload() {
 function handleAppearWpFile(event) {
     var file = event.target.files[0];
     if (!file) return;
-    showToast('正在压缩壁纸...');
+    showToast('正在处理壁纸...');
     var reader = new FileReader();
     reader.onload = function (e) {
-        smartCompress(e.target.result, 60, function (compressed) {
+        // ★ 壁纸专用压缩：高画质，存IndexedDB避免爆localStorage
+        compressWallpaperHQ(e.target.result, function (compressed) {
             var sizeKB = Math.round(compressed.length / 1024);
             document.getElementById('appearWpUrl').value = compressed;
             refreshWallpaperPreview();
-            showToast('壁纸压缩完成 (' + sizeKB + 'KB)');
+            showToast('壁纸处理完成 (' + sizeKB + 'KB)');
         });
     };
     reader.readAsDataURL(file);
@@ -150,7 +151,7 @@ function handleIconCustomFile(event) {
 
     var reader = new FileReader();
     reader.onload = function (e) {
-        smartCompress(e.target.result, 3, function (compressed) {
+        smartCompress(e.target.result, 8, function (compressed) {
             var sizeKB = Math.round(compressed.length / 1024);
             var key = 'ds_icon_' + iconId;
 
@@ -298,17 +299,28 @@ function saveAppearanceSettings() {
 
     if (wpUrl) {
         if (wpUrl.startsWith('data:')) {
-            showToast('正在压缩保存壁纸...');
-            smartCompress(wpUrl, 60, function (compressed) {
-                var sizeKB = Math.round(compressed.length / 1024);
-                if (safeSetItem('ds_appear_wallpaper', compressed)) {
-                    doFinishAppearSave(compressed, fontUrl, bubbleColor, statusbar);
-                } else {
-                    showToast('壁纸太大无法保存，请使用图片URL链接');
-                }
+            showToast('正在保存壁纸...');
+            // ★ 壁纸存IndexedDB，localStorage只存标记
+            compressWallpaperHQ(wpUrl, function (compressed) {
+                // 尝试存IndexedDB
+                _wpSaveToDB(compressed, function (ok) {
+                    if (ok) {
+                        // localStorage存标记，实际数据在IndexedDB
+                        safeSetItem('ds_appear_wallpaper', '__idb_wp__');
+                        doFinishAppearSave(compressed, fontUrl, bubbleColor, statusbar);
+                    } else {
+                        // 回退：尝试直接存localStorage
+                        if (safeSetItem('ds_appear_wallpaper', compressed)) {
+                            doFinishAppearSave(compressed, fontUrl, bubbleColor, statusbar);
+                        } else {
+                            showToast('壁纸太大无法保存，请使用图片URL链接');
+                        }
+                    }
+                });
             });
             return;
         }
+        // URL链接直接存
         safeSetItem('ds_appear_wallpaper', wpUrl);
     } else {
         localStorage.removeItem('ds_appear_wallpaper');
@@ -328,12 +340,17 @@ function doFinishAppearSave(wpSrc, fontUrl, bubbleColor, statusbar) {
     safeSetItem('ds_appear_bubbleColor', bubbleColor);
     safeSetItem('ds_appear_statusbar', statusbar ? 'visible' : 'hidden');
 
+    // ★ 应用壁纸（wpSrc可能是实际数据或URL）
     var wallpaper = document.getElementById('wallpaper');
-    var savedWp = localStorage.getItem('ds_appear_wallpaper');
-    if (savedWp) {
-        wallpaper.style.backgroundImage = 'url(' + savedWp + ')';
+    if (wpSrc) {
+        wallpaper.style.backgroundImage = 'url(' + wpSrc + ')';
     } else {
-        wallpaper.style.backgroundImage = '';
+        var savedWp = localStorage.getItem('ds_appear_wallpaper');
+        if (savedWp && savedWp !== '__idb_wp__') {
+            wallpaper.style.backgroundImage = 'url(' + savedWp + ')';
+        } else if (!savedWp) {
+            wallpaper.style.backgroundImage = '';
+        }
     }
 
     if (fontUrl) { applyGlobalFont(fontUrl); }
@@ -344,7 +361,6 @@ function doFinishAppearSave(wpSrc, fontUrl, bubbleColor, statusbar) {
     closeAppearanceApp();
     showToast('外观设置已保存');
 }
-
 /* ========== 清除全部外观设置 ========== */
 function clearAllAppearSettings() {
     if (!confirm('确认清除所有外观设置？')) return;
@@ -389,7 +405,16 @@ function clearAllAppearSettings() {
 document.addEventListener('DOMContentLoaded', function () {
     var savedWp = localStorage.getItem('ds_appear_wallpaper');
     if (savedWp) {
-        document.getElementById('wallpaper').style.backgroundImage = 'url(' + savedWp + ')';
+        if (savedWp === '__idb_wp__') {
+            // ★ 从IndexedDB恢复壁纸
+            _wpLoadFromDB(function (data) {
+                if (data) {
+                    document.getElementById('wallpaper').style.backgroundImage = 'url(' + data + ')';
+                }
+            });
+        } else {
+            document.getElementById('wallpaper').style.backgroundImage = 'url(' + savedWp + ')';
+        }
     }
 
     var fontUrl = localStorage.getItem('ds_appear_fontUrl');
@@ -403,3 +428,98 @@ document.addEventListener('DOMContentLoaded', function () {
 
     setTimeout(function () { applyAllIconImages(); }, 100);
 });
+
+/* ========== ★ 壁纸高画质压缩 + IndexedDB存储 ========== */
+
+/**
+ * 壁纸专用高画质压缩
+ * - 最大宽度 1080px（手机足够清晰）
+ * - JPEG quality 从 0.92 开始，目标 ≤ 800KB
+ * - 比 smartCompress 的 60KB 宽松十几倍，画质清晰
+ */
+function compressWallpaperHQ(dataUrl, callback) {
+    var img = new Image();
+    img.onload = function () {
+        var maxW = 1080, maxH = 1920;
+        var w = img.width, h = img.height;
+        // 等比缩放
+        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+        if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
+
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // 从高画质开始逐步降低，直到 ≤ 800KB
+        var quality = 0.92;
+        var result = canvas.toDataURL('image/jpeg', quality);
+
+        while (result.length > 800 * 1024 && quality > 0.3) {
+            quality -= 0.08;
+            result = canvas.toDataURL('image/jpeg', quality);
+        }
+
+        // 如果还是太大，缩小尺寸
+        if (result.length > 800 * 1024 && w > 600) {
+            var scale = 0.7;
+            canvas.width = Math.round(w * scale);
+            canvas.height = Math.round(h * scale);
+            ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            result = canvas.toDataURL('image/jpeg', 0.85);
+        }
+
+        callback(result);
+    };
+    img.onerror = function () {
+        // 无法作为图片加载，原样返回
+        callback(dataUrl);
+    };
+    img.src = dataUrl;
+}
+
+/* --- 壁纸 IndexedDB 存储 --- */
+var _wpDBName = 'DanShuWallpaper';
+var _wpDBVersion = 1;
+
+function _wpOpenDB(cb) {
+    var req = indexedDB.open(_wpDBName, _wpDBVersion);
+    req.onupgradeneeded = function (e) {
+        var db = e.target.result;
+        if (!db.objectStoreNames.contains('wallpaper')) {
+            db.createObjectStore('wallpaper', { keyPath: 'id' });
+        }
+    };
+    req.onsuccess = function (e) { cb(e.target.result); };
+    req.onerror = function () { cb(null); };
+}
+
+function _wpSaveToDB(dataUrl, callback) {
+    _wpOpenDB(function (db) {
+        if (!db) { callback(false); return; }
+        try {
+            var tx = db.transaction('wallpaper', 'readwrite');
+            var store = tx.objectStore('wallpaper');
+            store.put({ id: 'current', data: dataUrl });
+            tx.oncomplete = function () { callback(true); };
+            tx.onerror = function () { callback(false); };
+        } catch (e) { callback(false); }
+    });
+}
+
+function _wpLoadFromDB(callback) {
+    _wpOpenDB(function (db) {
+        if (!db) { callback(null); return; }
+        try {
+            var tx = db.transaction('wallpaper', 'readonly');
+            var store = tx.objectStore('wallpaper');
+            var req = store.get('current');
+            req.onsuccess = function () {
+                callback(req.result ? req.result.data : null);
+            };
+            req.onerror = function () { callback(null); };
+        } catch (e) { callback(null); }
+    });
+}
+

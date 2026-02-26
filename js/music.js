@@ -744,11 +744,6 @@ function _muRenderMe() {
             h += '<div class="mu-playlist-del" onclick="event.stopPropagation();_muDeletePlaylist(\'' + pl.id + '\')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>';
             h += '</div>';
         }
-        for (var i = 0; i < _muPlaylists.length; i++) {
-            var pl = _muPlaylists[i];
-            h += '<div class="mu-playlist-item" onclick="_muOpenPlaylist(\'' + pl.id + '\')"><div class="mu-playlist-cover">' + icons[i % icons.length] + '</div><div class="mu-playlist-info"><div class="mu-playlist-name">' + _muEsc(pl.name) + '</div><div class="mu-playlist-count">' + (pl.songs || []).length + ' 首歌曲</div></div>';
-            h += '<div class="mu-song-del" style="opacity:.4" onclick="event.stopPropagation();_muDeletePlaylist(\'' + pl.id + '\')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>';
-        }
         h += '</div>';
     }
     h += '</div>';
@@ -768,6 +763,9 @@ function _muRenderPlaylistDetail() {
 
     var h = '<div class="mu-pl-detail">';
     h += '<div style="margin-bottom:10px"><span style="font-size:10px;color:#bbb;cursor:pointer" onclick="_muPlaylistDetail=null;_muRender()">← 返回歌单列表</span></div>';
+
+    // ★ 歌单导入按钮
+    h += '<div class="mu-import-row" style="margin-bottom:10px"><div class="mu-import-btn file" onclick="_muImportFileToPlaylist(\'' + pl.id + '\')" style="flex:1"><svg viewBox="0 0 24 24" width="12" height="12" style="stroke:currentColor;stroke-width:2;fill:none;vertical-align:-2px;margin-right:3px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>导入文件</div><div class="mu-import-btn file" onclick="_muShowBatchImport(\'' + pl.id + '\')" style="flex:1"><svg viewBox="0 0 24 24" width="12" height="12" style="stroke:currentColor;stroke-width:2;fill:none;vertical-align:-2px;margin-right:3px"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>批量导入</div></div>';
 
     // ★ 歌单封面 + 信息头部
     h += '<div class="mu-pl-header">';
@@ -1395,16 +1393,14 @@ function _muShowJsonImport() { _muImportModal = 'json_import'; _muRender(); }
 function _muRenderImportModal() { if (_muImportModal === 'batch') return _muRenderBatchModal(); if (_muImportModal === 'json_import') return _muRenderJsonImportModal(); return ''; }
 
 function _muRenderBatchModal() {
-    var h = '<div class="mu-import-overlay"><div class="mu-import-modal"><div class="mu-import-modal-title">批量导入歌曲</div><div class="mu-import-modal-sub">从QQ音乐/网易云/酷狗复制歌曲列表粘贴</div>';
-    h += '<div class="mu-platform-row"><div class="mu-platform-btn" onclick="_muShowPlatformHelp(\'qq\')"><div class="mu-platform-icon">🟢</div><div class="mu-platform-name">QQ音乐</div></div><div class="mu-platform-btn" onclick="_muShowPlatformHelp(\'netease\')"><div class="mu-platform-icon">🔴</div><div class="mu-platform-name">网易云</div></div><div class="mu-platform-btn" onclick="_muShowPlatformHelp(\'kugou\')"><div class="mu-platform-icon">🔵</div><div class="mu-platform-name">酷狗</div></div></div>';
-    h += '<textarea class="mu-import-textarea" id="muBatchInput" placeholder="每行一首：歌名 - 歌手" oninput="_muParseBatch()"></textarea>';
-    if (_muParsedSongs.length > 0) { h += '<div class="mu-import-preview">'; for (var i = 0; i < Math.min(_muParsedSongs.length, 50); i++) h += '<div class="mu-import-preview-item"><div class="mu-import-preview-idx">' + (i + 1) + '</div><div class="mu-import-preview-name">' + _muEsc(_muParsedSongs[i].name) + '</div><div class="mu-import-preview-artist">' + _muEsc(_muParsedSongs[i].artist) + '</div></div>'; h += '</div>'; }
+    var h = '<div class="mu-import-overlay"><div class="mu-import-modal"><div class="mu-import-modal-title">批量导入歌曲</div><div class="mu-import-modal-sub">每行一首，格式：歌名 - 歌手</div>';
+    h += '<textarea class="mu-import-textarea" id="muBatchInput" placeholder="晴天 - 周杰伦\n起风了 - 买辣椒也用券\n海阔天空 - Beyond" oninput="_muParseBatch()"></textarea>';
+    if (_muParsedSongs.length) h += '<div style="font-size:11px;color:#999;padding:4px 0">已识别 ' + _muParsedSongs.length + ' 首歌曲</div>';
     h += '<div class="mu-import-modal-btns"><div class="mu-import-modal-btn cancel" onclick="_muImportModal=\'\';_muRender()">取消</div><div class="mu-import-modal-btn ok" onclick="_muDoBatchImport()">导入 ' + (_muParsedSongs.length ? _muParsedSongs.length + ' 首' : '') + '</div></div></div></div>';
     return h;
 }
 function _muParseBatch() { var el = document.getElementById('muBatchInput'); if (!el) return; var lines = el.value.split('\n'); _muParsedSongs = []; for (var i = 0; i < lines.length; i++) { var l = lines[i].trim().replace(/^\d+[\.\、\)\]\s]+/, '').trim(); if (!l) continue; var n = '', a = '', sep = l.indexOf(' - '); if (sep > 0) { n = l.substr(0, sep).trim(); a = l.substr(sep + 3).trim(); } else { sep = l.indexOf(' / '); if (sep > 0) { n = l.substr(0, sep).trim(); a = l.substr(sep + 3).trim(); } else { n = l; } } if (n) _muParsedSongs.push({ name: n, artist: a }); } _muRender(); }
 function _muDoBatchImport() { if (!_muParsedSongs.length) { if (typeof showToast === 'function') showToast('没有解析到歌曲'); return; } var t = _muImportTarget, c = 0; for (var i = 0; i < _muParsedSongs.length; i++) { var s = { id: _muGenId(), name: _muParsedSongs[i].name, artist: _muParsedSongs[i].artist, url: '', cover: '', lyrics: '' }; if (t) { for (var pi = 0; pi < _muPlaylists.length; pi++) { if (_muPlaylists[pi].id === t) { if (!_muPlaylists[pi].songs) _muPlaylists[pi].songs = []; _muPlaylists[pi].songs.push(s); break; } } } else { _muSongs.push(s); } c++; } _muParsedSongs = []; _muImportModal = ''; _muSave(); _muRender(); if (typeof showToast === 'function') showToast('导入 ' + c + ' 首（需绑定音源）'); }
-function _muShowPlatformHelp(p) { var t = { qq: '📋 QQ音乐：\n1. 歌单→分享→复制链接\n2. 浏览器打开→复制歌曲列表\n3. 粘贴到输入框\n\n格式：晴天 - 周杰伦', netease: '📋 网易云：\n1. 电脑端选中歌曲列表复制\n2. 粘贴到输入框\n\n格式：起风了 - 买辣椒也用券', kugou: '📋 酷狗：\n1. 复制歌曲列表\n2. 粘贴到输入框\n\n格式：海阔天空 - Beyond' }; alert(t[p] || ''); }
 
 /* ========================================
    ★ JSON导出/导入
@@ -1735,35 +1731,66 @@ function _muDeleteAudioFromDB(songId) {
 /* =============================================
    ★ IndexedDB 封面图持久化
    ============================================= */
+/* ===== 封面 IndexedDB — 独立数据库 ===== */
+var _muCoverDBName = 'MusicCoverDB';
+var _muCoverDBVer = 1;
+var _muCoverDBReady = null; // Promise-like 缓存
+
+function _muOpenCoverDB(callback) {
+    if (_muCoverDBReady) { _muCoverDBReady(callback); return; }
+    try {
+        var req = indexedDB.open(_muCoverDBName, _muCoverDBVer);
+        req.onupgradeneeded = function (e) {
+            var db = e.target.result;
+            if (!db.objectStoreNames.contains('covers')) {
+                db.createObjectStore('covers', { keyPath: 'id' });
+            }
+        };
+        req.onsuccess = function (e) {
+            var db = e.target.result;
+            _muCoverDBReady = function (cb) { cb(db); };
+            callback(db);
+        };
+        req.onerror = function () {
+            console.warn('CoverDB open error');
+            _muCoverDBReady = function (cb) { cb(null); };
+            callback(null);
+        };
+    } catch (e) {
+        console.warn('CoverDB exception', e);
+        callback(null);
+    }
+}
+
 function _muSaveCoverToDB(key, dataUrl) {
-    _muOpenDB(function (db) {
+    _muOpenCoverDB(function (db) {
+        if (!db) return;
         try {
-            var tx = db.transaction('audio', 'readwrite');
-            var store = tx.objectStore('audio');
-            store.put({ id: 'cover_' + key, data: dataUrl, type: 'image' });
-        } catch (e) { console.warn('Save cover to DB failed', e); }
+            var tx = db.transaction('covers', 'readwrite');
+            var store = tx.objectStore('covers');
+            store.put({ id: key, data: dataUrl });
+        } catch (e) { console.warn('CoverDB save error', e); }
     });
 }
 
 function _muLoadCoverFromDB(key, callback) {
-    _muOpenDB(function (db) {
+    _muOpenCoverDB(function (db) {
+        if (!db) { callback(null); return; }
         try {
-            var tx = db.transaction('audio', 'readonly');
-            var store = tx.objectStore('audio');
-            var req = store.get('cover_' + key);
+            var tx = db.transaction('covers', 'readonly');
+            var store = tx.objectStore('covers');
+            var req = store.get(key);
             req.onsuccess = function () {
-                if (req.result && req.result.data) callback(req.result.data);
-                else callback(null);
+                callback(req.result ? req.result.data : null);
             };
             req.onerror = function () { callback(null); };
-        } catch (e) { callback(null); }
+        } catch (e) { console.warn('CoverDB load error', e); callback(null); }
     });
 }
 
 function _muRestoreCoversFromDB() {
-    var needRender = false;
     var pending = 0;
-    function done() { pending--; if (pending <= 0 && needRender) _muRender(); }
+    var needRender = false;
 
     // 恢复歌曲封面
     for (var i = 0; i < _muSongs.length; i++) {
@@ -1772,13 +1799,14 @@ function _muRestoreCoversFromDB() {
             (function (idx) {
                 _muLoadCoverFromDB(_muSongs[idx].id, function (data) {
                     if (data) { _muSongs[idx].cover = data; needRender = true; }
-                    done();
+                    pending--;
+                    if (pending <= 0 && needRender) _muRender();
                 });
             })(i);
         }
     }
 
-    // 恢复歌单中歌曲封面
+    // 恢复歌单里歌曲封面
     for (var pi = 0; pi < _muPlaylists.length; pi++) {
         if (!_muPlaylists[pi].songs) continue;
         for (var si = 0; si < _muPlaylists[pi].songs.length; si++) {
@@ -1787,7 +1815,8 @@ function _muRestoreCoversFromDB() {
                 (function (pIdx, sIdx) {
                     _muLoadCoverFromDB(_muPlaylists[pIdx].songs[sIdx].id, function (data) {
                         if (data) { _muPlaylists[pIdx].songs[sIdx].cover = data; needRender = true; }
-                        done();
+                        pending--;
+                        if (pending <= 0 && needRender) _muRender();
                     });
                 })(pi, si);
             }
@@ -1799,7 +1828,8 @@ function _muRestoreCoversFromDB() {
         pending++;
         _muLoadCoverFromDB('__profile_avatar__', function (data) {
             if (data) { _muProfile.avatar = data; needRender = true; }
-            done();
+            pending--;
+            if (pending <= 0 && needRender) _muRender();
         });
     }
 
@@ -1810,11 +1840,11 @@ function _muRestoreCoversFromDB() {
             (function (idx) {
                 _muLoadCoverFromDB('daily_' + _muDailyList[idx].id, function (data) {
                     if (data) { _muDailyList[idx].cover = data; needRender = true; }
-                    done();
+                    pending--;
+                    if (pending <= 0 && needRender) _muRender();
                 });
             })(di);
         }
     }
-
-    if (pending === 0) return; // 没有需要恢复的
 }
+
