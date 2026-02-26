@@ -43,7 +43,12 @@ function _muSave() {
         // ★ 保存时完全剥离 blobData（由IndexedDB负责持久化音频）
         var songsClean = _muSongs.map(function (s) {
             var c = Object.assign({}, s);
-            delete c.blobData; // 不再往localStorage存音频数据
+            delete c.blobData;
+            // ★ 封面图也存到IndexedDB，localStorage只存小数据
+            if (c.cover && c.cover.length > 500) {
+                _muSaveCoverToDB(c.id, c.cover);
+                c.cover = '__idb__'; // 标记：封面在IndexedDB中
+            }
             return c;
         });
         var plClean = _muPlaylists.map(function (pl) {
@@ -52,18 +57,44 @@ function _muSave() {
                 p.songs = p.songs.map(function (s) {
                     var c = Object.assign({}, s);
                     delete c.blobData;
+                    if (c.cover && c.cover.length > 500) {
+                        _muSaveCoverToDB(c.id, c.cover);
+                        c.cover = '__idb__';
+                    }
                     return c;
                 });
             }
             return p;
         });
+
+        // ★ 头像也移到IndexedDB
+        var profileClean = Object.assign({}, _muProfile);
+        if (profileClean.avatar && profileClean.avatar.length > 500) {
+            _muSaveCoverToDB('__profile_avatar__', profileClean.avatar);
+            profileClean.avatar = '__idb__';
+        }
+
+        // ★ 每日推荐封面也移到IndexedDB
+        var dailyClean = _muDailyList.map(function (d) {
+            var c = Object.assign({}, d);
+            if (c.cover && c.cover.length > 500) {
+                _muSaveCoverToDB('daily_' + c.id, c.cover);
+                c.cover = '__idb__';
+            }
+            return c;
+        });
+
         localStorage.setItem('_muSongs', JSON.stringify(songsClean));
         localStorage.setItem('_muPlaylists', JSON.stringify(plClean));
-        localStorage.setItem('_muProfile', JSON.stringify(_muProfile));
-        localStorage.setItem('_muDailyList', JSON.stringify(_muDailyList));
+        localStorage.setItem('_muProfile', JSON.stringify(profileClean));
+        localStorage.setItem('_muDailyList', JSON.stringify(dailyClean));
         try { localStorage.setItem('_muLtComments', JSON.stringify(_muLtComments)); } catch (e) { }
         try { localStorage.setItem('_muLtLikes', JSON.stringify(_muLtLikes)); } catch (e) { }
-    } catch (e) { console.warn('Save error', e); }
+    } catch (e) {
+        console.warn('Save error', e);
+        // ★ 保存失败时提示用户！不再静默
+        if (typeof showToast === 'function') showToast('⚠️ 存储空间不足，数据可能未保存');
+    }
 }
 
 function _muEsc(s) {
@@ -78,6 +109,32 @@ function _muGenId() {
 function openMusicApp() {
     var el = document.getElementById('musicOverlay');
     if (!el) return;
+
+    // ★ 每次打开都重新从localStorage读取最新数据，防止数据丢失
+    try {
+        var savedSongs = localStorage.getItem('_muSongs');
+        var savedPlaylists = localStorage.getItem('_muPlaylists');
+        var savedProfile = localStorage.getItem('_muProfile');
+        var savedDaily = localStorage.getItem('_muDailyList');
+        var savedComments = localStorage.getItem('_muLtComments');
+        var savedLikes = localStorage.getItem('_muLtLikes');
+
+        if (savedSongs) _muSongs = JSON.parse(savedSongs);
+        if (savedPlaylists) _muPlaylists = JSON.parse(savedPlaylists);
+        if (savedProfile) _muProfile = JSON.parse(savedProfile) || {
+            avatar: '', name: '未设置昵称', age: '1年', ip: '未知',
+            sig: 'ℳ𝓊𝓈𝒾𝓬𓂃✍︎𝄞 ❤︎ ▶︎·၊၊||၊|။|||| | ❤'
+        };
+        if (savedDaily) _muDailyList = JSON.parse(savedDaily) || [
+            { id: 'dr_default', name: '每日推荐', artist: 'Daily Mix', url: '', cover: '', coverEmoji: '🎵', songRef: '' }
+        ];
+        if (savedComments) _muLtComments = JSON.parse(savedComments);
+        if (savedLikes) _muLtLikes = JSON.parse(savedLikes);
+    } catch (e) { console.warn('Load error', e); }
+
+    // ★ 从IndexedDB恢复封面图
+    _muRestoreCoversFromDB();
+
     _muTab = 'home'; _muShowFull = false; _muPlaylistDetail = null;
     _muSearchKw = ''; _muEditType = ''; _muImportModal = ''; _muPickDaily = false;
     _muRender(); el.classList.add('show');
@@ -1675,3 +1732,89 @@ function _muDeleteAudioFromDB(songId) {
     });
 }
 
+/* =============================================
+   ★ IndexedDB 封面图持久化
+   ============================================= */
+function _muSaveCoverToDB(key, dataUrl) {
+    _muOpenDB(function (db) {
+        try {
+            var tx = db.transaction('audio', 'readwrite');
+            var store = tx.objectStore('audio');
+            store.put({ id: 'cover_' + key, data: dataUrl, type: 'image' });
+        } catch (e) { console.warn('Save cover to DB failed', e); }
+    });
+}
+
+function _muLoadCoverFromDB(key, callback) {
+    _muOpenDB(function (db) {
+        try {
+            var tx = db.transaction('audio', 'readonly');
+            var store = tx.objectStore('audio');
+            var req = store.get('cover_' + key);
+            req.onsuccess = function () {
+                if (req.result && req.result.data) callback(req.result.data);
+                else callback(null);
+            };
+            req.onerror = function () { callback(null); };
+        } catch (e) { callback(null); }
+    });
+}
+
+function _muRestoreCoversFromDB() {
+    var needRender = false;
+    var pending = 0;
+    function done() { pending--; if (pending <= 0 && needRender) _muRender(); }
+
+    // 恢复歌曲封面
+    for (var i = 0; i < _muSongs.length; i++) {
+        if (_muSongs[i].cover === '__idb__') {
+            pending++;
+            (function (idx) {
+                _muLoadCoverFromDB(_muSongs[idx].id, function (data) {
+                    if (data) { _muSongs[idx].cover = data; needRender = true; }
+                    done();
+                });
+            })(i);
+        }
+    }
+
+    // 恢复歌单中歌曲封面
+    for (var pi = 0; pi < _muPlaylists.length; pi++) {
+        if (!_muPlaylists[pi].songs) continue;
+        for (var si = 0; si < _muPlaylists[pi].songs.length; si++) {
+            if (_muPlaylists[pi].songs[si].cover === '__idb__') {
+                pending++;
+                (function (pIdx, sIdx) {
+                    _muLoadCoverFromDB(_muPlaylists[pIdx].songs[sIdx].id, function (data) {
+                        if (data) { _muPlaylists[pIdx].songs[sIdx].cover = data; needRender = true; }
+                        done();
+                    });
+                })(pi, si);
+            }
+        }
+    }
+
+    // 恢复头像
+    if (_muProfile.avatar === '__idb__') {
+        pending++;
+        _muLoadCoverFromDB('__profile_avatar__', function (data) {
+            if (data) { _muProfile.avatar = data; needRender = true; }
+            done();
+        });
+    }
+
+    // 恢复每日推荐封面
+    for (var di = 0; di < _muDailyList.length; di++) {
+        if (_muDailyList[di].cover === '__idb__') {
+            pending++;
+            (function (idx) {
+                _muLoadCoverFromDB('daily_' + _muDailyList[idx].id, function (data) {
+                    if (data) { _muDailyList[idx].cover = data; needRender = true; }
+                    done();
+                });
+            })(di);
+        }
+    }
+
+    if (pending === 0) return; // 没有需要恢复的
+}
