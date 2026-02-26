@@ -13,7 +13,7 @@ function openGameApp() {
 }
 function closeGameApp() {
     var el = document.getElementById('gameOverlay');
-    if (el) { el.classList.remove('show'); el.classList.remove('landscape'); }
+    if (el) el.classList.remove('show');
     _unoState = null; _mjState = null; _ddzState = null;
 }
 
@@ -164,7 +164,7 @@ document.addEventListener('click', function (e) {
     if (dc) { _ddzToggleCard(parseInt(dc.getAttribute('data-ddz-card'))); return; }
 });
 
-function gameBackToLobby() { _gameView = 'lobby'; var el = document.getElementById('gameOverlay'); if (el) { el.classList.remove('landscape'); el.innerHTML = gameBuildLobby(); } }
+function gameBackToLobby() { _gameView = 'lobby'; var el = document.getElementById('gameOverlay'); if (el) el.innerHTML = gameBuildLobby(); }
 function _gameRefreshSetup() { var el = document.getElementById('gameOverlay'); if (el) el.innerHTML = _gameBuildSetup(); }
 function _gameToggleChar(id) {
     var maxP = (_gameType === 'mahjong') ? 3 : (_gameType === 'landlord') ? 2 : (_gameType === 'guess') ? 9 : 10;
@@ -233,7 +233,7 @@ function _mjSortHand(hand) {
 }
 
 function mjStart() {
-    var ov = document.getElementById('gameOverlay'); if (ov) ov.classList.add('landscape');
+
     var persona = (typeof findPersona === 'function') ? findPersona(_gameSelectedPersona) : null;
     var pl = [];
     pl.push({ id: 'user', name: (persona && persona.name) || '我', avatar: (persona && persona.avatar) || '', hand: [], melds: [], discards: [], isUser: true, score: 0, wind: 0, dingque: -1 });
@@ -503,117 +503,78 @@ function _mjRenderChatOnly() {
 function _mjRender() {
     var el = document.getElementById('gameOverlay'); if (!el || !_mjState) return;
     var s = _mjState, h = '';
-
-    // 顶栏
-    h += '<div class="game-header" style="background:rgba(234,230,226,.9);padding-top:54px"><div class="game-back" data-mj-action="quit"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="game-header-title" style="color:#5a4a52">Mahjong 麻将</div><div class="game-header-spacer"></div></div>';
-
-    // 主体
-    h += '<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;background:radial-gradient(ellipse at 50% 50%,#e8e4e0,#ddd8d4)">';
-
-    // ── 上方：3个对手横排 ──
-    h += '<div style="display:flex;justify-content:space-around;align-items:flex-start;padding:4px 4px 2px;flex-shrink:0">';
-    for (var oi = 1; oi < 4; oi++) {
-        var op = s.players[oi], isA = (oi === s.currentPlayer && (s.phase === 'discard' || s.phase === 'draw'));
-        h += '<div style="display:flex;flex-direction:column;align-items:center;width:30%">';
-        // 头像+名字
-        h += '<div style="display:flex;align-items:center;gap:3px;padding:2px 6px;border-radius:7px;' + (isA ? 'background:rgba(143,181,160,.15);border:1px solid rgba(143,181,160,.15)' : 'background:rgba(255,255,255,.35);border:1px solid rgba(160,140,150,.06)') + '">';
-        h += '<div style="width:20px;height:20px;border-radius:50%;overflow:hidden;background:rgba(160,140,150,.06);flex-shrink:0">';
-        if (op.avatar) h += '<img src="' + _gEsc(op.avatar) + '" style="width:100%;height:100%;object-fit:cover">';
-        h += '</div>';
-        h += '<div style="font-size:8px;color:#5a4a52;font-weight:600;max-width:40px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _gEsc(op.name) + '</div>';
-        h += '<div style="font-size:6.5px;color:rgba(120,100,112,.3)">' + MJ_WINDS[oi] + '</div>';
-        h += '<div style="font-size:7px;color:#8fb5a0;font-weight:700">' + op.score + '</div>';
-        h += '</div>';
-        // 手牌数
-        h += '<div style="display:flex;gap:0;margin-top:2px">';
-        var show = Math.min(op.hand.length, 13);
-        for (var ob = 0; ob < show; ob++)h += '<div style="width:10px;height:15px;border-radius:2px;background:linear-gradient(180deg,#b8c8be,#9aaa9e);border:1px solid rgba(160,140,150,.1);margin-left:' + (ob > 0 ? '-2px' : '0') + '"></div>';
-        h += '</div>';
-        h += '<div style="font-size:6px;color:rgba(120,100,112,.25)">' + op.hand.length + '张</div>';
-        h += '</div>';
+    // 计算旋转容器尺寸(宽高互换实现横屏)
+    var ew = el.offsetWidth || 390, eh = el.offsetHeight || 844;
+    var wrapW = eh, wrapH = ew;
+    // 横屏容器
+    h += '<div class="ls-wrap" style="width:' + wrapW + 'px;height:' + wrapH + 'px;margin-left:-' + (wrapW / 2) + 'px;margin-top:-' + (wrapH / 2) + 'px">';
+    // header
+    h += '<div class="game-header" style="background:rgba(234,230,226,.9);padding:8px 12px 6px"><div class="game-back" data-mj-action="quit"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="game-header-title" style="color:#5a4a52;font-size:11px">麻将</div><div style="font-size:7px;color:rgba(90,74,82,.4)">R' + s.roundNum + '/' + s.totalRounds + ' 余' + s.wall.length + '</div></div>';
+    // 牌桌grid：左char1 / 上char2 / 右char3 / 中央 / 下user
+    h += '<div class="mj-table-ls">';
+    // ---- 左座 char1(players[1]) ----
+    var p1 = s.players[1], a1 = (1 === s.currentPlayer && (s.phase === 'discard' || s.phase === 'draw'));
+    h += '<div class="mj-seat mj-seat-left' + (a1 ? ' active' : '') + '">';
+    h += '<div class="mj-seat-av">';
+    if (p1.avatar) h += '<img src="' + _gEsc(p1.avatar) + '">';
+    h += '</div><div class="mj-seat-name">' + _gEsc(p1.name) + '</div>';
+    h += '<div class="mj-seat-cnt">' + p1.hand.length + '张 ' + p1.score + '分</div>';
+    h += '</div>';
+    // ---- 上座 char2(players[2]) ----
+    var p2 = s.players[2], a2 = (2 === s.currentPlayer && (s.phase === 'discard' || s.phase === 'draw'));
+    h += '<div class="mj-seat mj-seat-top' + (a2 ? ' active' : '') + '">';
+    h += '<div class="mj-seat-av">';
+    if (p2.avatar) h += '<img src="' + _gEsc(p2.avatar) + '">';
+    h += '</div><div class="mj-seat-name">' + _gEsc(p2.name) + '</div>';
+    h += '<div class="mj-seat-cnt">' + p2.hand.length + '张 ' + p2.score + '分</div>';
+    h += '</div>';
+    // ---- 右座 char3(players[3]) ----
+    var p3 = s.players[3], a3 = (3 === s.currentPlayer && (s.phase === 'discard' || s.phase === 'draw'));
+    h += '<div class="mj-seat mj-seat-right' + (a3 ? ' active' : '') + '">';
+    h += '<div class="mj-seat-av">';
+    if (p3.avatar) h += '<img src="' + _gEsc(p3.avatar) + '">';
+    h += '</div><div class="mj-seat-name">' + _gEsc(p3.name) + '</div>';
+    h += '<div class="mj-seat-cnt">' + p3.hand.length + '张 ' + p3.score + '分</div>';
+    h += '</div>';
+    // ---- 中央(log+牌河) ----
+    h += '<div class="mj-center-ls">';
+    h += '<div class="mj-center-log" id="mjLog">';
+    var logA = s.log || [];
+    for (var li = Math.max(0, logA.length - 20); li < logA.length; li++) h += '<div>' + _gEsc(logA[li]) + '</div>';
+    h += '</div>';
+    h += '<div class="mj-center-discards">';
+    for (var di = 0; di < 4; di++) { var dp = s.players[di]; for (var dd = 0; dd < dp.discards.length; dd++) { var dt = dp.discards[dd]; h += '<div class="mj-discard-tile ' + _mjTileSuitClass(dt) + '">' + _mjTileShort(dt) + '</div>'; } }
+    h += '</div></div>';
+    // ---- 底部user(players[0]) ----
+    h += '<div class="mj-hand-ls">';
+    // 操作按钮
+    if (s.pendingAction && s.pendingAction.type === 'canHu') {
+        h += '<div class="mj-action-ls"><div class="mj-action-btn primary" data-mj-action="hu">胡!</div><div class="mj-action-btn gray" data-mj-action="skip">跳过</div></div>';
     }
-    h += '</div>';
-
-    // ── 中部：牌桌+弃牌+聊天 ──
-    h += '<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;min-height:0">';
-
-    // 中心信息
-    h += '<div style="position:absolute;top:4px;left:50%;transform:translateX(-50%);padding:3px 10px;border-radius:6px;background:rgba(255,255,255,.4);font-size:8px;color:#6a5560;z-index:2;display:flex;gap:6px;align-items:center">';
-    h += '<span style="font-weight:800">' + MJ_WINDS[s.currentPlayer] + '</span>';
-    h += '<span>余' + s.wall.length + '</span>';
-    h += '<span>' + s.roundNum + '/' + s.totalRounds + '局</span>';
-    h += '</div>';
-
-    // 弃牌区（可滚动）
-    h += '<div style="flex:0 0 auto;max-height:60px;overflow-y:auto;padding:18px 8px 2px 8px;display:flex;flex-wrap:wrap;gap:1px;justify-content:center">';
-    for (var di = 0; di < 4; di++) {
-        var dp = s.players[di];
-        for (var dd = 0; dd < dp.discards.length; dd++) {
-            var dt = dp.discards[dd];
-            h += '<div class="mj-discard-tile ' + _mjTileSuitClass(dt) + '" title="' + _gEsc(s.players[di].name) + '">' + _mjTileShort(dt) + '</div>';
-        }
-    }
-    h += '</div>';
-
-    // 日志
-    h += '<div style="padding:2px 8px;flex-shrink:0">';
-    var ls = Math.max(0, s.logs.length - 2);
-    for (var li = ls; li < s.logs.length; li++)h += '<div style="font-size:7px;color:rgba(90,74,82,.4);background:rgba(255,255,255,.3);border-radius:4px;padding:1px 5px;margin-bottom:1px;width:fit-content;max-width:80%">' + _gEsc(s.logs[li]) + '</div>';
-    h += '</div>';
-
-    // ── 操作按钮 ──
-    if (s.pendingAction && s.pendingAction.type === 'canHu' && s.pendingAction.pIdx === 0) {
-        h += '<div style="display:flex;gap:5px;justify-content:center;padding:3px;flex-shrink:0">';
-        h += '<div class="mj-action-btn primary" data-mj-action="hu">胡 Hu!</div>';
-        h += '<div class="mj-action-btn gray" data-mj-action="skip">跳过 Skip</div>';
-        h += '</div>';
-    }
-
-    // ── 下方：我的信息+手牌 ──
-    h += '<div style="flex-shrink:0;padding:2px 5px 8px;background:linear-gradient(to top,rgba(230,226,222,.9),rgba(230,226,222,.2))">';
-    var myA = (s.currentPlayer === 0 && s.phase === 'discard'), me = s.players[0];
-    h += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">';
+    var me = s.players[0], myA = (s.currentPlayer === 0 && s.phase === 'discard');
+    h += '<div class="mj-hand-ls-info">';
     h += '<div style="display:flex;align-items:center;gap:3px;padding:2px 6px;border-radius:7px;' + (myA ? 'background:rgba(143,181,160,.15);border:1px solid rgba(143,181,160,.15)' : 'background:rgba(255,255,255,.35);border:1px solid rgba(160,140,150,.06)') + '">';
-    h += '<div style="width:18px;height:18px;border-radius:50%;overflow:hidden;background:rgba(160,140,150,.06);flex-shrink:0">';
+    h += '<div style="width:14px;height:14px;border-radius:50%;overflow:hidden">';
     if (me.avatar) h += '<img src="' + _gEsc(me.avatar) + '" style="width:100%;height:100%;object-fit:cover">';
-    h += '</div>';
-    h += '<div style="font-size:8px;color:#5a4a52;font-weight:600">' + _gEsc(me.name) + '</div>';
-    h += '<div style="font-size:6.5px;color:rgba(120,100,112,.3)">' + MJ_WINDS[0] + '</div>';
-    h += '<div style="font-size:7px;color:#8fb5a0;font-weight:700">' + me.score + '</div>';
-    h += '</div>';
-    if (myA) h += '<div style="font-size:7px;color:#8fb5a0;font-weight:600;animation:pulse 1s infinite">← 轮到你出牌</div>';
-    h += '</div>';
-
-    // ★ 手牌横排
-    h += '<div style="display:flex;gap:1px;overflow-x:auto;padding:2px 0;align-items:flex-end;-webkit-overflow-scrolling:touch">';
+    h += '</div><span style="font-size:7px;font-weight:600;color:#5a4a52">' + _gEsc(me.name) + '</span>';
+    h += '<span style="font-size:6px;color:rgba(120,100,112,.3)">分:' + me.score + '</span></div></div>';
+    // 手牌
+    h += '<div class="mj-hand-ls-cards">';
     for (var hi = 0; hi < me.hand.length; hi++) {
         var ht = me.hand[hi], canP = (s.currentPlayer === 0 && s.phase === 'discard');
-        h += '<div class="mj-tile ' + _mjTileSuitClass(ht) + (canP ? ' playable' : '') + '" style="min-width:22px;width:22px;height:32px"' + (canP ? ' data-mj-play="' + hi + '"' : '') + '>';
-        h += '<div class="mj-tile-val" style="font-size:12px">' + _mjTileShort(ht) + '</div>';
-        h += '<div class="mj-tile-suit" style="font-size:5px">' + (MJ_SUIT_CN[ht.suit] || '') + '</div>';
-        h += '</div>';
+        h += '<div class="mj-tile ' + _mjTileSuitClass(ht) + (canP ? ' playable' : '') + '"' + (canP ? ' data-mj-play="' + hi + '"' : '') + '>';
+        h += '<div class="mj-tile-val">' + _mjTileShort(ht) + '</div>';
+        h += '<div class="mj-tile-suit">' + (MJ_SUIT_CN[ht.suit] || '') + '</div></div>';
     }
-    h += '</div>';
-
-    // 副露
     if (me.melds.length > 0) {
-        h += '<div style="display:flex;gap:2px;margin-top:1px;justify-content:center">';
-        for (var mi = 0; mi < me.melds.length; mi++) {
-            var meld = me.melds[mi];
-            h += '<div style="display:flex;gap:0;padding:1px;border-radius:2px;background:rgba(255,255,255,.3)">';
-            for (var mt = 0; mt < meld.tiles.length; mt++) {
-                var mtt = meld.tiles[mt];
-                h += '<div class="mj-meld-tile ' + _mjTileSuitClass(mtt) + '" style="width:14px;height:20px;font-size:5.5px">' + _mjTileShort(mtt) + '</div>';
-            }
-            h += '</div>';
-        }
+        h += '<div style="display:flex;gap:2px;margin-left:4px;align-items:flex-end">';
+        for (var mi = 0; mi < me.melds.length; mi++) { h += '<div style="display:flex;gap:0">'; for (var mti = 0; mti < me.melds[mi].tiles.length; mti++) { var mtt = me.melds[mi].tiles[mti]; h += '<div class="mj-meld-tile ' + _mjTileSuitClass(mtt) + '">' + _mjTileShort(mtt) + '</div>'; } h += '</div>'; }
         h += '</div>';
     }
-    h += '</div>'; // /下方
-    h += '</div>'; // /主体
-
-    // ====== 弹窗 ======
-    if (s.phase === 'dingque') {
+    h += '</div></div>'; // /mj-hand-ls-cards /mj-hand-ls
+    h += '</div>'; // /mj-table-ls
+    // 定缺overlay(四川)
+    if (s.region === 'sichuan' && s.phase === 'dingque' && me.dingque === -1) {
         h += '<div class="mj-dingque-overlay show"><div class="mj-dingque-box">';
         h += '<div class="mj-dingque-title">定缺 Choose Exclude</div>';
         h += '<div class="mj-dingque-sub">选择一个花色，整局不能出该花色的牌胡牌</div>';
@@ -623,15 +584,16 @@ function _mjRender() {
         h += '<div class="mj-dingque-btn tong" data-mj-action="dingque-2"><div class="mj-dingque-btn-label">筒</div><div class="mj-dingque-btn-sub">Tong</div></div>';
         h += '</div></div></div>';
     }
-    if (s.phase === 'result') {
+    // 结算
+    if (s.gameOver && s.phase === 'result') {
         h += '<div class="mj-result show"><div class="mj-result-title">Game Over 对局结束</div>';
         h += '<div class="mj-result-sub">' + s.totalRounds + '局结算</div><div class="mj-result-scores">';
-        var sorted = []; for (var si = 0; si < 4; si++)sorted.push({ idx: si, score: s.players[si].score });
+        var sorted = []; for (var si = 0; si < 4; si++) sorted.push({ idx: si, score: s.players[si].score });
         sorted.sort(function (a, b) { return b.score - a.score; });
         for (var sr = 0; sr < sorted.length; sr++) {
             var sp = s.players[sorted[sr].idx], isW = (sr === 0);
             h += '<div class="mj-result-row' + (isW ? ' winner' : '') + '"><div class="mj-result-av">';
-            if (sp.avatar) h += '<img src="' + _gEsc(sp.avatar) + '">';
+            if (sp.avatar) h += '<img src="' + _gEsc(sp.avatar) + '" style="width:100%;height:100%;object-fit:cover">';
             h += '</div><div class="mj-result-name">' + _gEsc(sp.name) + '</div><div class="mj-result-pts' + (sp.score < 0 ? ' neg' : '') + '">' + sp.score + '</div></div>';
         }
         h += '</div><div class="mj-result-btns">';
@@ -639,8 +601,10 @@ function _mjRender() {
         h += '<div class="mj-result-btn secondary" data-mj-action="lobby">大厅 Lobby</div>';
         h += '</div></div>';
     }
-
+    h += '</div>'; // /ls-wrap
     el.innerHTML = h;
+    var logEl = document.getElementById('mjLog');
+    if (logEl) logEl.scrollTop = logEl.scrollHeight;
 }
 
 /* ==========================================
@@ -711,13 +675,12 @@ function _ddzCardColor(c) {
 }
 
 function ddzStart() {
-    var ov = document.getElementById('gameOverlay'); if (ov) ov.classList.add('landscape');
     var persona = (typeof findPersona === 'function') ? findPersona(_gameSelectedPersona) : null;
     var pl = [];
-    pl.push({ id: 'user', name: (persona && persona.name) || '我', avatar: (persona && persona.avatar) || '', hand: [], isUser: true, isLandlord: false, score: 0 });
+    pl.push({ id: 'user', name: (persona && persona.name) || '我', avatar: (persona && persona.avatar) || '', hand: [], isUser: true, isLandlord: false, score: 0, lastPlayed: [], lastAction: '' });
     for (var i = 0; i < _gameSelectedChars.length; i++) {
         var r = (typeof findRole === 'function') ? findRole(_gameSelectedChars[i]) : null;
-        if (r) pl.push({ id: r.id, name: r.name || '角色', avatar: r.avatar || '', detail: r.detail || '', hand: [], isUser: false, isLandlord: false, score: 0 });
+        if (r) pl.push({ id: r.id, name: r.name || '角色', avatar: r.avatar || '', detail: r.detail || '', hand: [], isUser: false, isLandlord: false, score: 0, lastPlayed: [], lastAction: '' });
     }
     var deck = _ddzBuildDeck();
     // 发牌：每人17张，留3张底牌
@@ -997,6 +960,7 @@ function _ddzDoPlay(pIdx, cards, analysis) {
     var ids = {}; for (var i = 0; i < cards.length; i++) ids[cards[i].id] = true;
     pl.hand = pl.hand.filter(function (c) { return !ids[c.id]; });
     s.selectedCards = [];
+    pl.lastPlayed = cards.slice(); pl.lastAction = 'play';
 
     // 记录出牌
     s.lastPlay = analysis;
@@ -1031,6 +995,7 @@ function _ddzDoPlay(pIdx, cards, analysis) {
 
 function _ddzDoPass(pIdx) {
     var s = _ddzState;
+    s.players[pIdx].lastPlayed = []; s.players[pIdx].lastAction = 'pass';
     _ddzLog(s.players[pIdx].name + ' 过');
     s.passCount++;
 
@@ -1204,122 +1169,130 @@ function _ddzGameOver(winnerIdx) {
 
 /* ===== 渲染 ===== */
 function _ddzRender() {
-    var el = document.getElementById('gameOverlay'); if (!el) return;
-    var s = _ddzState; if (!s) return;
-    var h = '';
-    h += '<div class="game-header"><div class="game-back" onclick="_ddzHandleAction(\'quit\')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="game-header-title">Landlord 斗地主</div><div class="game-header-spacer"></div></div>';
-    h += '<div class="ddz-game show">';
-
-    // 对手区
-    h += '<div class="ddz-opponents">';
-    for (var i = 1; i <= 2; i++) {
-        var op = s.players[i];
-        h += '<div class="ddz-opponent">';
-        h += '<div class="ddz-opp-avatar">';
-        if (op.avatar) h += '<img src="' + _gEsc(op.avatar) + '">';
-        else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-        if (op.isLandlord) h += '<div class="ddz-crown">👑</div>';
+    var el = document.getElementById('gameOverlay'); if (!el || !_ddzState) return;
+    var s = _ddzState, h = '';
+    var ew = el.offsetWidth || 390, eh = el.offsetHeight || 844;
+    var wrapW = eh, wrapH = ew;
+    // 横屏容器
+    h += '<div class="ls-wrap" style="width:' + wrapW + 'px;height:' + wrapH + 'px;margin-left:-' + (wrapW / 2) + 'px;margin-top:-' + (wrapH / 2) + 'px">';
+    // header
+    h += '<div class="game-header" style="padding:8px 12px 6px"><div class="game-back" data-ddz-action="quit"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="game-header-title" style="font-size:11px">斗地主</div><div class="game-header-spacer"></div></div>';
+    // 牌桌grid：左char1 / 右char2 / 中央 / 下user
+    h += '<div class="ddz-table-ls">';
+    // ---- 左座 char1(players[1]) ----
+    var op1 = s.players[1], ia1 = (1 === s.currentPlayer);
+    h += '<div class="ddz-seat ddz-seat-left' + (ia1 ? ' active' : '') + '">';
+    h += '<div class="ddz-seat-av">';
+    if (op1.avatar) h += '<img src="' + _gEsc(op1.avatar) + '">';
+    h += '</div><div class="ddz-seat-name">' + _gEsc(op1.name) + '</div>';
+    h += '<div class="ddz-seat-cnt">' + op1.hand.length + '张</div>';
+    if (s.landlordIdx === 1) h += '<div class="ddz-seat-tag">地主</div>';
+    if (op1.lastPlayed && op1.lastPlayed.length > 0) {
+        h += '<div class="ddz-seat-played">';
+        for (var lp1 = 0; lp1 < op1.lastPlayed.length; lp1++) {
+            var c1 = op1.lastPlayed[lp1], r1 = (['♥', '♦'].indexOf(c1.suit) >= 0 || c1.rank === 'Joker');
+            h += '<span style="font-size:7px;color:' + (r1 ? '#c9908e' : '#5a4a52') + ';margin:0 1px">' + _gEsc(c1.rank) + (c1.suit || '') + '</span>';
+        }
         h += '</div>';
-        h += '<div class="ddz-opp-name">' + _gEsc(op.name) + '</div>';
-        h += '<div class="ddz-opp-count">' + op.hand.length + '张</div>';
-        if (s.turnPlayer === i) h += '<div class="ddz-thinking">思考中...</div>';
-        h += '</div>';
+    } else if (op1.lastAction === 'pass') {
+        h += '<div class="ddz-seat-played" style="color:rgba(120,100,112,.3)">不出</div>';
     }
     h += '</div>';
-
-    // 牌桌中央 - 信息区
-    h += '<div class="ddz-center">';
-    // 底牌
-    if (s.phase !== 'bid' || s.landlordIdx >= 0) {
-        h += '<div class="ddz-dizhu-cards"><span class="ddz-dizhu-label">底牌</span>';
-        for (var d = 0; d < s.dizhuCards.length; d++) {
-            var dc = s.dizhuCards[d];
-            h += '<span class="ddz-mini-card ' + _ddzCardColor(dc) + '">' + _ddzCardDisplay(dc) + '</span>';
+    // ---- 右座 char2(players[2]) ----
+    var op2 = s.players[2], ia2 = (2 === s.currentPlayer);
+    h += '<div class="ddz-seat ddz-seat-right' + (ia2 ? ' active' : '') + '">';
+    h += '<div class="ddz-seat-av">';
+    if (op2.avatar) h += '<img src="' + _gEsc(op2.avatar) + '">';
+    h += '</div><div class="ddz-seat-name">' + _gEsc(op2.name) + '</div>';
+    h += '<div class="ddz-seat-cnt">' + op2.hand.length + '张</div>';
+    if (s.landlordIdx === 2) h += '<div class="ddz-seat-tag">地主</div>';
+    if (op2.lastPlayed && op2.lastPlayed.length > 0) {
+        h += '<div class="ddz-seat-played">';
+        for (var lp2 = 0; lp2 < op2.lastPlayed.length; lp2++) {
+            var c2 = op2.lastPlayed[lp2], r2 = (['♥', '♦'].indexOf(c2.suit) >= 0 || c2.rank === 'Joker');
+            h += '<span style="font-size:7px;color:' + (r2 ? '#c9908e' : '#5a4a52') + ';margin:0 1px">' + _gEsc(c2.rank) + (c2.suit || '') + '</span>';
+        }
+        h += '</div>';
+    } else if (op2.lastAction === 'pass') {
+        h += '<div class="ddz-seat-played" style="color:rgba(120,100,112,.3)">不出</div>';
+    }
+    h += '</div>';
+    // ---- 中央区 ----
+    h += '<div class="ddz-center-ls">';
+    h += '<div class="ddz-center-log">';
+    var logA = s.logs || [];
+    for (var li = Math.max(0, logA.length - 6); li < logA.length; li++) h += _gEsc(logA[li]) + ' ';
+    h += '</div>';
+    if (s.diPai && s.diPai.length > 0 && s.phase !== 'bid') {
+        h += '<div style="display:flex;gap:1px;justify-content:center;margin:2px 0">';
+        for (var dpi = 0; dpi < s.diPai.length; dpi++) {
+            var dc = s.diPai[dpi], dRed = (['♥', '♦'].indexOf(dc.suit) >= 0);
+            h += '<div style="width:18px;height:26px;background:#fffefa;border-radius:3px;border:1px solid rgba(160,140,150,.1);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:.5">';
+            h += '<div style="font-size:7px;color:' + (dRed ? '#c9908e' : '#5a4a52') + '">' + _gEsc(dc.rank) + '</div>';
+            h += '<div style="font-size:5px;color:' + (dRed ? '#c9908e' : '#5a4a52') + '">' + dc.suit + '</div></div>';
         }
         h += '</div>';
     }
-
-    // 倍数&分数信息
-    h += '<div class="ddz-info">';
-    if (s.landlordIdx >= 0) h += '<span>底分 ' + s.bidHighest + '</span><span>倍数 ×' + s.multiplier + '</span>';
-    h += '</div>';
-
-    // 出牌记录区
-    h += '<div class="ddz-play-area">';
-    if (s.lastPlay && s.lastPlay.cards) {
-        h += '<div class="ddz-played"><div class="ddz-played-name">' + _gEsc(s.players[s.lastPlayPlayer].name) + '</div><div class="ddz-played-cards">';
-        for (var c = 0; c < s.lastPlay.cards.length; c++) {
-            var pc = s.lastPlay.cards[c];
-            h += '<span class="ddz-play-card ' + _ddzCardColor(pc) + '">' + _ddzCardDisplay(pc) + '</span>';
-        }
-        h += '</div></div>';
-    }
-    h += '</div>';
-
-    // 日志
-    h += '<div class="ddz-log-area">';
-    var showLogs = s.logs.slice(-3);
-    for (var l = 0; l < showLogs.length; l++) {
-        h += '<div class="ddz-log-item">' + _gEsc(showLogs[l]) + '</div>';
-    }
-    h += '</div>';
-    h += '</div>'; // ddz-center end
-
-    // 叫地主阶段
-    if (s.phase === 'bid' && s.bidCurrent === 0) {
-        h += '<div class="ddz-bid-bar">';
-        h += '<div class="ddz-bid-title">请叫地主</div>';
-        h += '<div class="ddz-bid-btns">';
-        h += '<div class="ddz-bid-btn pass" data-ddz-action="bid-0">不叫</div>';
-        if (s.bidHighest < 1) h += '<div class="ddz-bid-btn" data-ddz-action="bid-1">1分</div>';
-        if (s.bidHighest < 2) h += '<div class="ddz-bid-btn" data-ddz-action="bid-2">2分</div>';
-        if (s.bidHighest < 3) h += '<div class="ddz-bid-btn call3" data-ddz-action="bid-3">3分</div>';
-        h += '</div></div>';
-    }
-
-    // 出牌操作栏
-    if (s.phase === 'play' && s.turnPlayer === 0) {
-        h += '<div class="ddz-action-bar">';
-        if (s.lastPlay && s.lastPlayPlayer !== 0) h += '<div class="ddz-act-btn pass" data-ddz-action="pass">不出</div>';
-        h += '<div class="ddz-act-btn hint" data-ddz-action="hint">提示</div>';
-        h += '<div class="ddz-act-btn play" data-ddz-action="play">出牌</div>';
-        h += '</div>';
-    }
-
-    // 结算
-    if (s.phase === 'result') {
-        h += '<div class="ddz-result-overlay">';
-        h += '<div class="ddz-result-card">';
-        var landlordWon = s.players[s.landlordIdx].hand.length === 0;
-        h += '<div class="ddz-result-title">' + (landlordWon ? '👑 地主胜利' : '🌾 农民胜利') + '</div>';
-        for (var i = 0; i < 3; i++) {
-            var p = s.players[i];
-            h += '<div class="ddz-result-player"><div class="ddz-result-av">';
-            if (p.avatar) h += '<img src="' + _gEsc(p.avatar) + '">';
-            h += '</div><div class="ddz-result-name">' + _gEsc(p.name) + (p.isLandlord ? ' 👑' : ' 🌾') + '</div><div class="ddz-result-score ' + (p.score >= 0 ? 'pos' : 'neg') + '">' + (p.score >= 0 ? '+' : '') + p.score + '</div></div>';
-        }
-        h += '<div class="ddz-result-btns">';
-        h += '<div class="ddz-act-btn" data-ddz-action="again">再来一局</div>';
-        h += '<div class="ddz-act-btn" data-ddz-action="lobby">返回大厅</div>';
-        h += '</div></div></div>';
-    }
-
-    // 手牌区
-    h += '<div class="ddz-hand">';
+    // user最后出的牌(显示在中央)
     var me = s.players[0];
-    if (me.isLandlord) h += '<div class="ddz-hand-label">👑 地主</div>';
-    else h += '<div class="ddz-hand-label">🌾 农民</div>';
-    h += '<div class="ddz-hand-cards">';
-    for (var i = 0; i < me.hand.length; i++) {
-        var c = me.hand[i], isSel = s.selectedCards.indexOf(i) >= 0;
-        h += '<div class="ddz-card ' + _ddzCardColor(c) + (isSel ? ' selected' : '') + '" data-ddz-card="' + i + '">';
-        h += '<div class="ddz-card-rank">' + (c.isJoker ? c.rank : c.rank) + '</div>';
-        if (!c.isJoker) h += '<div class="ddz-card-suit">' + c.suit + '</div>';
+    if (me.lastPlayed && me.lastPlayed.length > 0) {
+        h += '<div style="display:flex;gap:1px;justify-content:center;margin:3px 0">';
+        for (var mp = 0; mp < me.lastPlayed.length; mp++) {
+            var mc = me.lastPlayed[mp], mRed = (['♥', '♦'].indexOf(mc.suit) >= 0 || mc.rank === 'Joker');
+            h += '<span style="font-size:9px;font-weight:600;color:' + (mRed ? '#c9908e' : '#5a4a52') + ';margin:0 1px">' + _gEsc(mc.rank) + (mc.suit || '') + '</span>';
+        }
         h += '</div>';
+    } else if (me.lastAction === 'pass') {
+        h += '<div style="text-align:center;font-size:8px;color:rgba(120,100,112,.3);margin:3px 0">不出</div>';
+    }
+    h += '</div>';
+    // ---- 操作栏 ----
+    h += '<div class="ddz-bottom-ls">';
+    if (s.phase === 'bid' && s.currentPlayer === 0) {
+        h += '<div class="ddz-act-btn" data-ddz-action="bid-0" style="background:rgba(160,140,150,.08);color:#8a7580;border:1px solid rgba(160,140,150,.1);cursor:pointer;border-radius:6px;padding:4px 12px;font-size:9px">不叫</div>';
+        for (var bv = 1; bv <= 3; bv++) {
+            if (bv >= (s.currentBid || 0) + 1) h += '<div class="ddz-act-btn" data-ddz-action="bid-' + bv + '" style="background:rgba(143,168,197,.12);color:#6a8ab0;border:1px solid rgba(143,168,197,.15);cursor:pointer;border-radius:6px;padding:4px 12px;font-size:9px">' + bv + '分</div>';
+        }
+    } else if (s.phase === 'play' && s.currentPlayer === 0) {
+        h += '<div class="ddz-act-btn" data-ddz-action="play" style="background:rgba(143,168,197,.12);color:#6a8ab0;border:1px solid rgba(143,168,197,.15);cursor:pointer;border-radius:6px;padding:4px 12px;font-size:9px">出牌</div>';
+        h += '<div class="ddz-act-btn" data-ddz-action="pass" style="background:rgba(160,140,150,.08);color:#8a7580;border:1px solid rgba(160,140,150,.1);cursor:pointer;border-radius:6px;padding:4px 12px;font-size:9px">不出</div>';
+        h += '<div class="ddz-act-btn" data-ddz-action="hint" style="background:rgba(160,140,150,.05);color:rgba(120,100,112,.4);border:1px solid rgba(160,140,150,.06);cursor:pointer;border-radius:6px;padding:4px 12px;font-size:9px">提示</div>';
+    }
+    h += '</div>';
+    // ---- 底部user手牌 ----
+    h += '<div class="ddz-hand-ls">';
+    h += '<div style="display:flex;align-items:center;gap:4px;padding:1px 4px;font-size:7px;color:#5a4a52">';
+    if (me.avatar) h += '<img src="' + _gEsc(me.avatar) + '" style="width:14px;height:14px;border-radius:50%;object-fit:cover">';
+    h += '<span style="font-weight:600">' + _gEsc(me.name) + '</span>';
+    if (s.landlordIdx === 0) h += '<span style="font-size:5px;padding:1px 3px;border-radius:3px;background:rgba(201,144,142,.15);color:#c9908e">地主</span>';
+    h += '<span style="color:rgba(120,100,112,.3)">分:' + me.score + '</span></div>';
+    h += '<div class="ddz-hand-ls-cards">';
+    for (var ci = 0; ci < me.hand.length; ci++) {
+        var c = me.hand[ci], sel = (s.selectedCards && s.selectedCards.indexOf(ci) >= 0);
+        var isRed = (['♥', '♦'].indexOf(c.suit) >= 0 || c.rank === 'Joker');
+        h += '<div class="ddz-card-ls' + (sel ? ' selected' : '') + '" data-ddz-card="' + ci + '">';
+        h += '<div class="ddz-card-ls-rank" style="color:' + (isRed ? '#c9908e' : '#5a4a52') + '">' + _gEsc(c.rank) + '</div>';
+        h += '<div class="ddz-card-ls-suit" style="color:' + (isRed ? '#c9908e' : '#5a4a52') + '">' + (c.suit || '') + '</div></div>';
     }
     h += '</div></div>';
-
-    h += '</div>'; // ddz-game end
+    h += '</div>'; // /ddz-table-ls
+    // 结算
+    if (s.gameOver && s.phase === 'result') {
+        h += '<div class="ddz-result show"><div class="ddz-result-title">Game Over</div>';
+        h += '<div class="ddz-result-scores">';
+        for (var ri = 0; ri < 3; ri++) {
+            var rp = s.players[ri];
+            h += '<div class="ddz-result-row' + (rp.score > 0 ? ' winner' : '') + '"><div class="ddz-result-av">';
+            if (rp.avatar) h += '<img src="' + _gEsc(rp.avatar) + '" style="width:100%;height:100%;object-fit:cover">';
+            h += '</div><div class="ddz-result-name">' + _gEsc(rp.name) + (s.landlordIdx === ri ? ' 👑' : '') + '</div>';
+            h += '<div class="ddz-result-pts' + (rp.score < 0 ? ' neg' : '') + '">' + rp.score + '</div></div>';
+        }
+        h += '</div><div class="ddz-result-btns">';
+        h += '<div class="ddz-result-btn primary" data-ddz-action="again">再来 Again</div>';
+        h += '<div class="ddz-result-btn secondary" data-ddz-action="lobby">大厅 Lobby</div>';
+        h += '</div></div>';
+    }
+    h += '</div>'; // /ls-wrap
     el.innerHTML = h;
 }
 
@@ -1357,5 +1330,12 @@ function _ddzHint() {
             if (typeof showToast === 'function') showToast('没有能出的牌');
         }
     }
+
+    function _ddzMiniCard(card) {
+        var isRed = (['♥', '♦'].indexOf(card.suit) >= 0 || card.rank === 'Joker');
+        var c = isRed ? '#c9908e' : '#5a4a52';
+        return '<span style="font-size:7px;color:' + c + ';margin:0 1px">' + _gEsc(card.rank) + (card.suit || '') + '</span>';
+    }
+
     _ddzRender();
 }
