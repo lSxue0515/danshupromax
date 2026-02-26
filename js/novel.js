@@ -792,12 +792,37 @@ function _nvGenerateOneChapter(novelId, chapIdx) {
     };
 
     var xhr = new XMLHttpRequest();
-    var apiUrl = api.url.replace(/\/$/, '');
-    if (apiUrl.indexOf('/chat/completions') < 0) apiUrl += '/v1/chat/completions';
+    var apiUrl = api.url.replace(/\/+$/, '');
+    /* 防止重复拼接路径 */
+    if (apiUrl.indexOf('/chat/completions') < 0) {
+        if (apiUrl.indexOf('/v1') < 0) {
+            apiUrl += '/v1/chat/completions';
+        } else {
+            apiUrl += '/chat/completions';
+        }
+    }
     xhr.open('POST', apiUrl, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('Authorization', 'Bearer ' + api.key);
+    xhr.timeout = 120000; /* 2分钟超时，生成长文需要时间 */
     xhr.onload = function () {
+        /* 先检查HTTP状态码 */
+        if (xhr.status !== 200) {
+            _nvGenerating = false; _nvRender();
+            var errMsg = '请求失败 (' + xhr.status + ')';
+            try {
+                var errRes = JSON.parse(xhr.responseText);
+                if (errRes.error && errRes.error.message) errMsg = errRes.error.message;
+            } catch (e) { }
+            console.error('API error', xhr.status, xhr.responseText);
+            if (xhr.status === 401) errMsg = 'API密钥无效，请检查设置';
+            else if (xhr.status === 429) errMsg = '请求太频繁，请稍后再试';
+            else if (xhr.status === 403) errMsg = 'API访问被拒绝，请检查密钥';
+            else if (xhr.status === 404) errMsg = 'API地址错误，请检查URL';
+            else if (xhr.status >= 500) errMsg = 'API服务器异常，请稍后重试';
+            if (typeof showToast === 'function') showToast(errMsg);
+            return;
+        }
         try {
             var res = JSON.parse(xhr.responseText);
             var text = res.choices[0].message.content || '';
@@ -819,14 +844,19 @@ function _nvGenerateOneChapter(novelId, chapIdx) {
             _nvSave(); _nvRender();
             if (typeof showToast === 'function') showToast(chapTitle + ' 已完成!');
         } catch (e) {
-            console.error('Novel gen error', e);
+            console.error('Novel gen parse error', e, xhr.responseText);
             _nvGenerating = false; _nvRender();
-            if (typeof showToast === 'function') showToast('生成出错，请重试');
+            if (typeof showToast === 'function') showToast('生成出错: 返回数据解析失败');
         }
     };
     xhr.onerror = function () {
+        console.error('XHR onerror', apiUrl);
         _nvGenerating = false; _nvRender();
-        if (typeof showToast === 'function') showToast('网络错误');
+        if (typeof showToast === 'function') showToast('网络连接失败，请检查API地址是否正确');
+    };
+    xhr.ontimeout = function () {
+        _nvGenerating = false; _nvRender();
+        if (typeof showToast === 'function') showToast('请求超时，请稍后重试');
     };
     xhr.send(JSON.stringify(body));
 }
@@ -962,6 +992,120 @@ function _nvRenderRead() {
 
     h += '</div>';
     return h;
+}
+
+/* ===== 阅读页 ===== */
+function _nvOpenRead(id) {
+    _nvReadNovel = id; _nvReadChap = 0; _nvTocOpen = false; _nvRender();
+}
+
+function _nvRenderRead() {
+    var novel = null;
+    for (var i = 0; i < _nvNovels.length; i++) {
+        if (_nvNovels[i].id === _nvReadNovel) { novel = _nvNovels[i]; break; }
+    }
+    if (!novel) return '';
+
+    var h = '<div class="nv-create-overlay show">';
+    h += '<div class="nv-header">';
+    h += '<div class="nv-back" onclick="_nvReadNovel=null;_nvRender()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>';
+    h += '<div class="nv-header-title">' + _nvEsc(novel.title) + '</div>';
+    h += '<div class="nv-back" onclick="_nvTocOpen=true;_nvRender()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></div>';
+    h += '</div>';
+
+    h += '<div class="nv-create-body" style="padding-bottom:80px">';
+
+    if (_nvGenerating && _nvGenNovelId === novel.id) {
+        h += '<div style="text-align:center;padding:20px 0">';
+        h += '<div style="font-size:13px;color:#8b7e6a;margin-bottom:6px">正在生成第 ' + (_nvGenChapIdx + 1) + ' 章...</div>';
+        h += '<div style="font-size:11px;color:#c4b9a8">已完成的章节可以先阅读</div>';
+        h += '</div>';
+    }
+
+    var chap = novel.chapters[_nvReadChap];
+    if (chap) {
+        h += '<div style="text-align:center;font-size:16px;font-weight:700;color:#5a4e3c;padding:20px 0 12px">' + _nvEsc(chap.title) + '</div>';
+        if (chap.content) {
+            var paragraphs = chap.content.split('\n');
+            h += '<div style="font-size:14px;line-height:1.9;color:#5a4e3c;padding:0 4px">';
+            for (var pi = 0; pi < paragraphs.length; pi++) {
+                var line = paragraphs[pi].trim();
+                if (line) h += '<p style="text-indent:2em;margin:0 0 10px 0">' + _nvEsc(line) + '</p>';
+            }
+            h += '</div>';
+        } else {
+            h += '<div style="text-align:center;padding:40px 0;color:#c4b9a8;font-size:13px">';
+            if (_nvGenerating && _nvGenNovelId === novel.id) {
+                h += '本章正在生成中...';
+            } else {
+                h += '本章尚未生成';
+                h += '<div style="margin-top:12px"><span style="display:inline-block;padding:8px 20px;background:#d4c8b0;color:#fff;border-radius:20px;font-size:12px;cursor:pointer" onclick="_nvGenerateOneChapter(\'' + novel.id + '\',' + _nvReadChap + ')">生成本章</span></div>';
+            }
+            h += '</div>';
+        }
+
+        /* 上一章 / 目录 / 下一章 */
+        h += '<div style="display:flex;justify-content:center;gap:12px;padding:20px 0">';
+        if (_nvReadChap > 0) {
+            h += '<span style="padding:8px 16px;background:#faf8f4;border:1px solid #ddd5c5;border-radius:16px;font-size:12px;color:#8b7e6a;cursor:pointer" onclick="_nvReadChap--;_nvRender()">上一章</span>';
+        }
+        h += '<span style="padding:8px 16px;background:#faf8f4;border:1px solid #ddd5c5;border-radius:16px;font-size:12px;color:#8b7e6a;cursor:pointer" onclick="_nvTocOpen=true;_nvRender()">目录</span>';
+        if (_nvReadChap < novel.chapters.length - 1) {
+            h += '<span style="padding:8px 16px;background:#faf8f4;border:1px solid #ddd5c5;border-radius:16px;font-size:12px;color:#8b7e6a;cursor:pointer" onclick="_nvReadChap++;_nvRender()">下一章</span>';
+        }
+        h += '</div>';
+
+        /* 生成下一章按钮（无emoji） */
+        var nextIdx = _nvReadChap + 1;
+        if (!_nvGenerating && nextIdx < novel.chapters.length && !novel.chapters[nextIdx].content) {
+            h += '<div style="text-align:center;padding:8px 0 16px">';
+            h += '<span style="display:inline-block;padding:10px 24px;background:#d4c8b0;color:#fff;border-radius:20px;font-size:13px;cursor:pointer" onclick="_nvGenerateOneChapter(\'' + novel.id + '\',' + nextIdx + ')">生成下一章</span>';
+            h += '</div>';
+        }
+    }
+
+    h += '<div style="text-align:center;padding:14px 0">';
+    h += '<span style="font-size:11px;color:#b0a48e;cursor:pointer;padding:6px 14px;border-radius:10px;background:#faf8f4;border:1px solid #ddd5c5" onclick="event.stopPropagation();_nvPickNovelCover(\'' + novel.id + '\')">更换封面</span>';
+    h += '</div>';
+    h += '<div style="text-align:center;padding:10px 0 30px"><span style="font-size:11px;color:#d9534f;cursor:pointer" onclick="_nvDeleteNovel(\'' + novel.id + '\')">删除小说</span></div>';
+
+    h += '</div>';
+
+    /* 目录侧栏 */
+    if (_nvTocOpen) {
+        h += '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:1000" onclick="_nvTocOpen=false;_nvRender()">';
+        h += '<div style="position:absolute;right:0;top:0;bottom:0;width:260px;background:#faf8f4;padding:20px 16px;overflow-y:auto" onclick="event.stopPropagation()">';
+        h += '<div style="font-size:14px;font-weight:700;color:#5a4e3c;margin-bottom:16px">目录</div>';
+        for (var ci = 0; ci < novel.chapters.length; ci++) {
+            var hasContent = !!novel.chapters[ci].content;
+            var isActive = ci === _nvReadChap;
+            h += '<div style="padding:10px 8px;font-size:12px;border-bottom:1px solid #ece6da;cursor:pointer;color:' + (isActive ? '#d4c8b0' : (hasContent ? '#5a4e3c' : '#c4b9a8')) + '" onclick="' + (hasContent ? '_nvReadChap=' + ci + ';_nvTocOpen=false;_nvRender()' : '') + '">';
+            h += _nvEsc(novel.chapters[ci].title);
+            if (!hasContent) h += ' <span style="font-size:10px;color:#ccc">[未生成]</span>';
+            h += '</div>';
+        }
+        h += '</div></div>';
+    }
+
+    h += '</div>';
+    return h;
+}
+
+/* 继续生成（找第一个空章节） */
+function _nvContinueGenerate(novelId) {
+    if (_nvGenerating) return;
+    var novel = null;
+    for (var i = 0; i < _nvNovels.length; i++) {
+        if (_nvNovels[i].id === novelId) { novel = _nvNovels[i]; break; }
+    }
+    if (!novel) return;
+    for (var ch = 0; ch < novel.chapters.length; ch++) {
+        if (!novel.chapters[ch].content) {
+            _nvGenerateOneChapter(novelId, ch);
+            return;
+        }
+    }
+    if (typeof showToast === 'function') showToast('所有章节已生成');
 }
 
 /* ===== 初始化 ===== */
