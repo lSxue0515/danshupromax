@@ -2,7 +2,6 @@
    game.js — 游戏大厅 + UNO + 麻将(四地区)
    ============================================ */
 var _gameView = 'lobby', _gameType = '', _gameSelectedPersona = '', _gameSelectedChars = [];
-var _gameRecords = JSON.parse(localStorage.getItem('_gameRecords') || '[]');
 var _unoState = null, _mjState = null;
 var _mjRegion = 'northeast', _mjRounds = 4;
 
@@ -28,38 +27,10 @@ function gameBuildLobby() {
     h += '<div class="game-card sheep" onclick="gamePickType(\'sheep\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><path d="M12 2C9 2 7 4 7 6c-2 0-4 2-4 4s2 4 4 4h1v4a2 2 0 002 2h4a2 2 0 002-2v-4h1c2 0 4-2 4-4s-2-4-4-4c0-2-2-4-5-4z"/></svg></div><div class="game-card-name">Sheep 羊了个羊</div><div class="game-card-desc">三消闯关 Tile Match</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>单人</div></div>';
     h += '<div class="game-card crush" onclick="gamePickType(\'crush\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div><div class="game-card-name">Crush 消消乐</div><div class="game-card-desc">开发中 Coming Soon</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>单人</div></div>';
     h += '<div class="game-card link" onclick="gamePickType(\'link\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></div><div class="game-card-name">Link 连连看</div><div class="game-card-desc">开发中 Coming Soon</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>单人</div></div>';
-    h += '</div><div class="game-recent"><div class="game-recent-title">Recent 近期记录</div>';
-    // 渲染记录
-    if (!_gameRecords || !_gameRecords.length) {
-        h += '<div class="game-recent-empty">暂无游戏记录</div>';
-    } else {
-        h += '<div class="game-recent-list">';
-        var typeNames = { uno: 'UNO', mahjong: '麻将', landlord: '斗地主' };
-        var typeColors = { uno: '#c9908e', mahjong: '#8fb5a0', landlord: '#8fa8c5' };
-        for (var ri = 0; ri < Math.min(_gameRecords.length, 10); ri++) {
-            var rec = _gameRecords[ri];
-            var ago = _gameTimeAgo(rec.time);
-            h += '<div class="game-recent-item">';
-            h += '<div class="game-recent-dot" style="background:' + (typeColors[rec.type] || '#aaa') + '"></div>';
-            h += '<div class="game-recent-info">';
-            h += '<div class="game-recent-name">' + _gEsc(typeNames[rec.type] || rec.type) + ' <span class="game-recent-time">' + ago + '</span></div>';
-            h += '<div class="game-recent-detail">🏆 ' + _gEsc(rec.winner || '???') + ' &nbsp;·&nbsp; ' + _gEsc(rec.players.join(', '));
-            if (rec.scores) h += ' &nbsp;·&nbsp; ' + rec.scores;
-            h += '</div></div></div>';
-        }
-        h += '</div>';
-    }
-    h += '</div></div>';
-    return h;
-}
 
-function _gameTimeAgo(ts) {
-    var d = Date.now() - ts, m = Math.floor(d / 60000);
-    if (m < 1) return '刚刚';
-    if (m < 60) return m + '分钟前';
-    var hr = Math.floor(m / 60);
-    if (hr < 24) return hr + '小时前';
-    return Math.floor(hr / 24) + '天前';
+    h += '</div></div>';
+
+    return h;
 }
 
 function gamePickType(type) {
@@ -178,20 +149,6 @@ function _gameToggleChar(id) {
     _gameRefreshSetup();
 }
 function gameStart() { if (_gameType === 'uno') unoStart(); if (_gameType === 'mahjong') mjStart(); if (_gameType === 'landlord') ddzStart(); }
-
-function _gameSaveRecord(type, players, winnerName, scores) {
-    var names = [];
-    for (var i = 0; i < players.length; i++) names.push(players[i].name);
-    _gameRecords.unshift({
-        type: type,
-        players: names,
-        winner: winnerName,
-        scores: scores,
-        time: Date.now()
-    });
-    if (_gameRecords.length > 20) _gameRecords = _gameRecords.slice(0, 20);
-    try { localStorage.setItem('_gameRecords', JSON.stringify(_gameRecords)); } catch (e) { }
-}
 
 /* ==========================================
    麻将引擎 MAHJONG ENGINE
@@ -434,7 +391,6 @@ function _mjDoHu(winnerIdx, huTile, fromIdx) {
     if (s.roundNum >= s.totalRounds) {
         s.phase = 'result'; s.gameOver = true;
         var scStr = ''; for (var si = 0; si < 4; si++) scStr += s.players[si].name + ':' + s.players[si].score + ' ';
-        _gameSaveRecord('mahjong', s.players, pl.name, scStr.trim());
     }
     else { s.roundNum++; setTimeout(function () { _mjNextRound(); }, 2000); }
     _mjRender();
@@ -444,7 +400,6 @@ function _mjDraw() {
     if (s.roundNum >= s.totalRounds) {
         s.phase = 'result'; s.gameOver = true;
         var scStr = ''; for (var si = 0; si < 4; si++) scStr += s.players[si].name + ':' + s.players[si].score + ' ';
-        _gameSaveRecord('mahjong', s.players, '流局', scStr.trim());
     }
     else { s.roundNum++; setTimeout(function () { _mjNextRound(); }, 2000); }
     _mjRender();
@@ -1165,7 +1120,6 @@ function _ddzGameOver(winnerIdx) {
         _ddzLog('农民赢了！' + (isSpring ? '(反春天×2)' : '') + ' 地主 -' + (baseScore * 2) + '分');
     }
     var scStr = ''; for (var si = 0; si < 3; si++) scStr += s.players[si].name + ':' + s.players[si].score + ' ';
-    _gameSaveRecord('landlord', s.players, winnerIsLandlord ? s.players[landlord].name + '(地主)' : '农民', scStr.trim());
     s.phase = 'result';
     s.gameOver = true;
     _ddzRender();

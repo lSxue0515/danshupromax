@@ -192,27 +192,6 @@
     background: linear-gradient(135deg, #a895be 0%, #c4b5d5 100%);
 }
 
-.game-recent {
-    margin-top: 20px;
-}
-
-.game-recent-title {
-    font-size: 10px;
-    font-weight: 600;
-    color: rgba(120, 100, 112, .35);
-    margin-bottom: 7px;
-    letter-spacing: .7px;
-}
-
-.game-recent-empty {
-    font-size: 10.5px;
-    color: rgba(120, 100, 112, .22);
-    text-align: center;
-    padding: 16px;
-    background: rgba(160, 140, 150, .03);
-    border-radius: 12px;
-}
-
 /* Setup */
 .game-setup {
     flex: 1;
@@ -2301,59 +2280,6 @@
     gap: 8px;
     margin-top: 14px;
     justify-content: center;
-}
-
-/* 游戏记录列表 */
-.game-recent-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.game-recent-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 9px 11px;
-    background: rgba(255, 255, 255, .55);
-    border-radius: 11px;
-    border: 1px solid rgba(160, 140, 150, .06);
-}
-
-.game-recent-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-top: 3px;
-    flex-shrink: 0;
-}
-
-.game-recent-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.game-recent-name {
-    font-size: 11px;
-    font-weight: 600;
-    color: #5a4a52;
-}
-
-.game-recent-time {
-    font-size: 8.5px;
-    font-weight: 400;
-    color: rgba(120, 100, 112, .3);
-    margin-left: 4px;
-}
-
-.game-recent-detail {
-    font-size: 9px;
-    color: rgba(120, 100, 112, .35);
-    margin-top: 2px;
-    line-height: 1.4;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 /* ===== 横屏旋转容器 ===== */
