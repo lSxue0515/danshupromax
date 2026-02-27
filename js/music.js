@@ -102,6 +102,11 @@ function _muEsc(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/* 判断封面/头像是否可用（排除 __idb__ 占位符） */
+function _muCoverOk(v) {
+    return v && v !== '__idb__';
+}
+
 function _muGenId() {
     return 'song_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 }
@@ -186,7 +191,7 @@ function _muRenderHome() {
         h += '<div class="mu-daily-item-v5">';
         h += '<div class="mu-daily-rank-v5">#' + (di + 1) + '</div>';
         h += '<div class="mu-daily-cover-v5" onclick="event.stopPropagation();_muEditDailyCover(' + di + ')">';
-        if (d.cover) h += '<img src="' + _muEsc(d.cover) + '">';
+        if (_muCoverOk(d.cover)) h += '<img src="' + _muEsc(d.cover) + '">';
         else h += (d.coverEmoji || '🎵');
         h += '</div>';
         h += '<div class="mu-daily-info-v5" onclick="_muPlayDailyItem(' + di + ')">';
@@ -229,12 +234,13 @@ function _muRenderSongListHTML(songs) {
         if (isPlaying && _muPlaying) h += '<svg viewBox="0 0 24 24" width="14" height="14" style="stroke:#999;stroke-width:2;fill:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
         else h += (i + 1);
         h += '</div>';
-        h += '<div class="mu-song-cover">' + (s.cover ? '<img src="' + _muEsc(s.cover) + '">' : '🎵') + '</div>';
+        h += '<div class="mu-song-cover">' + (_muCoverOk(s.cover) ? '<img src="' + _muEsc(s.cover) + '">' : '🎵') + '</div>';
         h += '<div class="mu-song-info"><div class="mu-song-name">' + _muEsc(s.name);
         if (!s.url && !s.blobData) h += ' <span style="font-size:8px;color:#daa;font-weight:400">未绑定音源</span>';
         h += '</div><div class="mu-song-artist">' + _muEsc(s.artist || '未知') + '</div></div>';
         h += '<div class="mu-song-star' + (isDaily ? ' active' : '') + '" onclick="event.stopPropagation();_muToggleDailySong(\'' + s.id + '\')" title="' + (isDaily ? '取消推荐' : '设为推荐') + '">' + (isDaily ? '⭐' : '☆') + '</div>';
         if (!s.url && !s.blobData) h += '<div class="mu-song-del" style="opacity:1" onclick="event.stopPropagation();_muBindAudio(\'' + s.id + '\')"><svg viewBox="0 0 24 24" style="stroke:#aaa"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg></div>';
+        h += '<div class="mu-song-del" style="opacity:1" onclick="event.stopPropagation();_muPickSongCover(\'' + s.id + '\')"><svg viewBox="0 0 24 24" style="stroke:#bbb"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
         h += '<div class="mu-song-del" onclick="event.stopPropagation();_muDeleteSong(\'' + s.id + '\')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>';
         h += '</div>';
     }
@@ -298,7 +304,7 @@ function _muRenderListen() {
     h += '<div class="mu-lt-person">';
     h += '<div class="mu-lt-hp-tag">9 9</div>';
     h += '<div class="mu-lt-av-ring"><div class="mu-lt-av">';
-    if (_muProfile.avatar) h += '<img src="' + _muEsc(_muProfile.avatar) + '">';
+    if (_muCoverOk(_muProfile.avatar)) h += '<img src="' + _muEsc(_muProfile.avatar) + '">';
     else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
     h += '</div></div>';
     h += '<div class="mu-lt-pname">' + _muEsc(_muProfile.name || '未设置昵称') + '</div>';
@@ -435,7 +441,7 @@ function _muLtRenderCard(idx) {
     // song row (not full-width cover)
     h += '<div class="mu-lt-card-song" onclick="_muPlaySong(\'' + song.id + '\')">';
     h += '<div class="mu-lt-card-scv">';
-    if (song.cover) h += '<img src="' + _muEsc(song.cover) + '">';
+    if (_muCoverOk(song.cover)) h += '<img src="' + _muEsc(song.cover) + '">';
     else h += '<div class="mu-lt-card-scvph">&#9835;</div>';
     h += '</div>';
     h += '<div class="mu-lt-card-sinfo">';
@@ -709,7 +715,7 @@ function _muLtSelectChar(id) {
 function _muRenderMe() {
     var p = _muProfile, h = '<div class="mu-me">';
     h += '<div class="mu-profile-card"><div class="mu-profile-avatar" onclick="_muPickAvatar()">';
-    if (p.avatar) h += '<img src="' + _muEsc(p.avatar) + '">'; else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+    if (_muCoverOk(p.avatar)) h += '<img src="' + _muEsc(p.avatar) + '">'; else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
     h += '<div class="mu-av-hint">点击更换</div></div><div class="mu-profile-info">';
     h += '<div class="mu-profile-name" onclick="_muEditField(\'name\')">' + _muEsc(p.name) + '</div>';
     h += '<div class="mu-profile-meta"><div class="mu-profile-tag" onclick="_muEditField(\'age\')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>歌龄 ' + _muEsc(p.age) + '</div>';
@@ -805,7 +811,7 @@ function _muRenderPlaylistDetail() {
             h += '<div class="mu-song-item' + (isPlaying && _muPlaying ? ' playing' : '') + '" onclick="_muPlaySong(\'' + s.id + '\')">';
             h += '<div class="mu-song-idx">' + (si + 1) + '</div>';
             h += '<div class="mu-song-cover">';
-            if (s.cover) h += '<img src="' + _muEsc(s.cover) + '">';
+            if (_muCoverOk(s.cover)) h += '<img src="' + _muEsc(s.cover) + '">';
             else h += '&#9835;';
             h += '</div>';
             h += '<div class="mu-song-info"><div class="mu-song-name">' + _muEsc(s.name) + '</div>';
@@ -833,7 +839,7 @@ function _muRenderPlayerBar() {
     var s = _muCurrentSong, pct = 0;
     if (_muPlayer && _muPlayer.duration) pct = (_muPlayer.currentTime / _muPlayer.duration) * 100;
     var h = '<div class="mu-player-bar" onclick="_muShowFull=true;_muRender()" style="position:relative">';
-    h += '<div class="mu-player-bar-cover">' + (s.cover ? '<img src="' + _muEsc(s.cover) + '">' : '🎵') + '</div>';
+    h += '<div class="mu-player-bar-cover">' + (_muCoverOk(s.cover) ? '<img src="' + _muEsc(s.cover) + '">' : '🎵') + '</div>';
     h += '<div class="mu-player-bar-info"><div class="mu-player-bar-name">' + _muEsc(s.name) + '</div><div class="mu-player-bar-artist">' + _muEsc(s.artist || '') + '</div></div>';
     h += '<div class="mu-player-bar-btn" onclick="event.stopPropagation();_muTogglePlay()"><svg viewBox="0 0 24 24">';
     if (_muPlaying) h += '<line x1="10" y1="5" x2="10" y2="19"/><line x1="14" y1="5" x2="14" y2="19"/>'; else h += '<polygon points="5 3 19 12 5 21 5 3"/>';
@@ -856,7 +862,7 @@ function _muRenderFullPlayer() {
     h += '<div class="mu-pf-header"><div class="mu-pf-close" onclick="_muShowFull=false;_muRender()"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div><div class="mu-pf-title">NOW PLAYING</div><div class="mu-pf-spacer"></div></div>';
     h += '<div class="mu-pf-body' + (hasLyrics ? ' has-lyrics' : '') + '">';
     h += '<div class="mu-pf-disc' + (_muPlaying ? ' spinning' : '') + '">';
-    if (s.cover) h += '<img src="' + _muEsc(s.cover) + '">'; else h += '🎵';
+    if (_muCoverOk(s.cover)) h += '<img src="' + _muEsc(s.cover) + '">'; else h += '🎵';
     h += '</div>';
     h += '<div class="mu-pf-song">' + _muEsc(s.name) + '</div>';
     h += '<div class="mu-pf-artist">' + _muEsc(s.artist || '未知歌手') + '</div>';
@@ -1628,7 +1634,7 @@ function _muFloatRender() {
     // 顶部：封面 + 歌曲信息 + 控制按钮
     h += '<div class="mu-fw-top" onmousedown="_muFloatStartDrag(event)" ontouchstart="_muFloatStartDrag(event)">';
     h += '<div class="mu-fw-cover">';
-    if (s.cover) h += '<img src="' + _muEsc(s.cover) + '">';
+    if (_muCoverOk(s.cover)) h += '<img src="' + _muEsc(s.cover) + '">';
     else h += '🎵';
     h += '</div>';
     h += '<div class="mu-fw-info">';
@@ -1930,62 +1936,87 @@ function _muLoadCoverFromDB(key, callback) {
 }
 
 function _muRestoreCoversFromDB() {
-    var pending = 0;
-    var needRender = false;
-
-    // 恢复歌曲封面
+    /* 歌曲封面 */
     for (var i = 0; i < _muSongs.length; i++) {
         if (_muSongs[i].cover === '__idb__') {
-            pending++;
             (function (idx) {
                 _muLoadCoverFromDB(_muSongs[idx].id, function (data) {
-                    if (data) { _muSongs[idx].cover = data; needRender = true; }
-                    pending--;
-                    if (pending <= 0 && needRender) _muRender();
+                    if (data) { _muSongs[idx].cover = data; _muRender(); }
                 });
             })(i);
         }
     }
-
-    // 恢复歌单里歌曲封面
+    /* 歌单内歌曲封面 */
     for (var pi = 0; pi < _muPlaylists.length; pi++) {
-        if (!_muPlaylists[pi].songs) continue;
-        for (var si = 0; si < _muPlaylists[pi].songs.length; si++) {
-            if (_muPlaylists[pi].songs[si].cover === '__idb__') {
-                pending++;
-                (function (pIdx, sIdx) {
-                    _muLoadCoverFromDB(_muPlaylists[pIdx].songs[sIdx].id, function (data) {
-                        if (data) { _muPlaylists[pIdx].songs[sIdx].cover = data; needRender = true; }
-                        pending--;
-                        if (pending <= 0 && needRender) _muRender();
-                    });
-                })(pi, si);
+        if (_muPlaylists[pi].songs) {
+            for (var si = 0; si < _muPlaylists[pi].songs.length; si++) {
+                if (_muPlaylists[pi].songs[si].cover === '__idb__') {
+                    (function (pIdx, sIdx) {
+                        _muLoadCoverFromDB(_muPlaylists[pIdx].songs[sIdx].id, function (data) {
+                            if (data) { _muPlaylists[pIdx].songs[sIdx].cover = data; _muRender(); }
+                        });
+                    })(pi, si);
+                }
             }
         }
     }
-
-    // 恢复头像
+    /* 头像 */
     if (_muProfile.avatar === '__idb__') {
-        pending++;
         _muLoadCoverFromDB('__profile_avatar__', function (data) {
-            if (data) { _muProfile.avatar = data; needRender = true; }
-            pending--;
-            if (pending <= 0 && needRender) _muRender();
+            if (data) { _muProfile.avatar = data; _muRender(); }
         });
     }
-
-    // 恢复每日推荐封面
+    /* 每日推荐封面 */
     for (var di = 0; di < _muDailyList.length; di++) {
         if (_muDailyList[di].cover === '__idb__') {
-            pending++;
             (function (idx) {
                 _muLoadCoverFromDB('daily_' + _muDailyList[idx].id, function (data) {
-                    if (data) { _muDailyList[idx].cover = data; needRender = true; }
-                    pending--;
-                    if (pending <= 0 && needRender) _muRender();
+                    if (data) { _muDailyList[idx].cover = data; _muRender(); }
                 });
             })(di);
         }
     }
 }
 
+/* ===== 歌曲自定义封面 ===== */
+function _muPickSongCover(songId) {
+    var inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = function () {
+        if (!inp.files || !inp.files[0]) return;
+        var r = new FileReader();
+        r.onload = function (e) {
+            /* 更新全局歌曲列表 */
+            for (var i = 0; i < _muSongs.length; i++) {
+                if (_muSongs[i].id === songId) {
+                    _muSongs[i].cover = e.target.result;
+                    break;
+                }
+            }
+            /* 更新歌单内的歌曲 */
+            for (var pi = 0; pi < _muPlaylists.length; pi++) {
+                if (_muPlaylists[pi].songs) {
+                    for (var si = 0; si < _muPlaylists[pi].songs.length; si++) {
+                        if (_muPlaylists[pi].songs[si].id === songId) {
+                            _muPlaylists[pi].songs[si].cover = e.target.result;
+                        }
+                    }
+                }
+            }
+            /* 更新每日推荐中引用该歌曲的封面 */
+            for (var di = 0; di < _muDailyList.length; di++) {
+                if (_muDailyList[di].songRef === songId) {
+                    _muDailyList[di].cover = e.target.result;
+                }
+            }
+            /* 更新当前播放的歌曲封面 */
+            if (_muCurrentSong && _muCurrentSong.id === songId) {
+                _muCurrentSong.cover = e.target.result;
+            }
+            _muSave(); _muRender();
+            if (typeof showToast === 'function') showToast('封面已更新');
+        };
+        r.readAsDataURL(inp.files[0]);
+    };
+    inp.click();
+}
