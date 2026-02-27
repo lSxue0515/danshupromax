@@ -13,6 +13,7 @@ var _nvTocOpen = false;
 var _nvGenerating = false;
 var _nvGenChapIdx = 0;
 var _nvGenNovelId = '';
+var _nvComments = JSON.parse(localStorage.getItem('_nvComments') || '{}');
 
 /* ===== 数据 ===== */
 var _nvNovels = JSON.parse(localStorage.getItem('_nvNovels') || '[]');
@@ -66,6 +67,7 @@ function _nvSave() {
         localStorage.setItem('_nvFavTags', JSON.stringify(_nvFavTags));
         localStorage.setItem('_nvCategories', JSON.stringify(_nvCategories));
         localStorage.setItem('_nvTagPool', JSON.stringify(_nvTagPool));
+        localStorage.setItem('_nvComments', JSON.stringify(_nvComments));
     } catch (e) {
         console.warn('Novel save error', e);
         if (typeof showToast === 'function') showToast('存储空间不足');
@@ -788,6 +790,7 @@ function _nvGenerateOneChapter(novelId, chapIdx) {
     if (prevContext) up += '\n前文回顾（请承接）：' + prevContext + '\n';
     up += '\n格式：第一行写"第' + chapNum + '章 章节名"，之后写正文。\n';
     up += '★必须在完整句子处结束，不能断在半截话中间★\n';
+    up += '\n在正文结束后，另起一行写"【作者有话说】"，然后用作者身份写1-3句话，可以是对本章剧情的碎碎念、剧透预告、或与读者的互动，语气轻松亲切，像真正的网文作者一样。\n';
 
     var body = {
         model: api.model || 'gpt-4o-mini',
@@ -843,9 +846,20 @@ function _nvGenerateOneChapter(novelId, chapIdx) {
                     contentStart = li + 1; break;
                 }
             }
-            var chapContent = lines.slice(contentStart).join('\n').trim();
+            var rawContent = lines.slice(contentStart).join('\n').trim();
+            var authorNote = '';
+            var noteIdx = rawContent.indexOf('【作者有话说】');
+            if (noteIdx === -1) noteIdx = rawContent.indexOf('【作者的话】');
+            if (noteIdx === -1) noteIdx = rawContent.indexOf('作者有话说：');
+            if (noteIdx === -1) noteIdx = rawContent.indexOf('作者有话说:');
+            if (noteIdx >= 0) {
+                authorNote = rawContent.substring(noteIdx).replace(/^【?作者[有的]话说?】?[：:]?\s*/, '').trim();
+                rawContent = rawContent.substring(0, noteIdx).trim();
+            }
+            var chapContent = rawContent;
             novel.chapters[chapIdx].title = chapTitle;
             novel.chapters[chapIdx].content = chapContent;
+            novel.chapters[chapIdx].authorNote = authorNote;
             _nvGenerating = false;
             _nvReadChap = chapIdx;
             _nvSave(); _nvRender();
@@ -994,12 +1008,44 @@ function _nvRenderRead() {
         h += '<div style="text-align:center;font-size:' + (rs.fontSize + 3) + 'px;font-weight:700;color:' + rs.fontColor + ';padding:20px 0 12px">' + _nvEsc(chap.title) + '</div>';
         if (chap.content) {
             var paragraphs = chap.content.split('\n');
+            var cmtKey = novel.id + '_' + _nvReadChap;
             h += '<div style="font-size:' + rs.fontSize + 'px;line-height:' + rs.lineHeight + ';color:' + rs.fontColor + ';letter-spacing:' + rs.letterSpacing + 'px;padding:0 4px">';
             for (var pi = 0; pi < paragraphs.length; pi++) {
                 var line = paragraphs[pi].trim();
-                if (line) h += '<p style="text-indent:2em;margin:0 0 ' + rs.paragraphSpacing + 'px 0">' + _nvEsc(line) + '</p>';
+                if (!line) continue;
+                var pKey = cmtKey + '_p' + pi;
+                var hasCmt = _nvComments[pKey];
+                /* 段落 */
+                h += '<div style="position:relative;margin:0 0 ' + rs.paragraphSpacing + 'px 0">';
+                h += '<p style="text-indent:2em;margin:0">' + _nvEsc(line) + '</p>';
+                /* 操作按钮 */
+                h += '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:2px">';
+                h += '<span style="font-size:9px;color:#c4b9a8;cursor:pointer;padding:2px 6px;border-radius:6px;background:rgba(0,0,0,.02)" onclick="_nvToggleBookmark(\'' + pKey + '\')">' + (hasCmt && hasCmt.bookmark ? '[已标记]' : '[标记]') + '</span>';
+                h += '<span style="font-size:9px;color:#c4b9a8;cursor:pointer;padding:2px 6px;border-radius:6px;background:rgba(0,0,0,.02)" onclick="_nvAddParagraphComment(\'' + pKey + '\')">[批注]</span>';
+                h += '</div>';
+                /* 显示已有标记和评论 */
+                if (hasCmt) {
+                    if (hasCmt.bookmark) {
+                        h += '<div style="font-size:9px;color:#d4c8b0;padding:2px 0 2px 2em;font-style:italic">* 已标记</div>';
+                    }
+                    if (hasCmt.note) {
+                        h += '<div style="font-size:10px;color:#c07a6a;background:rgba(212,200,176,.12);border-left:2px solid #d4c8b0;padding:4px 8px;margin:2px 0 4px 2em;border-radius:0 6px 6px 0">';
+                        h += _nvEsc(hasCmt.note);
+                        h += ' <span style="color:#ccc;cursor:pointer;font-size:9px" onclick="_nvDeleteComment(\'' + pKey + '\')">[删除]</span>';
+                        h += '</div>';
+                    }
+                }
+                h += '</div>';
             }
             h += '</div>';
+
+            /* 作者有话说 */
+            if (chap.authorNote) {
+                h += '<div style="margin:16px 4px;padding:12px 14px;background:rgba(212,200,176,.12);border-radius:12px;border:1px dashed #ddd5c5">';
+                h += '<div style="font-size:11px;font-weight:700;color:#c07a6a;margin-bottom:6px">作者有话说</div>';
+                h += '<div style="font-size:11px;color:#8b7e6a;line-height:1.7">' + _nvEsc(chap.authorNote) + '</div>';
+                h += '</div>';
+            }
 
             /* 重新生成本章按钮 */
             if (!_nvGenerating) {
@@ -1059,6 +1105,7 @@ function _nvRenderRead() {
     h += '<div style="text-align:center;padding:14px 0">';
     h += '<span style="font-size:11px;color:#b0a48e;cursor:pointer;padding:6px 14px;border-radius:10px;background:rgba(250,248,244,.85);border:1px solid #ddd5c5" onclick="event.stopPropagation();_nvPickNovelCover(\'' + novel.id + '\')">更换封面</span>';
     h += '</div>';
+    h += '<div style="text-align:center;padding:10px 0"><span style="font-size:11px;color:#8b7355;cursor:pointer;padding:6px 14px;border-radius:10px;background:rgba(250,248,244,.85);border:1px solid #ddd5c5" onclick="_nvExportNovelTxt(\'' + novel.id + '\')">导出TXT小说</span></div>';
     h += '<div style="text-align:center;padding:10px 0 30px"><span style="font-size:11px;color:#d9534f;cursor:pointer" onclick="_nvDeleteNovel(\'' + novel.id + '\')">删除小说</span></div>';
 
     h += '</div>'; /* z-index:1 wrapper end */
@@ -1331,6 +1378,154 @@ function _nvSaveNovelInfo() {
     _nvModal = '';
     _nvSave(); _nvRender();
     if (typeof showToast === 'function') showToast('小说信息已更新');
+}
+
+/* ===== 段落标记/批注 ===== */
+function _nvToggleBookmark(pKey) {
+    if (!_nvComments[pKey]) _nvComments[pKey] = {};
+    _nvComments[pKey].bookmark = !_nvComments[pKey].bookmark;
+    if (!_nvComments[pKey].bookmark && !_nvComments[pKey].note) delete _nvComments[pKey];
+    _nvSave(); _nvRender();
+}
+
+function _nvAddParagraphComment(pKey) {
+    var existing = (_nvComments[pKey] && _nvComments[pKey].note) ? _nvComments[pKey].note : '';
+    var note = prompt('写下你的批注:', existing);
+    if (note === null) return;
+    if (!note.trim()) {
+        if (_nvComments[pKey]) {
+            delete _nvComments[pKey].note;
+            if (!_nvComments[pKey].bookmark) delete _nvComments[pKey];
+        }
+    } else {
+        if (!_nvComments[pKey]) _nvComments[pKey] = {};
+        _nvComments[pKey].note = note.trim();
+    }
+    _nvSave(); _nvRender();
+}
+
+function _nvDeleteComment(pKey) {
+    if (_nvComments[pKey]) {
+        delete _nvComments[pKey].note;
+        if (!_nvComments[pKey].bookmark) delete _nvComments[pKey];
+    }
+    _nvSave(); _nvRender();
+}
+
+/* ===== 导出TXT小说 ===== */
+function _nvExportNovelTxt(novelId) {
+    var novel = null;
+    for (var i = 0; i < _nvNovels.length; i++) {
+        if (_nvNovels[i].id === novelId) { novel = _nvNovels[i]; break; }
+    }
+    if (!novel) return;
+
+    var txt = '';
+    /* 封面页 */
+    txt += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    txt += '\n';
+    txt += '    ' + novel.title + '\n';
+    txt += '\n';
+    txt += '    作者: ' + (novel.penName || _nvProfile.penName) + '\n';
+    txt += '\n';
+    txt += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    txt += '\n\n';
+
+    /* 小说信息 */
+    txt += '【小说信息】\n';
+    txt += '书名: ' + novel.title + '\n';
+    txt += '作者: ' + (novel.penName || _nvProfile.penName) + '\n';
+    txt += '分类: ' + (novel.category || '') + '\n';
+    if (novel.tags && novel.tags.length) {
+        txt += '标签: ' + novel.tags.join(' / ') + '\n';
+    }
+    if (novel.synopsis) {
+        txt += '简介: ' + novel.synopsis + '\n';
+    }
+    txt += '总章数: ' + (novel.totalChapters || 0) + ' 章\n';
+
+    /* 统计字数 */
+    var totalWords = 0;
+    var genCount = 0;
+    for (var ci = 0; ci < novel.chapters.length; ci++) {
+        if (novel.chapters[ci].content) {
+            totalWords += novel.chapters[ci].content.length;
+            genCount++;
+        }
+    }
+    txt += '总字数: 约 ' + totalWords + ' 字\n';
+    txt += '已生成: ' + genCount + ' / ' + novel.chapters.length + ' 章\n';
+    txt += '\n';
+    txt += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    txt += '\n\n';
+
+    /* 目录 */
+    txt += '【目  录】\n\n';
+    for (var ci = 0; ci < novel.chapters.length; ci++) {
+        var ch = novel.chapters[ci];
+        if (ch.content) {
+            txt += '  ' + ch.title + '\n';
+        } else {
+            txt += '  第' + (ci + 1) + '章 [未生成]\n';
+        }
+    }
+    txt += '\n';
+    txt += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    txt += '\n\n';
+
+    /* 正文 */
+    for (var ci = 0; ci < novel.chapters.length; ci++) {
+        var ch = novel.chapters[ci];
+        if (!ch.content) continue;
+
+        txt += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        txt += '\n';
+        txt += '  ' + ch.title + '\n';
+        txt += '\n';
+        txt += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        txt += '\n';
+
+        var paragraphs = ch.content.split('\n');
+        for (var pi = 0; pi < paragraphs.length; pi++) {
+            var line = paragraphs[pi].trim();
+            if (line) {
+                txt += '    ' + line + '\n\n';
+            }
+        }
+
+        /* 作者有话说 */
+        if (ch.authorNote) {
+            txt += '\n';
+            txt += '  -------- 作者有话说 --------\n';
+            txt += '  ' + ch.authorNote + '\n';
+            txt += '  ----------------------------\n';
+        }
+
+        txt += '\n\n';
+    }
+
+    /* 结尾 */
+    txt += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    txt += '\n';
+    txt += '    《' + novel.title + '》 完\n';
+    txt += '\n';
+    txt += '    感谢阅读\n';
+    txt += '    由「柿子小说」生成\n';
+    txt += '\n';
+    txt += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+
+    /* 下载 */
+    var blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = novel.title + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    if (typeof showToast === 'function') showToast('小说已导出为TXT文件');
 }
 
 /* ===== 初始化 ===== */
