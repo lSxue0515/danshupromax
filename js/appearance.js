@@ -1,525 +1,545 @@
 /* ============================================
-   蛋薯机 DanShu Pro v2 — appearance.js
-   外观设置 — smartCompress + safeSetItem 全链路防爆
+   appearance.js — 外观设置独立页面
+   蛋薯机 danshu pro
    ============================================ */
 
-var ICON_LIST = [
-    { id: 'icon_api', name: 'API' },
-    { id: 'icon_appear', name: '外观' },
-    { id: 'icon_tieba', name: '贴吧' },
-    { id: 'icon_meituan', name: '美团' },
-    { id: 'icon_mail', name: '邮件' },
-    { id: 'icon_weather', name: '天气' },
-    { id: 'icon_music', name: '音乐' },
-    { id: 'icon_album', name: '相册' },
-    { id: 'icon_dock_msg', name: '消息' },
-    { id: 'icon_dock_note', name: '柿子小说' },
-    { id: 'icon_dock_worldbook', name: '世界书' },
-    { id: 'icon_game', name: '游戏' },
-    { id: 'icon_catnip', name: '猫尾薄荷' },
-    { id: 'icon_mood', name: '心绪回响' },
-    { id: 'icon_video', name: '视频' }
+// ==========================================
+// localStorage keys
+// ==========================================
+var AP = {
+    wallpaper: 'ds_ap_wallpaper',
+    fontFamily: 'ds_ap_font_family',
+    fontUrl: 'ds_ap_font_url',
+    fontName: 'ds_ap_font_name',
+    bubbleColor: 'ds_ap_bubble_color',
+    cardTitleColor: 'ds_ap_card_title_color',
+    cardTextColor: 'ds_ap_card_text_color',
+    statusBar: 'ds_ap_status_bar'
+};
+
+// 8个应用图标的 key 前缀
+var ICON_KEY_PREFIX = 'ds_ap_icon_';
+
+// 8个应用ID及原始SVG缓存
+var APP_ICON_IDS = [
+    'appIconApi', 'appIconAppearance', 'appIconTieba', 'appIconMeituan',
+    'appIconCalendar', 'appIconWeather', 'appIconAlbum', 'appIconMusic'
 ];
+var _originalSvg = {};
 
-var _editingIconId = null;
+// 暂存
+var _pending = {};
+var _pendingIcons = {};
 
-/* ========== 打开 / 关闭 ========== */
+// ==========================================
+// 页面：打开 / 关闭
+// ==========================================
 function openAppearanceApp() {
-    var overlay = document.getElementById('appearAppOverlay');
-    if (!overlay) return;
-    loadAppearanceSettings();
-    renderIconGrid();
-    overlay.classList.add('show');
+    // 首次缓存原始SVG
+    cacheOriginalSvg();
+    document.getElementById('appearPageOverlay').classList.add('active');
+    loadAppearForm();
 }
 
-function closeAppearanceApp() {
-    var overlay = document.getElementById('appearAppOverlay');
-    if (overlay) overlay.classList.remove('show');
+function closeAppearPage() {
+    document.getElementById('appearPageOverlay').classList.remove('active');
+    _pending = {};
+    _pendingIcons = {};
 }
 
-/* ========== 读取设置 ========== */
-function loadAppearanceSettings() {
-    var wpUrl = localStorage.getItem('ds_appear_wallpaper') || '';
-    document.getElementById('appearWpUrl').value = wpUrl;
-    refreshWallpaperPreview();
-
-    var fontUrl = localStorage.getItem('ds_appear_fontUrl') || '';
-    document.getElementById('appearFontUrl').value = fontUrl;
-
-    var bubbleColor = localStorage.getItem('ds_appear_bubbleColor') || 'rgba(80,60,70,0.9)';
-    document.getElementById('appearBubbleColorHex').value = bubbleColor;
-    if (bubbleColor.startsWith('#')) {
-        document.getElementById('appearBubbleColorPicker').value = bubbleColor;
-    }
-    highlightAppearColorDot(bubbleColor);
-
-    var statusbar = localStorage.getItem('ds_appear_statusbar');
-    document.getElementById('appearStatusbarToggle').checked = statusbar !== 'hidden';
-
-    // 加载铃声URL
-    var ringtoneUrl = '';
-    if (typeof loadRingtoneUrl === 'function') {
-        ringtoneUrl = loadRingtoneUrl();
-    }
-    var ringtoneInput = document.getElementById('appearRingtoneUrl');
-    if (ringtoneInput) ringtoneInput.value = ringtoneUrl;
+// ==========================================
+// 缓存原始SVG（只存一次）
+// ==========================================
+function cacheOriginalSvg() {
+    APP_ICON_IDS.forEach(function (id) {
+        if (_originalSvg[id]) return;
+        var el = document.getElementById(id);
+        if (!el) return;
+        // 只缓存SVG，不缓存img
+        var svg = el.querySelector('svg');
+        if (svg) {
+            _originalSvg[id] = svg.outerHTML;
+        }
+    });
 }
 
-/* ========== 壁纸 ========== */
-function refreshWallpaperPreview() {
-    var url = document.getElementById('appearWpUrl').value.trim();
-    var img = document.getElementById('appearWpPreviewImg');
-    if (url) {
-        img.src = url;
-        img.style.display = 'block';
+// ==========================================
+// 读取已保存设置 → 填入面板
+// ==========================================
+function loadAppearForm() {
+    _pending = {};
+    _pendingIcons = {};
+
+    // 壁纸
+    var wp = localStorage.getItem(AP.wallpaper);
+    var wpImg = document.getElementById('appearWpImg');
+    var wpHint = document.getElementById('appearWpHint');
+    if (wp) {
+        wpImg.src = wp;
+        wpImg.classList.add('visible');
+        wpHint.style.display = 'none';
     } else {
-        var wallpaper = document.getElementById('wallpaper');
-        var current = getComputedStyle(wallpaper).backgroundImage;
-        var match = current.match(/url\(["']?(.+?)["']?\)/);
-        if (match && match[1] && match[1] !== 'none') {
-            img.src = match[1];
-            img.style.display = 'block';
+        wpImg.src = '';
+        wpImg.classList.remove('visible');
+        wpHint.style.display = '';
+    }
+
+    // 图标预览
+    document.querySelectorAll('.appear-icon-replace-preview').forEach(function (box) {
+        var targetId = box.dataset.target;
+        var saved = localStorage.getItem(ICON_KEY_PREFIX + targetId);
+        var img = box.querySelector('img');
+        if (saved) {
+            img.src = saved;
+            img.classList.add('visible');
+            box.classList.add('has-image');
         } else {
-            img.style.display = 'none';
+            img.src = '';
+            img.classList.remove('visible');
+            box.classList.remove('has-image');
         }
+    });
+
+    // 字体
+    var fontUrl = localStorage.getItem(AP.fontUrl) || '';
+    var fontName = localStorage.getItem(AP.fontName) || '';
+    var fontFamily = localStorage.getItem(AP.fontFamily) || '';
+    var sel = document.getElementById('appearFontSelect');
+    if (fontUrl) {
+        sel.value = 'custom';
+        document.getElementById('appearCustomFontWrap').style.display = '';
+        document.getElementById('appearCustomFontNameWrap').style.display = '';
+        document.getElementById('appearCustomFontUrl').value = fontUrl;
+        document.getElementById('appearCustomFontName').value = fontName;
+    } else {
+        sel.value = fontFamily;
+        document.getElementById('appearCustomFontWrap').style.display = 'none';
+        document.getElementById('appearCustomFontNameWrap').style.display = 'none';
+    }
+    updateFontPreview();
+
+    // 气泡颜色
+    var bc = localStorage.getItem(AP.bubbleColor) || '#1a1a1a';
+    document.getElementById('appearBubbleColorPicker').value = bc;
+    document.getElementById('appearBubbleColorHex').value = bc;
+
+    // 大卡片标题颜色
+    var ctc = localStorage.getItem(AP.cardTitleColor) || '#ffffff';
+    document.getElementById('appearCardTitleColorPicker').value = ctc;
+    document.getElementById('appearCardTitleColorHex').value = ctc;
+
+    // 大卡片正文颜色
+    var cxc = localStorage.getItem(AP.cardTextColor) || '#cccccc';
+    document.getElementById('appearCardTextColorPicker').value = cxc;
+    document.getElementById('appearCardTextColorHex').value = cxc;
+
+    // 顶栏
+    var sb = localStorage.getItem(AP.statusBar);
+    var toggle = document.getElementById('appearStatusToggle');
+    if (sb === 'hidden') {
+        toggle.classList.remove('on');
+    } else {
+        toggle.classList.add('on');
     }
 }
 
-function triggerAppearWpUpload() {
-    document.getElementById('appearWpFile').click();
-}
-
-function handleAppearWpFile(event) {
-    var file = event.target.files[0];
-    if (!file) return;
-    showToast('正在处理壁纸...');
-    var reader = new FileReader();
-    reader.onload = function (e) {
-        // ★ 壁纸专用压缩：高画质，存IndexedDB避免爆localStorage
-        compressWallpaperHQ(e.target.result, function (compressed) {
-            var sizeKB = Math.round(compressed.length / 1024);
-            document.getElementById('appearWpUrl').value = compressed;
-            refreshWallpaperPreview();
-            showToast('壁纸处理完成 (' + sizeKB + 'KB)');
-        });
-    };
-    reader.readAsDataURL(file);
-    event.target.value = '';
-}
-
-/* ========== 自定义图标图片 ========== */
-function getIconImage(iconId) {
-    return localStorage.getItem('ds_icon_' + iconId) || '';
-}
-
-function renderIconGrid() {
-    var container = document.getElementById('appearIconGrid');
-    var html = '';
-    for (var i = 0; i < ICON_LIST.length; i++) {
-        var item = ICON_LIST[i];
-        var imgSrc = getIconImage(item.id);
-        var hasImg = !!imgSrc;
-
-        html += '<div class="appear-icon-item" onclick="triggerIconUpload(\'' + item.id + '\')">';
-        html += '  <div class="appear-icon-item-box' + (hasImg ? ' has-custom' : '') + '">';
-        if (hasImg) {
-            html += '    <img src="' + imgSrc + '" alt="">';
-            html += '    <div class="appear-icon-clear" onclick="event.stopPropagation(); clearSingleIcon(\'' + item.id + '\')">';
-            html += '      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-            html += '    </div>';
-        } else {
-            html += '    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
-        }
-        html += '  </div>';
-        html += '  <div class="appear-icon-item-name">' + item.name + '</div>';
-        html += '</div>';
-    }
-    container.innerHTML = html;
-}
-
-function triggerIconUpload(iconId) {
-    _editingIconId = iconId;
-    document.getElementById('iconCustomFile').click();
-}
-
-function handleIconCustomFile(event) {
-    var file = event.target.files[0];
-    if (!file || !_editingIconId) return;
-
-    var iconId = _editingIconId;
-    showToast('正在处理图标...');
-
-    var reader = new FileReader();
-    reader.onload = function (e) {
-        smartCompress(e.target.result, 8, function (compressed) {
-            var sizeKB = Math.round(compressed.length / 1024);
-            var key = 'ds_icon_' + iconId;
-
-            if (safeSetItem(key, compressed)) {
-                applyOneIconImage(iconId, compressed);
-                renderIconGrid();
-                showToast('图标已更换 (' + sizeKB + 'KB)');
-            } else {
-                for (var i = 0; i < ICON_LIST.length; i++) {
-                    if (ICON_LIST[i].id !== iconId) {
-                        localStorage.removeItem('ds_icon_' + ICON_LIST[i].id);
-                    }
-                }
-                var wp = localStorage.getItem('ds_appear_wallpaper');
-                if (wp && wp.indexOf('data:image') !== -1) {
-                    localStorage.removeItem('ds_appear_wallpaper');
-                }
-
-                try {
-                    localStorage.setItem(key, compressed);
-                    applyOneIconImage(iconId, compressed);
-                    renderIconGrid();
-                    showToast('图标已更换（已自动清理旧数据）');
-                } catch (finalErr) {
-                    showToast('存储空间严重不足，建议清除浏览器数据');
-                }
-            }
-            _editingIconId = null;
-        });
-    };
-    reader.readAsDataURL(file);
-    event.target.value = '';
-}
-
-function clearSingleIcon(iconId) {
-    localStorage.removeItem('ds_icon_' + iconId);
-    removeOneIconImage(iconId);
-    renderIconGrid();
-    showToast('已恢复默认图标');
-}
-
-function applyOneIconImage(iconId, imgSrc) {
-    var el = document.getElementById(iconId);
-    if (!el) return;
-    if (!el.getAttribute('data-original-svg')) {
-        el.setAttribute('data-original-svg', el.innerHTML);
-    }
-    el.innerHTML = '<img src="' + imgSrc + '" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;position:absolute;top:0;left:0;z-index:2;">';
-}
-
-function removeOneIconImage(iconId) {
-    var el = document.getElementById(iconId);
-    if (!el) return;
-    var original = el.getAttribute('data-original-svg');
-    if (original) {
-        el.innerHTML = original;
-    }
-}
-
-function applyAllIconImages() {
-    for (var i = 0; i < ICON_LIST.length; i++) {
-        var el = document.getElementById(ICON_LIST[i].id);
-        if (el && !el.getAttribute('data-original-svg')) {
-            el.setAttribute('data-original-svg', el.innerHTML);
-        }
-    }
-    for (var j = 0; j < ICON_LIST.length; j++) {
-        var id = ICON_LIST[j].id;
-        var src = getIconImage(id);
-        if (src) applyOneIconImage(id, src);
-    }
-}
-
-/* ========== 气泡字体颜色 ========== */
-function pickAppearBubbleColor(el) {
-    var color = el.getAttribute('data-color');
-    document.getElementById('appearBubbleColorHex').value = color;
-    if (color.startsWith('#')) {
-        document.getElementById('appearBubbleColorPicker').value = color;
-    }
-    highlightAppearColorDot(color);
-}
-
-function setAppearBubbleFromPicker(val) {
-    document.getElementById('appearBubbleColorHex').value = val;
-    highlightAppearColorDot(val);
-}
-
-function setAppearBubbleFromHex(val) {
-    if (val.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)) {
-        document.getElementById('appearBubbleColorPicker').value = val;
-    }
-    highlightAppearColorDot(val);
-}
-
-function highlightAppearColorDot(color) {
-    document.querySelectorAll('.appear-color-dot').forEach(function (d) {
-        d.classList.toggle('active', d.getAttribute('data-color') === color);
+// ==========================================
+// 壁纸
+// ==========================================
+function pickWallpaper() {
+    pickImage(function (dataUrl) {
+        document.getElementById('appearWpImg').src = dataUrl;
+        document.getElementById('appearWpImg').classList.add('visible');
+        document.getElementById('appearWpHint').style.display = 'none';
+        _pending.wallpaper = dataUrl;
     });
 }
 
-function applyBubbleColor(color) {
-    document.querySelectorAll('.bubble-text').forEach(function (el) {
-        el.style.color = color;
+function removeWallpaper() {
+    document.getElementById('appearWpImg').src = '';
+    document.getElementById('appearWpImg').classList.remove('visible');
+    document.getElementById('appearWpHint').style.display = '';
+    _pending.wallpaper = '';
+    localStorage.removeItem(AP.wallpaper);
+    document.querySelector('.phone-frame').style.backgroundImage = '';
+    showToast('壁纸已移除');
+}
+
+// ==========================================
+// 应用图标更换
+// ==========================================
+function pickIconImg(box) {
+    var targetId = box.dataset.target;
+    pickImage(function (dataUrl) {
+        var img = box.querySelector('img');
+        img.src = dataUrl;
+        img.classList.add('visible');
+        box.classList.add('has-image');
+        _pendingIcons[targetId] = dataUrl;
     });
 }
 
-/* ========== 全局字体 ========== */
-var _globalFontLoaded = '';
-function applyGlobalFont(url) {
-    if (!url) {
-        document.getElementById('phoneFrame').style.fontFamily = '';
-        return;
+function resetIconImg(targetId, e) {
+    if (e) e.stopPropagation();
+
+    // 面板预览还原
+    var box = document.querySelector('.appear-icon-replace-preview[data-target="' + targetId + '"]');
+    if (box) {
+        var img = box.querySelector('img');
+        img.src = '';
+        img.classList.remove('visible');
+        box.classList.remove('has-image');
     }
-    if (_globalFontLoaded === url) {
-        document.getElementById('phoneFrame').style.fontFamily = '"GlobalCustomFont", sans-serif';
-        return;
+
+    // 标记删除
+    _pendingIcons[targetId] = '';
+
+    // 立即还原主屏图标
+    localStorage.removeItem(ICON_KEY_PREFIX + targetId);
+    restoreIconSvg(targetId);
+
+    showToast('图标已还原');
+}
+
+function applyIconImage(targetId, dataUrl) {
+    var el = document.getElementById(targetId);
+    if (!el) return;
+
+    // 清空内容，放入img
+    el.innerHTML = '';
+    var img = document.createElement('img');
+    img.src = dataUrl;
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'cover';
+    img.style.borderRadius = '14px';
+    el.appendChild(img);
+    el.style.overflow = 'hidden';
+}
+
+function restoreIconSvg(targetId) {
+    var el = document.getElementById(targetId);
+    if (!el) return;
+    if (_originalSvg[targetId]) {
+        el.innerHTML = _originalSvg[targetId];
+        el.style.overflow = '';
     }
-    var fontFace = new FontFace('GlobalCustomFont', 'url(' + url + ')');
-    fontFace.load().then(function (loaded) {
+}
+
+// ==========================================
+// 字体
+// ==========================================
+function onFontSelectChange() {
+    var sel = document.getElementById('appearFontSelect');
+    var isCustom = sel.value === 'custom';
+    document.getElementById('appearCustomFontWrap').style.display = isCustom ? '' : 'none';
+    document.getElementById('appearCustomFontNameWrap').style.display = isCustom ? '' : 'none';
+    updateFontPreview();
+}
+
+function updateFontPreview() {
+    var sel = document.getElementById('appearFontSelect');
+    var preview = document.getElementById('appearFontPreviewText');
+    if (sel.value && sel.value !== 'custom') {
+        preview.style.fontFamily = sel.value;
+    } else {
+        preview.style.fontFamily = '';
+    }
+}
+
+async function loadCustomFont(url, name) {
+    if (!url || !name) return false;
+    try {
+        var font = new FontFace(name, 'url(' + url + ')');
+        var loaded = await font.load();
         document.fonts.add(loaded);
-        _globalFontLoaded = url;
-        document.getElementById('phoneFrame').style.fontFamily = '"GlobalCustomFont", sans-serif';
-    }).catch(function () {
-        showToast('字体加载失败');
+        return true;
+    } catch (e) {
+        console.error('Font load error:', e);
+        return false;
+    }
+}
+
+function applyGlobalFont(family) {
+    var frame = document.querySelector('.phone-frame');
+    if (family) {
+        frame.style.fontFamily = family;
+    } else {
+        frame.style.fontFamily = '';
+    }
+}
+
+// ==========================================
+// 颜色联动
+// ==========================================
+function setupColorPair(pickerId, hexId, presetsId, onChange) {
+    var picker = document.getElementById(pickerId);
+    var hex = document.getElementById(hexId);
+    var presets = document.getElementById(presetsId);
+
+    if (picker && hex) {
+        picker.addEventListener('input', function () {
+            hex.value = this.value;
+            if (onChange) onChange(this.value);
+        });
+        hex.addEventListener('input', function () {
+            var v = this.value.trim();
+            if (/^#[0-9A-Fa-f]{6}$/.test(v)) {
+                picker.value = v;
+                if (onChange) onChange(v);
+            }
+        });
+    }
+
+    if (presets) {
+        presets.addEventListener('click', function (e) {
+            var dot = e.target.closest('.appear-color-dot');
+            if (!dot) return;
+            var color = dot.dataset.color;
+            if (picker) picker.value = color;
+            if (hex) hex.value = color;
+            if (onChange) onChange(color);
+        });
+    }
+}
+
+// ==========================================
+// 顶栏
+// ==========================================
+function toggleAppearStatus() {
+    document.getElementById('appearStatusToggle').classList.toggle('on');
+}
+
+function applyStatusBar(show) {
+    var bar = document.querySelector('.status-bar');
+    if (!bar) return;
+    bar.style.visibility = show ? 'visible' : 'hidden';
+    bar.style.opacity = show ? '1' : '0';
+}
+
+// ==========================================
+// 保存
+// ==========================================
+async function saveAppearSettings() {
+    // 1. 壁纸
+    if (_pending.wallpaper !== undefined) {
+        if (_pending.wallpaper) {
+            localStorage.setItem(AP.wallpaper, _pending.wallpaper);
+        } else {
+            localStorage.removeItem(AP.wallpaper);
+        }
+    }
+    var wp = localStorage.getItem(AP.wallpaper);
+    var frame = document.querySelector('.phone-frame');
+    if (wp) {
+        frame.style.backgroundImage = 'url(' + wp + ')';
+        frame.style.backgroundSize = 'cover';
+        frame.style.backgroundPosition = 'center';
+    } else {
+        frame.style.backgroundImage = '';
+    }
+
+    // 2. 应用图标
+    Object.keys(_pendingIcons).forEach(function (targetId) {
+        var dataUrl = _pendingIcons[targetId];
+        if (dataUrl) {
+            localStorage.setItem(ICON_KEY_PREFIX + targetId, dataUrl);
+            applyIconImage(targetId, dataUrl);
+        } else {
+            localStorage.removeItem(ICON_KEY_PREFIX + targetId);
+            restoreIconSvg(targetId);
+        }
     });
-}
 
-/* ========== 顶栏开关 ========== */
-function applyStatusbarState(visible) {
-    var frame = document.getElementById('phoneFrame');
-    if (visible) {
-        frame.classList.remove('statusbar-hidden');
-    } else {
-        frame.classList.add('statusbar-hidden');
-    }
-}
-
-/* ========== 保存全部外观设置 ========== */
-function saveAppearanceSettings() {
-    var wpUrl = document.getElementById('appearWpUrl').value.trim();
-    var fontUrl = document.getElementById('appearFontUrl').value.trim();
-    var bubbleColor = document.getElementById('appearBubbleColorHex').value.trim() || 'rgba(80,60,70,0.9)';
-    var statusbar = document.getElementById('appearStatusbarToggle').checked;
-
-    if (wpUrl) {
-        if (wpUrl.startsWith('data:')) {
-            showToast('正在保存壁纸...');
-            // ★ 壁纸存IndexedDB，localStorage只存标记
-            compressWallpaperHQ(wpUrl, function (compressed) {
-                // 尝试存IndexedDB
-                _wpSaveToDB(compressed, function (ok) {
-                    if (ok) {
-                        // localStorage存标记，实际数据在IndexedDB
-                        safeSetItem('ds_appear_wallpaper', '__idb_wp__');
-                        doFinishAppearSave(compressed, fontUrl, bubbleColor, statusbar);
-                    } else {
-                        // 回退：尝试直接存localStorage
-                        if (safeSetItem('ds_appear_wallpaper', compressed)) {
-                            doFinishAppearSave(compressed, fontUrl, bubbleColor, statusbar);
-                        } else {
-                            showToast('壁纸太大无法保存，请使用图片URL链接');
-                        }
-                    }
-                });
-            });
-            return;
+    // 3. 字体
+    var fontSelect = document.getElementById('appearFontSelect');
+    if (fontSelect.value === 'custom') {
+        var url = document.getElementById('appearCustomFontUrl').value.trim();
+        var name = document.getElementById('appearCustomFontName').value.trim();
+        if (url && name) {
+            var ok = await loadCustomFont(url, name);
+            if (ok) {
+                localStorage.setItem(AP.fontUrl, url);
+                localStorage.setItem(AP.fontName, name);
+                localStorage.setItem(AP.fontFamily, "'" + name + "'");
+                applyGlobalFont("'" + name + "'");
+            } else {
+                showToast('字体加载失败，请检查URL');
+                return;
+            }
         }
-        // URL链接直接存
-        safeSetItem('ds_appear_wallpaper', wpUrl);
     } else {
-        localStorage.removeItem('ds_appear_wallpaper');
+        localStorage.setItem(AP.fontFamily, fontSelect.value);
+        localStorage.removeItem(AP.fontUrl);
+        localStorage.removeItem(AP.fontName);
+        applyGlobalFont(fontSelect.value);
     }
 
-    doFinishAppearSave(wpUrl, fontUrl, bubbleColor, statusbar);
-}
+    // 4. 气泡颜色
+    var bubbleColor = document.getElementById('appearBubbleColorHex').value.trim() || '#1a1a1a';
+    localStorage.setItem(AP.bubbleColor, bubbleColor);
+    document.querySelectorAll('.bubble-text').forEach(function (el) {
+        el.style.color = bubbleColor;
+    });
 
-function doFinishAppearSave(wpSrc, fontUrl, bubbleColor, statusbar) {
-    // 保存铃声
-    var ringtoneUrl = document.getElementById('appearRingtoneUrl');
-    if (ringtoneUrl && typeof saveRingtoneUrl === 'function') {
-        saveRingtoneUrl(ringtoneUrl.value.trim());
-    }
+    // 5. 大卡片标题颜色
+    var ctColor = document.getElementById('appearCardTitleColorHex').value.trim() || '#ffffff';
+    localStorage.setItem(AP.cardTitleColor, ctColor);
+    var ct = document.getElementById('cardTitle');
+    if (ct) ct.style.color = ctColor;
 
-    safeSetItem('ds_appear_fontUrl', fontUrl);
-    safeSetItem('ds_appear_bubbleColor', bubbleColor);
-    safeSetItem('ds_appear_statusbar', statusbar ? 'visible' : 'hidden');
+    // 6. 大卡片正文颜色
+    var cxColor = document.getElementById('appearCardTextColorHex').value.trim() || '#cccccc';
+    localStorage.setItem(AP.cardTextColor, cxColor);
+    var cx = document.getElementById('cardText');
+    if (cx) cx.style.color = cxColor;
 
-    // ★ 应用壁纸（wpSrc可能是实际数据或URL）
-    var wallpaper = document.getElementById('wallpaper');
-    if (wpSrc) {
-        wallpaper.style.backgroundImage = 'url(' + wpSrc + ')';
-    } else {
-        var savedWp = localStorage.getItem('ds_appear_wallpaper');
-        if (savedWp && savedWp !== '__idb_wp__') {
-            wallpaper.style.backgroundImage = 'url(' + savedWp + ')';
-        } else if (!savedWp) {
-            wallpaper.style.backgroundImage = '';
-        }
-    }
+    // 7. 顶栏
+    var isOn = document.getElementById('appearStatusToggle').classList.contains('on');
+    localStorage.setItem(AP.statusBar, isOn ? 'visible' : 'hidden');
+    applyStatusBar(isOn);
 
-    if (fontUrl) { applyGlobalFont(fontUrl); }
-    else { document.getElementById('phoneFrame').style.fontFamily = ''; }
-    applyBubbleColor(bubbleColor);
-    applyStatusbarState(statusbar);
-
-    closeAppearanceApp();
+    _pending = {};
+    _pendingIcons = {};
     showToast('外观设置已保存');
 }
-/* ========== 清除全部外观设置 ========== */
-function clearAllAppearSettings() {
-    if (!confirm('确认清除所有外观设置？')) return;
 
-    ['ds_appear_wallpaper', 'ds_appear_fontUrl',
-        'ds_appear_bubbleColor', 'ds_appear_statusbar'].forEach(function (k) {
-            localStorage.removeItem(k);
+// ==========================================
+// 清除所有
+// ==========================================
+function clearAllAppear() {
+    if (!confirm('确认清除所有外观设置？将恢复默认外观。')) return;
+
+    // 清除通用设置
+    Object.values(AP).forEach(function (key) {
+        localStorage.removeItem(key);
+    });
+
+    // 清除图标
+    APP_ICON_IDS.forEach(function (id) {
+        localStorage.removeItem(ICON_KEY_PREFIX + id);
+        restoreIconSvg(id);
+    });
+
+    // 恢复默认
+    var frame = document.querySelector('.phone-frame');
+    frame.style.backgroundImage = '';
+    frame.style.fontFamily = '';
+
+    document.querySelectorAll('.bubble-text').forEach(function (el) {
+        el.style.color = '';
+    });
+
+    var ct = document.getElementById('cardTitle');
+    var cx = document.getElementById('cardText');
+    if (ct) ct.style.color = '';
+    if (cx) cx.style.color = '';
+
+    applyStatusBar(true);
+
+    loadAppearForm();
+    showToast('已恢复默认外观');
+}
+
+// ==========================================
+// 通用：选择图片
+// ==========================================
+function pickImage(callback) {
+    var input = document.getElementById('appearFileInput');
+    input.value = '';
+    input.onchange = function (e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+            callback(ev.target.result);
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
+}
+
+// ==========================================
+// 页面加载时恢复设置
+// ==========================================
+async function restoreAppearSettings() {
+    // 缓存SVG
+    cacheOriginalSvg();
+
+    // 壁纸
+    var wp = localStorage.getItem(AP.wallpaper);
+    if (wp) {
+        var frame = document.querySelector('.phone-frame');
+        frame.style.backgroundImage = 'url(' + wp + ')';
+        frame.style.backgroundSize = 'cover';
+        frame.style.backgroundPosition = 'center';
+    }
+
+    // 图标
+    APP_ICON_IDS.forEach(function (id) {
+        var saved = localStorage.getItem(ICON_KEY_PREFIX + id);
+        if (saved) {
+            applyIconImage(id, saved);
+        }
+    });
+
+    // 字体
+    var fontUrl = localStorage.getItem(AP.fontUrl);
+    var fontName = localStorage.getItem(AP.fontName);
+    var fontFamily = localStorage.getItem(AP.fontFamily);
+    if (fontUrl && fontName) {
+        var ok = await loadCustomFont(fontUrl, fontName);
+        if (ok) applyGlobalFont("'" + fontName + "'");
+    } else if (fontFamily) {
+        applyGlobalFont(fontFamily);
+    }
+
+    // 气泡颜色
+    var bc = localStorage.getItem(AP.bubbleColor);
+    if (bc) {
+        document.querySelectorAll('.bubble-text').forEach(function (el) {
+            el.style.color = bc;
         });
-
-    // 清除铃声
-    if (typeof saveRingtoneUrl === 'function') {
-        saveRingtoneUrl('');
-    }
-    var ringtoneInput = document.getElementById('appearRingtoneUrl');
-    if (ringtoneInput) ringtoneInput.value = '';
-
-    for (var i = 0; i < ICON_LIST.length; i++) {
-        localStorage.removeItem('ds_icon_' + ICON_LIST[i].id);
-        removeOneIconImage(ICON_LIST[i].id);
     }
 
-    document.getElementById('wallpaper').style.backgroundImage = '';
-    document.getElementById('phoneFrame').style.fontFamily = '';
-    _globalFontLoaded = '';
-    document.querySelectorAll('.bubble-text').forEach(function (el) { el.style.color = ''; });
-    applyStatusbarState(true);
+    // 大卡片颜色
+    var ctc = localStorage.getItem(AP.cardTitleColor);
+    if (ctc) {
+        var ct = document.getElementById('cardTitle');
+        if (ct) ct.style.color = ctc;
+    }
+    var cxc = localStorage.getItem(AP.cardTextColor);
+    if (cxc) {
+        var cx = document.getElementById('cardText');
+        if (cx) cx.style.color = cxc;
+    }
 
-    document.getElementById('appearWpUrl').value = '';
-    document.getElementById('appearFontUrl').value = '';
-    document.getElementById('appearBubbleColorHex').value = 'rgba(80,60,70,0.9)';
-    document.getElementById('appearBubbleColorPicker').value = '#503c46';
-    document.getElementById('appearStatusbarToggle').checked = true;
-    highlightAppearColorDot('');
-    refreshWallpaperPreview();
-    renderIconGrid();
-
-    var usage = getStorageUsage();
-    showToast('已清除，当前占用 ' + usage.usedKB + 'KB');
+    // 顶栏
+    var sb = localStorage.getItem(AP.statusBar);
+    if (sb === 'hidden') applyStatusBar(false);
 }
 
-/* ========== 初始化 ========== */
+// ==========================================
+// DOMContentLoaded
+// ==========================================
 document.addEventListener('DOMContentLoaded', function () {
-    var savedWp = localStorage.getItem('ds_appear_wallpaper');
-    if (savedWp) {
-        if (savedWp === '__idb_wp__') {
-            // ★ 从IndexedDB恢复壁纸
-            _wpLoadFromDB(function (data) {
-                if (data) {
-                    document.getElementById('wallpaper').style.backgroundImage = 'url(' + data + ')';
-                }
-            });
-        } else {
-            document.getElementById('wallpaper').style.backgroundImage = 'url(' + savedWp + ')';
-        }
-    }
+    restoreAppearSettings();
 
-    var fontUrl = localStorage.getItem('ds_appear_fontUrl');
-    if (fontUrl) applyGlobalFont(fontUrl);
+    // 气泡颜色联动
+    setupColorPair('appearBubbleColorPicker', 'appearBubbleColorHex', 'appearBubblePresets', function (c) {
+        document.querySelectorAll('.bubble-text').forEach(function (el) { el.style.color = c; });
+    });
 
-    var bubbleColor = localStorage.getItem('ds_appear_bubbleColor');
-    if (bubbleColor) applyBubbleColor(bubbleColor);
+    // 大卡片标题颜色联动
+    setupColorPair('appearCardTitleColorPicker', 'appearCardTitleColorHex', 'appearCardTitlePresets', function (c) {
+        var ct = document.getElementById('cardTitle');
+        if (ct) ct.style.color = c;
+    });
 
-    var statusbar = localStorage.getItem('ds_appear_statusbar');
-    if (statusbar === 'hidden') applyStatusbarState(false);
-
-    setTimeout(function () { applyAllIconImages(); }, 100);
+    // 大卡片正文颜色联动
+    setupColorPair('appearCardTextColorPicker', 'appearCardTextColorHex', 'appearCardTextPresets', function (c) {
+        var cx = document.getElementById('cardText');
+        if (cx) cx.style.color = c;
+    });
 });
-
-/* ========== ★ 壁纸高画质压缩 + IndexedDB存储 ========== */
-
-/**
- * 壁纸专用高画质压缩
- * - 最大宽度 1080px（手机足够清晰）
- * - JPEG quality 从 0.92 开始，目标 ≤ 800KB
- * - 比 smartCompress 的 60KB 宽松十几倍，画质清晰
- */
-function compressWallpaperHQ(dataUrl, callback) {
-    var img = new Image();
-    img.onload = function () {
-        var maxW = 1080, maxH = 1920;
-        var w = img.width, h = img.height;
-        // 等比缩放
-        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
-        if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
-
-        var canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        var ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-
-        // 从高画质开始逐步降低，直到 ≤ 800KB
-        var quality = 0.92;
-        var result = canvas.toDataURL('image/jpeg', quality);
-
-        while (result.length > 800 * 1024 && quality > 0.3) {
-            quality -= 0.08;
-            result = canvas.toDataURL('image/jpeg', quality);
-        }
-
-        // 如果还是太大，缩小尺寸
-        if (result.length > 800 * 1024 && w > 600) {
-            var scale = 0.7;
-            canvas.width = Math.round(w * scale);
-            canvas.height = Math.round(h * scale);
-            ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            result = canvas.toDataURL('image/jpeg', 0.85);
-        }
-
-        callback(result);
-    };
-    img.onerror = function () {
-        // 无法作为图片加载，原样返回
-        callback(dataUrl);
-    };
-    img.src = dataUrl;
-}
-
-/* --- 壁纸 IndexedDB 存储 --- */
-var _wpDBName = 'DanShuWallpaper';
-var _wpDBVersion = 1;
-
-function _wpOpenDB(cb) {
-    var req = indexedDB.open(_wpDBName, _wpDBVersion);
-    req.onupgradeneeded = function (e) {
-        var db = e.target.result;
-        if (!db.objectStoreNames.contains('wallpaper')) {
-            db.createObjectStore('wallpaper', { keyPath: 'id' });
-        }
-    };
-    req.onsuccess = function (e) { cb(e.target.result); };
-    req.onerror = function () { cb(null); };
-}
-
-function _wpSaveToDB(dataUrl, callback) {
-    _wpOpenDB(function (db) {
-        if (!db) { callback(false); return; }
-        try {
-            var tx = db.transaction('wallpaper', 'readwrite');
-            var store = tx.objectStore('wallpaper');
-            store.put({ id: 'current', data: dataUrl });
-            tx.oncomplete = function () { callback(true); };
-            tx.onerror = function () { callback(false); };
-        } catch (e) { callback(false); }
-    });
-}
-
-function _wpLoadFromDB(callback) {
-    _wpOpenDB(function (db) {
-        if (!db) { callback(null); return; }
-        try {
-            var tx = db.transaction('wallpaper', 'readonly');
-            var store = tx.objectStore('wallpaper');
-            var req = store.get('current');
-            req.onsuccess = function () {
-                callback(req.result ? req.result.data : null);
-            };
-            req.onerror = function () { callback(null); };
-        } catch (e) { callback(null); }
-    });
-}
 

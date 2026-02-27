@@ -1,10 +1,19 @@
-/* ============================================
-   蛋薯机 DanShu Pro v2 — app.js
-   ============================================ */
+function openApiApp() {
+    console.log('打开API设置');
+}
 
-/* openApiApp 已移至 api.js */
-/* openAppearanceApp 已移至 appearance.js */
+function openAppearanceApp() {
+    console.log('打开外观设置');
+}
 
 function openTiebaApp() {
-    showToast('贴吧');
+    console.log('打开贴吧');
+}
+
+function openChatApp() {
+    console.log('打开聊天');
+}
+
+function openWorldBookApp() {
+    console.log('打开世界之书');
 }
