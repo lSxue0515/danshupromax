@@ -14,6 +14,9 @@ var _nvGenerating = false;
 var _nvGenChapIdx = 0;
 var _nvGenNovelId = '';
 var _nvComments = JSON.parse(localStorage.getItem('_nvComments') || '{}');
+var _nvSharePicker = false;
+var _nvShareNovelId = '';
+var _nvShareChapIdx = 0;
 
 /* ===== 数据 ===== */
 var _nvNovels = JSON.parse(localStorage.getItem('_nvNovels') || '[]');
@@ -267,6 +270,8 @@ function _nvRender() {
     if (_nvCreateOpen) h += _nvRenderCreate();
     if (_nvReadNovel) h += _nvRenderRead();
     if (_nvModal) h += _nvRenderModal();
+    if (_nvSharePicker) h += _nvRenderSharePicker();
+    el.innerHTML = h;
 
     el.innerHTML = h;
 }
@@ -1062,6 +1067,7 @@ function _nvRenderRead() {
                 h += '<div style="margin-top:12px"><span style="display:inline-block;padding:8px 20px;background:#d4c8b0;color:#fff;border-radius:20px;font-size:12px;cursor:pointer" onclick="_nvGenerateOneChapter(\'' + novel.id + '\',' + _nvReadChap + ')">生成本章</span></div>';
             }
             h += '</div>';
+
         }
 
         /* 上一章 / 目录 / 下一章 */
@@ -1106,6 +1112,7 @@ function _nvRenderRead() {
     h += '<span style="font-size:11px;color:#b0a48e;cursor:pointer;padding:6px 14px;border-radius:10px;background:rgba(250,248,244,.85);border:1px solid #ddd5c5" onclick="event.stopPropagation();_nvPickNovelCover(\'' + novel.id + '\')">更换封面</span>';
     h += '</div>';
     h += '<div style="text-align:center;padding:10px 0"><span style="font-size:11px;color:#8b7355;cursor:pointer;padding:6px 14px;border-radius:10px;background:rgba(250,248,244,.85);border:1px solid #ddd5c5" onclick="_nvExportNovelTxt(\'' + novel.id + '\')">导出TXT小说</span></div>';
+    h += '<div style="text-align:center;padding:10px 0"><span style="font-size:11px;color:#8b7355;cursor:pointer;padding:6px 14px;border-radius:10px;background:rgba(250,248,244,.85);border:1px solid #ddd5c5" onclick="_nvShareToChat(\'' + novel.id + '\',' + _nvReadChap + ')">转发本章给TA</span></div>';
     h += '<div style="text-align:center;padding:10px 0 30px"><span style="font-size:11px;color:#d9534f;cursor:pointer" onclick="_nvDeleteNovel(\'' + novel.id + '\')">删除小说</span></div>';
 
     h += '</div>'; /* z-index:1 wrapper end */
@@ -1526,6 +1533,118 @@ function _nvExportNovelTxt(novelId) {
     URL.revokeObjectURL(url);
 
     if (typeof showToast === 'function') showToast('小说已导出为TXT文件');
+}
+
+/* ===== 转发小说到聊一聊 ===== */
+function _nvShareToChat(novelId, chapIdx) {
+    _nvShareNovelId = novelId;
+    _nvShareChapIdx = chapIdx;
+    _nvSharePicker = true;
+    _nvRender();
+}
+
+function _nvRenderSharePicker() {
+    if (!_nvSharePicker) return '';
+    var roles = [];
+    try { roles = JSON.parse(localStorage.getItem('ds_chat_roles') || '[]'); } catch (e) { }
+    if (!roles.length) {
+        if (typeof showToast === 'function') showToast('还没有聊天角色，先去聊一聊创建吧');
+        _nvSharePicker = false;
+        return '';
+    }
+
+    var h = '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="_nvSharePicker=false;_nvRender()">';
+    h += '<div style="background:#fdf8f2;border-radius:16px;width:85%;max-width:340px;max-height:70vh;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.15)" onclick="event.stopPropagation()">';
+    h += '<div style="padding:14px 16px;border-bottom:1px solid #ede6da;font-size:14px;font-weight:700;color:#6b5c4d">选择转发对象</div>';
+    h += '<div style="overflow-y:auto;max-height:55vh;padding:8px 12px">';
+
+    for (var i = 0; i < roles.length; i++) {
+        var r = roles[i];
+        var avatar = '';
+        if (r.avatar && r.avatar !== '__idb__' && r.avatar.length > 10) {
+            avatar = '<img src="' + _nvEsc(r.avatar) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:10px;flex-shrink:0">';
+        } else {
+            avatar = '<div style="width:36px;height:36px;border-radius:50%;background:#e8dfd3;display:flex;align-items:center;justify-content:center;margin-right:10px;font-size:16px;color:#b5a68e;flex-shrink:0">👤</div>';
+        }
+        h += '<div style="display:flex;align-items:center;padding:10px 8px;border-radius:10px;cursor:pointer;transition:background .15s" onmouseover="this.style.background=\'rgba(212,200,176,.15)\'" onmouseout="this.style.background=\'transparent\'" onclick="_nvDoShareToChat(\'' + r.id + '\')">';
+        h += avatar;
+        h += '<div><div style="font-size:13px;font-weight:600;color:#5a4d3e">' + _nvEsc(r.nickname || r.name) + '</div>';
+        if (r.group && r.group !== '默认') h += '<div style="font-size:10px;color:#b5a68e">' + _nvEsc(r.group) + '</div>';
+        h += '</div></div>';
+    }
+
+    h += '</div>';
+    h += '<div style="padding:10px 16px;text-align:center;border-top:1px solid #ede6da"><span style="font-size:12px;color:#b5a68e;cursor:pointer" onclick="_nvSharePicker=false;_nvRender()">取消</span></div>';
+    h += '</div></div>';
+    return h;
+}
+
+function _nvDoShareToChat(roleId) {
+    var novel = null;
+    for (var i = 0; i < _nvNovels.length; i++) {
+        if (_nvNovels[i].id === _nvShareNovelId) { novel = _nvNovels[i]; break; }
+    }
+    if (!novel) return;
+    var chap = novel.chapters[_nvShareChapIdx];
+    if (!chap || !chap.content) {
+        if (typeof showToast === 'function') showToast('本章还没有内容');
+        return;
+    }
+
+    /* 截取前200字作预览 */
+    var preview = chap.content.replace(/\n/g, ' ').substring(0, 200);
+    if (chap.content.length > 200) preview += '...';
+
+    /* 构造卡片数据 */
+    var cardData = {
+        type: 'novel_share',
+        novelTitle: novel.title,
+        chapTitle: chap.title,
+        chapIndex: _nvShareChapIdx,
+        category: novel.category || '',
+        tags: novel.tags || [],
+        preview: preview,
+        fullContent: chap.content,
+        authorNote: chap.authorNote || '',
+        author: novel.penName || _nvProfile.penName || '匿名柿'
+    };
+
+    var cardJson = JSON.stringify(cardData);
+    var msgText = '[小说卡片]' + cardJson;
+    var ts = Date.now();
+    var timeStr = new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    try {
+        var roles = JSON.parse(localStorage.getItem('ds_chat_roles') || '[]');
+        var role = null;
+        for (var ri = 0; ri < roles.length; ri++) {
+            if (roles[ri].id === roleId) { role = roles[ri]; break; }
+        }
+        if (!role) { showToast('角色不存在'); return; }
+        if (!role.msgs) role.msgs = [];
+
+        /* 推入小说卡片消息 */
+        role.msgs.push({
+            from: 'self',
+            text: msgText,
+            time: timeStr,
+            novelCard: true
+        });
+
+        /* 更新最后消息预览 */
+        role.lastMsg = '[小说] ' + novel.title + ' - ' + chap.title;
+        role.lastTime = ts;
+        role.lastTimeStr = timeStr;
+
+        localStorage.setItem('ds_chat_roles', JSON.stringify(roles));
+
+        _nvSharePicker = false;
+        _nvRender();
+        if (typeof showToast === 'function') showToast('已转发给 ' + (role.nickname || role.name));
+    } catch (e) {
+        console.warn('Share to chat error', e);
+        if (typeof showToast === 'function') showToast('转发失败');
+    }
 }
 
 /* ===== 初始化 ===== */

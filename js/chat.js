@@ -1347,6 +1347,7 @@ function renderBubbleRow(m, idx, myAv, roleAv) {
     if (m.image) return renderImageBubbleRow(m, idx, myAv, roleAv);
     if (m.sticker) return renderStickerBubbleRow(m, idx, myAv, roleAv);
     if (m.transfer) return renderTransferBubbleRow(m, idx, myAv, roleAv);
+    if (m.novelCard) return renderNovelCardBubbleRow(m, idx, myAv, roleAv);
     if (m.location) return renderLocationBubbleRow(m, idx, myAv, roleAv);
     if (m.giftCard) return renderGiftCardBubbleRow(m, idx, myAv, roleAv);
 
@@ -2825,6 +2826,21 @@ function buildChatMessages(role) {
         }
 
         var content = m.text;
+        /* ★ 小说卡片→转为AI可读文本 */
+        if (m.novelCard && content && content.indexOf('[小说卡片]') === 0) {
+            try {
+                var cd = JSON.parse(content.substring(6));
+                content = '【用户转发了一篇小说章节给你】\n';
+                content += '小说名: 《' + cd.novelTitle + '》\n';
+                content += '章节: ' + cd.chapTitle + '\n';
+                if (cd.category) content += '分类: ' + cd.category + '\n';
+                if (cd.tags && cd.tags.length) content += '标签: ' + cd.tags.join('、') + '\n';
+                content += '作者: ' + cd.author + '\n';
+                content += '\n--- 章节内容 ---\n' + cd.fullContent + '\n--- 内容结束 ---\n';
+                if (cd.authorNote) content += '\n作者有话说: ' + cd.authorNote + '\n';
+                content += '\n请你以角色身份对这篇小说内容发表看法、评价或讨论，像是读完后跟朋友分享感想一样自然。';
+            } catch (e2) { }
+        }
 
         // 语音消息
         if (m.voice) {
@@ -3550,6 +3566,77 @@ function renderTransferBubbleRow(m, idx, myAv, roleAv) {
 
     h += '<div class="chat-bubble-ts">' + (m.time || '') + '</div>';
     h += '</div></div>';
+    return h;
+}
+
+/* 渲染小说卡片气泡 */
+function renderNovelCardBubbleRow(m, idx, myAv, roleAv) {
+    var isSelf = m.from === 'self';
+    var h = '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-idx="' + idx + '">';
+
+    if (!isSelf) {
+        h += '<div class="chat-bubble-avatar">';
+        if (roleAv) h += '<img src="' + roleAv + '">';
+        else h += SVG_USER;
+        h += '</div>';
+    }
+
+    h += '<div class="chat-bubble-col">';
+
+    /* 解析卡片数据 */
+    var cardData = null;
+    try {
+        var raw = m.text || '';
+        if (raw.indexOf('[小说卡片]') === 0) {
+            cardData = JSON.parse(raw.substring(6));
+        }
+    } catch (e) { }
+
+    if (cardData) {
+        h += '<div class="chat-bubble" style="padding:0;overflow:hidden;max-width:260px;background:transparent;border:none;box-shadow:none">';
+        h += '<div style="background:linear-gradient(135deg,#fdf8f2,#f5efe5);border-radius:12px;padding:12px 14px;border:1px solid #e8dfd3;box-shadow:0 2px 8px rgba(0,0,0,.06)">';
+        /* 头部 */
+        h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">';
+        h += '<span style="font-size:16px">📖</span>';
+        h += '<span style="font-size:10px;color:#c07a6a;font-weight:700">柿子小说</span>';
+        if (cardData.category) h += '<span style="font-size:9px;color:#b5a68e;background:rgba(212,200,176,.2);padding:1px 6px;border-radius:6px">' + esc(cardData.category) + '</span>';
+        h += '</div>';
+        /* 标题 */
+        h += '<div style="font-size:13px;font-weight:700;color:#5a4d3e;margin-bottom:3px">' + esc(cardData.novelTitle) + '</div>';
+        h += '<div style="font-size:11px;color:#8b7e6a;margin-bottom:6px">' + esc(cardData.chapTitle) + '</div>';
+        /* 标签 */
+        if (cardData.tags && cardData.tags.length) {
+            h += '<div style="margin-bottom:6px">';
+            for (var ti = 0; ti < cardData.tags.length && ti < 3; ti++) {
+                h += '<span style="font-size:9px;color:#c07a6a;background:rgba(192,122,106,.1);padding:1px 6px;border-radius:6px;margin-right:3px">' + esc(cardData.tags[ti]) + '</span>';
+            }
+            h += '</div>';
+        }
+        /* 预览 */
+        h += '<div style="font-size:10px;color:#a89b8a;line-height:1.6;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden">' + esc(cardData.preview) + '</div>';
+        /* 底栏 */
+        h += '<div style="margin-top:8px;padding-top:6px;border-top:1px solid #ede6da;display:flex;justify-content:space-between;align-items:center">';
+        h += '<span style="font-size:9px;color:#b5a68e">作者: ' + esc(cardData.author) + '</span>';
+        h += '<span style="font-size:9px;color:#c07a6a">📄 转发的小说</span>';
+        h += '</div>';
+        h += '</div>';
+        h += '</div>';
+    } else {
+        h += '<div class="chat-bubble">[小说卡片]</div>';
+    }
+
+    /* 时间 */
+    if (m.time) h += '<div class="chat-bubble-time">' + m.time + '</div>';
+    h += '</div>';
+
+    if (isSelf) {
+        h += '<div class="chat-bubble-avatar">';
+        if (myAv) h += '<img src="' + myAv + '">';
+        else h += SVG_USER;
+        h += '</div>';
+    }
+
+    h += '</div>';
     return h;
 }
 
