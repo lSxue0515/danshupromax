@@ -442,7 +442,7 @@ function _mjRenderChatOnly() {
     for (var i = 0; i < show.length; i++) {
         var m = show[i];
         h += '<div style="display:flex;align-items:flex-start;gap:4px;margin-bottom:3px;' + (m.isUser ? 'flex-direction:row-reverse' : '') + '">';
-        h += '<div style="width:18px;height:18px;border-radius:50%;overflow:hidden;background:rgba(160,140,150,.08);flex-shrink:0">';
+        h += '<div style="width:30px;height:30px;border-radius:50%;overflow:hidden;background:rgba(160,140,150,.08);flex-shrink:0">';
         if (m.avatar) h += '<img src="' + _gEsc(m.avatar) + '" style="width:100%;height:100%;object-fit:cover">';
         h += '</div>';
         h += '<div style="max-width:70%;padding:3px 7px;border-radius:8px;font-size:8px;line-height:1.4;' + (m.isUser ? 'background:rgba(143,181,160,.15);color:#4a6a52' : 'background:rgba(255,255,255,.6);color:#5a4a52') + '">';
@@ -474,7 +474,7 @@ function _mjRender() {
     // ---- 左座 char1(players[1]) ----
     var p1 = s.players[1], a1 = (1 === s.currentPlayer && (s.phase === 'discard' || s.phase === 'draw'));
     h += '<div class="mj-seat mj-seat-left' + (a1 ? ' active' : '') + '">';
-    h += '<div class="mj-seat-av">';
+    h += '<div class="mj-seat-av" style="width:38px;height:38px">';
     if (p1.avatar) h += '<img src="' + _gEsc(p1.avatar) + '">';
     h += '</div><div class="mj-seat-name">' + _gEsc(p1.name) + '</div>';
     h += '<div class="mj-seat-cnt">' + p1.hand.length + '张 ' + p1.score + '分</div>';
@@ -482,7 +482,7 @@ function _mjRender() {
     // ---- 上座 char2(players[2]) ----
     var p2 = s.players[2], a2 = (2 === s.currentPlayer && (s.phase === 'discard' || s.phase === 'draw'));
     h += '<div class="mj-seat mj-seat-top' + (a2 ? ' active' : '') + '">';
-    h += '<div class="mj-seat-av">';
+    h += '<div class="mj-seat-av" style="width:38px;height:38px">';
     if (p2.avatar) h += '<img src="' + _gEsc(p2.avatar) + '">';
     h += '</div><div class="mj-seat-name">' + _gEsc(p2.name) + '</div>';
     h += '<div class="mj-seat-cnt">' + p2.hand.length + '张 ' + p2.score + '分</div>';
@@ -490,7 +490,7 @@ function _mjRender() {
     // ---- 右座 char3(players[3]) ----
     var p3 = s.players[3], a3 = (3 === s.currentPlayer && (s.phase === 'discard' || s.phase === 'draw'));
     h += '<div class="mj-seat mj-seat-right' + (a3 ? ' active' : '') + '">';
-    h += '<div class="mj-seat-av">';
+    h += '<div class="mj-seat-av" style="width:38px;height:38px">';
     if (p3.avatar) h += '<img src="' + _gEsc(p3.avatar) + '">';
     h += '</div><div class="mj-seat-name">' + _gEsc(p3.name) + '</div>';
     h += '<div class="mj-seat-cnt">' + p3.hand.length + '张 ' + p3.score + '分</div>';
@@ -502,7 +502,7 @@ function _mjRender() {
     for (var li = Math.max(0, logA.length - 20); li < logA.length; li++) h += '<div>' + _gEsc(logA[li]) + '</div>';
     h += '</div>';
     h += '<div class="mj-center-discards">';
-    for (var di = 0; di < 4; di++) { var dp = s.players[di]; for (var dd = 0; dd < dp.discards.length; dd++) { var dt = dp.discards[dd]; h += '<div class="mj-discard-tile ' + _mjTileSuitClass(dt) + '">' + _mjTileShort(dt) + '</div>'; } }
+    for (var di = 0; di < 4; di++) { var dp = s.players[di]; for (var dd = 0; dd < dp.discards.length; dd++) { var dt = dp.discards[dd]; h += '<div class="mj-discard-tile ' + _mjTileSuitClass(dt) + '" style="width:22px;height:28px;font-size:11px">' + _mjTileShort(dt) + '</div>'; } }
     h += '</div></div>';
     // ---- 底部user(players[0]) ----
     h += '<div class="mj-hand-ls">';
@@ -513,21 +513,21 @@ function _mjRender() {
     var me = s.players[0], myA = (s.currentPlayer === 0 && s.phase === 'discard');
     h += '<div class="mj-hand-ls-info">';
     h += '<div style="display:flex;align-items:center;gap:3px;padding:2px 6px;border-radius:7px;' + (myA ? 'background:rgba(143,181,160,.15);border:1px solid rgba(143,181,160,.15)' : 'background:rgba(255,255,255,.35);border:1px solid rgba(160,140,150,.06)') + '">';
-    h += '<div style="width:14px;height:14px;border-radius:50%;overflow:hidden">';
+    h += '<div style="width:30px;height:30px;border-radius:50%;overflow:hidden">';
     if (me.avatar) h += '<img src="' + _gEsc(me.avatar) + '" style="width:100%;height:100%;object-fit:cover">';
-    h += '</div><span style="font-size:7px;font-weight:600;color:#5a4a52">' + _gEsc(me.name) + '</span>';
-    h += '<span style="font-size:6px;color:rgba(120,100,112,.3)">分:' + me.score + '</span></div></div>';
+    h += '</div><span style="font-size:11px;font-weight:600;color:#5a4a52">' + _gEsc(me.name) + '</span>';
+    h += '<span style="font-size:9px;color:rgba(120,100,112,.3)">分:' + me.score + '</span></div></div>';
     // 手牌
     h += '<div class="mj-hand-ls-cards">';
     for (var hi = 0; hi < me.hand.length; hi++) {
         var ht = me.hand[hi], canP = (s.currentPlayer === 0 && s.phase === 'discard');
-        h += '<div class="mj-tile ' + _mjTileSuitClass(ht) + (canP ? ' playable' : '') + '"' + (canP ? ' data-mj-play="' + hi + '"' : '') + '>';
-        h += '<div class="mj-tile-val">' + _mjTileShort(ht) + '</div>';
-        h += '<div class="mj-tile-suit">' + (MJ_SUIT_CN[ht.suit] || '') + '</div></div>';
+        h += '<div class="mj-tile ' + _mjTileSuitClass(ht) + (canP ? ' playable' : '') + '" style="width:32px;height:44px"' + (canP ? ' data-mj-play="' + hi + '"' : '') + '>';
+        h += '<div class="mj-tile-val" style="font-size:14px">' + _mjTileShort(ht) + '</div>';
+        h += '<div class="mj-tile-suit" style="font-size:8px">' + (MJ_SUIT_CN[ht.suit] || '') + '</div></div>';
     }
     if (me.melds.length > 0) {
         h += '<div style="display:flex;gap:2px;margin-left:4px;align-items:flex-end">';
-        for (var mi = 0; mi < me.melds.length; mi++) { h += '<div style="display:flex;gap:0">'; for (var mti = 0; mti < me.melds[mi].tiles.length; mti++) { var mtt = me.melds[mi].tiles[mti]; h += '<div class="mj-meld-tile ' + _mjTileSuitClass(mtt) + '">' + _mjTileShort(mtt) + '</div>'; } h += '</div>'; }
+        for (var mi = 0; mi < me.melds.length; mi++) { h += '<div style="display:flex;gap:0">'; for (var mti = 0; mti < me.melds[mi].tiles.length; mti++) { var mtt = me.melds[mi].tiles[mti]; h += '<div class="mj-meld-tile ' + _mjTileSuitClass(mtt) + '" style="width:26px;height:34px;font-size:11px">' + _mjTileShort(mtt) + '</div>'; } h += '</div>'; }
         h += '</div>';
     }
     h += '</div></div>'; // /mj-hand-ls-cards /mj-hand-ls
@@ -551,7 +551,7 @@ function _mjRender() {
         sorted.sort(function (a, b) { return b.score - a.score; });
         for (var sr = 0; sr < sorted.length; sr++) {
             var sp = s.players[sorted[sr].idx], isW = (sr === 0);
-            h += '<div class="mj-result-row' + (isW ? ' winner' : '') + '"><div class="mj-result-av">';
+            h += '<div class="mj-result-row' + (isW ? ' winner' : '') + '"><div class="mj-result-av" style="width:36px;height:36px">';
             if (sp.avatar) h += '<img src="' + _gEsc(sp.avatar) + '" style="width:100%;height:100%;object-fit:cover">';
             h += '</div><div class="mj-result-name">' + _gEsc(sp.name) + '</div><div class="mj-result-pts' + (sp.score < 0 ? ' neg' : '') + '">' + sp.score + '</div></div>';
         }
@@ -1147,7 +1147,7 @@ function _ddzRender() {
     // ---- 左座 char1(players[1]) ----
     var op1 = s.players[1], ia1 = (1 === activeP);
     h += '<div class="ddz-seat ddz-seat-left' + (ia1 ? ' active' : '') + '">';
-    h += '<div class="ddz-seat-av">';
+    h += '<div class="ddz-seat-av" style="width:38px;height:38px">';
     if (op1.avatar) h += '<img src="' + _gEsc(op1.avatar) + '">';
     else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
     h += '</div><div class="ddz-seat-name">' + _gEsc(op1.name) + '</div>';
@@ -1157,7 +1157,7 @@ function _ddzRender() {
         h += '<div class="ddz-seat-played">';
         for (var lp1 = 0; lp1 < op1.lastPlayed.length; lp1++) {
             var c1 = op1.lastPlayed[lp1], r1 = (['♥', '♦'].indexOf(c1.suit) >= 0 || c1.rank === 'Joker');
-            h += '<span style="font-size:9px;color:' + (r1 ? '#c9908e' : '#5a4a52') + ';margin:0 1px">' + _gEsc(c1.rank) + (c1.suit || '') + '</span>';
+            h += '<span style="font-size:12px;color:' + (r1 ? '#c9908e' : '#5a4a52') + ';margin:0 2px">' + _gEsc(c1.rank) + (c1.suit || '') + '</span>';
         }
         h += '</div>';
     } else if (op1.lastAction === 'pass') {
@@ -1168,7 +1168,7 @@ function _ddzRender() {
     // ---- 右座 char2(players[2]) ----
     var op2 = s.players[2], ia2 = (2 === activeP);
     h += '<div class="ddz-seat ddz-seat-right' + (ia2 ? ' active' : '') + '">';
-    h += '<div class="ddz-seat-av">';
+    h += '<div class="ddz-seat-av" style="width:38px;height:38px">';
     if (op2.avatar) h += '<img src="' + _gEsc(op2.avatar) + '">';
     else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
     h += '</div><div class="ddz-seat-name">' + _gEsc(op2.name) + '</div>';
@@ -1178,7 +1178,7 @@ function _ddzRender() {
         h += '<div class="ddz-seat-played">';
         for (var lp2 = 0; lp2 < op2.lastPlayed.length; lp2++) {
             var c2 = op2.lastPlayed[lp2], r2 = (['♥', '♦'].indexOf(c2.suit) >= 0 || c2.rank === 'Joker');
-            h += '<span style="font-size:9px;color:' + (r2 ? '#c9908e' : '#5a4a52') + ';margin:0 1px">' + _gEsc(c2.rank) + (c2.suit || '') + '</span>';
+            h += '<span style="font-size:12px;color:' + (r2 ? '#c9908e' : '#5a4a52') + ';margin:0 2px">' + _gEsc(c2.rank) + (c2.suit || '') + '</span>';
         }
         h += '</div>';
     } else if (op2.lastAction === 'pass') {
@@ -1197,18 +1197,18 @@ function _ddzRender() {
         h += '<div style="display:flex;gap:2px;justify-content:center;margin:2px 0">';
         for (var dpi = 0; dpi < s.diPai.length; dpi++) {
             var dpcc = s.diPai[dpi], dRed = (['♥', '♦'].indexOf(dpcc.suit) >= 0);
-            h += '<div style="width:22px;height:30px;background:#fffefa;border-radius:4px;border:1px solid rgba(160,140,150,.1);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:.5">';
-            h += '<div style="font-size:9px;color:' + (dRed ? '#c9908e' : '#5a4a52') + '">' + _gEsc(dpcc.rank) + '</div>';
-            h += '<div style="font-size:6px;color:' + (dRed ? '#c9908e' : '#5a4a52') + '">' + dpcc.suit + '</div></div>';
+            h += '<div style="width:30px;height:40px;background:#fffefa;border-radius:4px;border:1px solid rgba(160,140,150,.1);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:.5">';
+            h += '<div style="font-size:12px;color:' + (dRed ? '#c9908e' : '#5a4a52') + '">' + _gEsc(dpcc.rank) + '</div>';
+            h += '<div style="font-size:9px;color:' + (dRed ? '#c9908e' : '#5a4a52') + '">' + dpcc.suit + '</div></div>';
         }
         h += '</div>';
     } else if (s.dizhuCards && s.dizhuCards.length > 0 && s.phase !== 'bid') {
         h += '<div style="display:flex;gap:2px;justify-content:center;margin:2px 0">';
         for (var dpi2 = 0; dpi2 < s.dizhuCards.length; dpi2++) {
             var dpcc2 = s.dizhuCards[dpi2], dRed2 = (['♥', '♦'].indexOf(dpcc2.suit) >= 0);
-            h += '<div style="width:22px;height:30px;background:#fffefa;border-radius:4px;border:1px solid rgba(160,140,150,.1);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:.5">';
-            h += '<div style="font-size:9px;color:' + (dRed2 ? '#c9908e' : '#5a4a52') + '">' + _gEsc(dpcc2.rank) + '</div>';
-            h += '<div style="font-size:6px;color:' + (dRed2 ? '#c9908e' : '#5a4a52') + '">' + dpcc2.suit + '</div></div>';
+            h += '<div style="width:30px;height:40px;background:#fffefa;border-radius:4px;border:1px solid rgba(160,140,150,.1);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:.5">';
+            h += '<div style="font-size:12px;color:' + (dRed2 ? '#c9908e' : '#5a4a52') + '">' + _gEsc(dpcc2.rank) + '</div>';
+            h += '<div style="font-size:9px;color:' + (dRed2 ? '#c9908e' : '#5a4a52') + '">' + dpcc2.suit + '</div></div>';
         }
         h += '</div>';
     }
@@ -1243,7 +1243,7 @@ function _ddzRender() {
     // ---- 底部user手牌 ----
     h += '<div class="ddz-hand-ls">';
     h += '<div style="display:flex;align-items:center;gap:5px;padding:2px 6px;font-size:9px;color:#5a4a52">';
-    if (me.avatar) h += '<img src="' + _gEsc(me.avatar) + '" style="width:20px;height:20px;border-radius:50%;object-fit:cover">';
+    if (me.avatar) h += '<img src="' + _gEsc(me.avatar) + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover">';
     h += '<span style="font-weight:600">' + _gEsc(me.name) + '</span>';
     if (s.landlordIdx === 0) h += '<span style="font-size:7px;padding:1px 4px;border-radius:3px;background:rgba(201,144,142,.15);color:#c9908e">地主</span>';
     h += '<span style="color:rgba(120,100,112,.3)">分:' + me.score + '</span></div>';
@@ -1251,9 +1251,9 @@ function _ddzRender() {
     for (var ci = 0; ci < me.hand.length; ci++) {
         var c = me.hand[ci], sel = (s.selectedCards && s.selectedCards.indexOf(ci) >= 0);
         var isRed = (['♥', '♦'].indexOf(c.suit) >= 0 || c.rank === 'Joker');
-        h += '<div class="ddz-card' + (sel ? ' selected' : '') + '" data-ddz-card="' + ci + '">';
-        h += '<div class="ddz-card-rank" style="color:' + (isRed ? '#c9908e' : '#5a4a52') + '">' + _gEsc(c.rank) + '</div>';
-        h += '<div class="ddz-card-suit" style="color:' + (isRed ? '#c9908e' : '#5a4a52') + '">' + (c.suit || '') + '</div></div>';
+        h += '<div class="ddz-card' + (sel ? ' selected' : '') + '" style="width:38px;height:54px" data-ddz-card="' + ci + '">';
+        h += '<div class="ddz-card-rank" style="color:' + (isRed ? '#c9908e' : '#5a4a52') + ';font-size:14px">' + _gEsc(c.rank) + '</div>';
+        h += '<div class="ddz-card-suit" style="color:' + (isRed ? '#c9908e' : '#5a4a52') + ';font-size:10px">' + (c.suit || '') + '</div></div>';
     }
     h += '</div></div>';
     h += '</div>'; // /ddz-table-ls
@@ -1264,7 +1264,7 @@ function _ddzRender() {
         h += '<div class="ddz-result-scores">';
         for (var ri = 0; ri < 3; ri++) {
             var rp = s.players[ri];
-            h += '<div class="ddz-result-row' + (rp.score > 0 ? ' winner' : '') + '"><div class="ddz-result-av">';
+            h += '<div class="ddz-result-row' + (rp.score > 0 ? ' winner' : '') + '"><div class="ddz-result-av" style="width:36px;height:36px">';
             if (rp.avatar) h += '<img src="' + _gEsc(rp.avatar) + '" style="width:100%;height:100%;object-fit:cover">';
             h += '</div><div class="ddz-result-name">' + _gEsc(rp.name) + (s.landlordIdx === ri ? ' 👑' : '') + '</div>';
             h += '<div class="ddz-result-pts' + (rp.score < 0 ? ' neg' : '') + '">' + rp.score + '</div></div>';
