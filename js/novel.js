@@ -896,9 +896,42 @@ function _nvFixEnding(text) {
     return text + '……';
 }
 
+/* ===== 阅读设置数据 ===== */
+var _nvReaderSettings = JSON.parse(localStorage.getItem('_nvReaderSettings') || 'null') || {
+    bgColor: '#f5f0ea',
+    bgImage: '',
+    bgOpacity: 100,
+    fontColor: '#5a4e3c',
+    fontSize: 15,
+    lineHeight: 2.0,
+    letterSpacing: 0,
+    paragraphSpacing: 12
+};
+var _nvSettingsOpen = false;
+
+function _nvSaveReaderSettings() {
+    try {
+        var s = Object.assign({}, _nvReaderSettings);
+        if (s.bgImage && s.bgImage.length > 500) {
+            _nvSaveBlobDB('nvReaderBgImg', s.bgImage);
+            s.bgImage = '__idb__';
+        }
+        localStorage.setItem('_nvReaderSettings', JSON.stringify(s));
+    } catch (e) { }
+}
+
+/* 恢复背景图 */
+(function () {
+    if (_nvReaderSettings.bgImage === '__idb__') {
+        _nvLoadBlobDB('nvReaderBgImg', function (d) {
+            if (d) _nvReaderSettings.bgImage = d;
+        });
+    }
+})();
+
 /* ===== 阅读页 ===== */
 function _nvOpenRead(id) {
-    _nvReadNovel = id; _nvReadChap = 0; _nvTocOpen = false; _nvRender();
+    _nvReadNovel = id; _nvReadChap = 0; _nvTocOpen = false; _nvSettingsOpen = false; _nvRender();
 }
 
 function _nvRenderRead() {
@@ -908,113 +941,41 @@ function _nvRenderRead() {
     }
     if (!novel) return '';
 
-    var h = '<div class="nv-create-overlay show">';
-    h += '<div class="nv-header">';
-    h += '<div class="nv-back" onclick="_nvReadNovel=null;_nvRender()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>';
-    h += '<div class="nv-header-title">' + _nvEsc(novel.title) + '</div>';
-    h += '<div class="nv-back" onclick="_nvTocOpen=true;_nvRender()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></div>';
-    h += '</div>';
+    var rs = _nvReaderSettings;
 
-    h += '<div class="nv-create-body" style="padding-bottom:80px">';
+    /* 阅读区背景样式 */
+    var readBodyStyle = 'padding-bottom:80px;position:relative;';
+    readBodyStyle += 'background-color:' + rs.bgColor + ';';
+    if (rs.bgImage && rs.bgImage !== '__idb__') {
+        readBodyStyle += 'background-image:url(' + rs.bgImage + ');background-size:cover;background-position:center;';
+    }
+
+    var h = '<div class="nv-create-overlay show">';
+
+    /* header */
+    h += '<div class="nv-header">';
+    h += '<div class="nv-back" onclick="_nvReadNovel=null;_nvSettingsOpen=false;_nvRender()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>';
+    h += '<div class="nv-header-title">' + _nvEsc(novel.title) + '</div>';
+    h += '<div style="display:flex;gap:6px">';
+    /* 目录按钮 */
+    h += '<div class="nv-back" onclick="_nvTocOpen=true;_nvRender()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></div>';
+    /* 设置按钮 */
+    h += '<div class="nv-back" onclick="_nvSettingsOpen=!_nvSettingsOpen;_nvRender()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>';
+    h += '</div></div>';
+
+    /* 阅读主体 - 带透明度覆盖层 */
+    h += '<div class="nv-create-body" style="' + readBodyStyle + '">';
+
+    /* 透明度遮罩层（用白色半透明覆盖让背景图变淡） */
+    if (rs.bgImage && rs.bgImage !== '__idb__' && rs.bgOpacity < 100) {
+        var maskAlpha = (100 - rs.bgOpacity) / 100;
+        h += '<div style="position:absolute;inset:0;background:rgba(255,255,255,' + maskAlpha.toFixed(2) + ');pointer-events:none;z-index:0"></div>';
+    }
+
+    /* 内容区域 z-index 保证在遮罩上方 */
+    h += '<div style="position:relative;z-index:1">';
 
     /* 生成中提示 */
-    if (_nvGenerating && _nvGenNovelId === novel.id) {
-        h += '<div style="text-align:center;padding:20px 0">';
-        h += '<div style="font-size:13px;color:#8b7e6a;margin-bottom:6px">✍ 正在生成第 ' + (_nvGenChapIdx + 1) + ' 章...</div>';
-        h += '<div style="font-size:11px;color:#c4b9a8">已完成的章节可以先阅读</div>';
-        h += '</div>';
-    }
-
-    var chap = novel.chapters[_nvReadChap];
-    if (chap) {
-        h += '<div style="text-align:center;font-size:16px;font-weight:700;color:#5a4e3c;padding:20px 0 12px">' + _nvEsc(chap.title) + '</div>';
-        if (chap.content) {
-            var paragraphs = chap.content.split('\n');
-            h += '<div style="font-size:14px;line-height:1.9;color:#5a4e3c;padding:0 4px">';
-            for (var pi = 0; pi < paragraphs.length; pi++) {
-                var line = paragraphs[pi].trim();
-                if (line) h += '<p style="text-indent:2em;margin:0 0 10px 0">' + _nvEsc(line) + '</p>';
-            }
-            h += '</div>';
-        } else {
-            h += '<div style="text-align:center;padding:40px 0;color:#c4b9a8;font-size:13px">';
-            if (_nvGenerating && _nvGenNovelId === novel.id) {
-                h += '本章正在生成中...';
-            } else {
-                h += '本章尚未生成';
-                h += '<div style="margin-top:12px"><span style="display:inline-block;padding:8px 20px;background:#d4c8b0;color:#fff;border-radius:20px;font-size:12px;cursor:pointer" onclick="_nvGenerateOneChapter(\'' + novel.id + '\',' + _nvReadChap + ')">生成本章</span></div>';
-            }
-            h += '</div>';
-        }
-
-        /* 导航按钮 */
-        h += '<div style="display:flex;justify-content:center;gap:12px;padding:20px 0">';
-        if (_nvReadChap > 0) {
-            h += '<span style="padding:8px 16px;background:#faf8f4;border:1px solid #ddd5c5;border-radius:16px;font-size:12px;color:#8b7e6a;cursor:pointer" onclick="_nvReadChap--;_nvRender()">上一章</span>';
-        }
-        h += '<span style="padding:8px 16px;background:#faf8f4;border:1px solid #ddd5c5;border-radius:16px;font-size:12px;color:#8b7e6a;cursor:pointer" onclick="_nvTocOpen=true;_nvRender()">目录</span>';
-        if (_nvReadChap < novel.chapters.length - 1) {
-            h += '<span style="padding:8px 16px;background:#faf8f4;border:1px solid #ddd5c5;border-radius:16px;font-size:12px;color:#8b7e6a;cursor:pointer" onclick="_nvReadChap++;_nvRender()">下一章</span>';
-        }
-        h += '</div>';
-
-        /* 生成下一章按钮 */
-        var nextIdx = _nvReadChap + 1;
-        if (!_nvGenerating && nextIdx < novel.chapters.length && !novel.chapters[nextIdx].content) {
-            h += '<div style="text-align:center;padding:8px 0 16px">';
-            h += '<span style="display:inline-block;padding:10px 24px;background:#d4c8b0;color:#fff;border-radius:20px;font-size:13px;cursor:pointer" onclick="_nvGenerateOneChapter(\'' + novel.id + '\',' + nextIdx + ')">✍ 生成下一章</span>';
-            h += '</div>';
-        }
-    }
-
-    h += '<div style="text-align:center;padding:14px 0">';
-    h += '<span style="font-size:11px;color:#b0a48e;cursor:pointer;padding:6px 14px;border-radius:10px;background:#faf8f4;border:1px solid #ddd5c5;margin-right:8px" onclick="event.stopPropagation();_nvPickNovelCover(\'' + novel.id + '\')">更换封面</span>';
-    h += '</div>';
-    h += '<div style="text-align:center;padding:10px 0 30px"><span style="font-size:11px;color:#d9534f;cursor:pointer" onclick="_nvDeleteNovel(\'' + novel.id + '\')">删除小说</span></div>';
-
-    h += '</div>';
-
-    /* 目录侧栏 */
-    if (_nvTocOpen) {
-        h += '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:1000" onclick="_nvTocOpen=false;_nvRender()">';
-        h += '<div style="position:absolute;right:0;top:0;bottom:0;width:260px;background:#faf8f4;padding:20px 16px;overflow-y:auto" onclick="event.stopPropagation()">';
-        h += '<div style="font-size:14px;font-weight:700;color:#5a4e3c;margin-bottom:16px">目录</div>';
-        for (var ci = 0; ci < novel.chapters.length; ci++) {
-            var hasContent = !!novel.chapters[ci].content;
-            var isActive = ci === _nvReadChap;
-            h += '<div style="padding:10px 8px;font-size:12px;border-bottom:1px solid #ece6da;cursor:pointer;color:' + (isActive ? '#d4c8b0' : (hasContent ? '#5a4e3c' : '#c4b9a8')) + '" onclick="' + (hasContent ? '_nvReadChap=' + ci + ';_nvTocOpen=false;_nvRender()' : '') + '">';
-            h += _nvEsc(novel.chapters[ci].title);
-            if (!hasContent) h += ' <span style="font-size:10px;color:#ccc">[未生成]</span>';
-            h += '</div>';
-        }
-        h += '</div></div>';
-    }
-
-    h += '</div>';
-    return h;
-}
-
-/* ===== 阅读页 ===== */
-function _nvOpenRead(id) {
-    _nvReadNovel = id; _nvReadChap = 0; _nvTocOpen = false; _nvRender();
-}
-
-function _nvRenderRead() {
-    var novel = null;
-    for (var i = 0; i < _nvNovels.length; i++) {
-        if (_nvNovels[i].id === _nvReadNovel) { novel = _nvNovels[i]; break; }
-    }
-    if (!novel) return '';
-
-    var h = '<div class="nv-create-overlay show">';
-    h += '<div class="nv-header">';
-    h += '<div class="nv-back" onclick="_nvReadNovel=null;_nvRender()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>';
-    h += '<div class="nv-header-title">' + _nvEsc(novel.title) + '</div>';
-    h += '<div class="nv-back" onclick="_nvTocOpen=true;_nvRender()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></div>';
-    h += '</div>';
-
-    h += '<div class="nv-create-body" style="padding-bottom:80px">';
-
     if (_nvGenerating && _nvGenNovelId === novel.id) {
         h += '<div style="text-align:center;padding:20px 0">';
         h += '<div style="font-size:13px;color:#8b7e6a;margin-bottom:6px">正在生成第 ' + (_nvGenChapIdx + 1) + ' 章...</div>';
@@ -1024,13 +985,13 @@ function _nvRenderRead() {
 
     var chap = novel.chapters[_nvReadChap];
     if (chap) {
-        h += '<div style="text-align:center;font-size:16px;font-weight:700;color:#5a4e3c;padding:20px 0 12px">' + _nvEsc(chap.title) + '</div>';
+        h += '<div style="text-align:center;font-size:' + (rs.fontSize + 3) + 'px;font-weight:700;color:' + rs.fontColor + ';padding:20px 0 12px">' + _nvEsc(chap.title) + '</div>';
         if (chap.content) {
             var paragraphs = chap.content.split('\n');
-            h += '<div style="font-size:14px;line-height:1.9;color:#5a4e3c;padding:0 4px">';
+            h += '<div style="font-size:' + rs.fontSize + 'px;line-height:' + rs.lineHeight + ';color:' + rs.fontColor + ';letter-spacing:' + rs.letterSpacing + 'px;padding:0 4px">';
             for (var pi = 0; pi < paragraphs.length; pi++) {
                 var line = paragraphs[pi].trim();
-                if (line) h += '<p style="text-indent:2em;margin:0 0 10px 0">' + _nvEsc(line) + '</p>';
+                if (line) h += '<p style="text-indent:2em;margin:0 0 ' + rs.paragraphSpacing + 'px 0">' + _nvEsc(line) + '</p>';
             }
             h += '</div>';
         } else {
@@ -1047,15 +1008,15 @@ function _nvRenderRead() {
         /* 上一章 / 目录 / 下一章 */
         h += '<div style="display:flex;justify-content:center;gap:12px;padding:20px 0">';
         if (_nvReadChap > 0) {
-            h += '<span style="padding:8px 16px;background:#faf8f4;border:1px solid #ddd5c5;border-radius:16px;font-size:12px;color:#8b7e6a;cursor:pointer" onclick="_nvReadChap--;_nvRender()">上一章</span>';
+            h += '<span style="padding:8px 16px;background:rgba(250,248,244,.85);border:1px solid #ddd5c5;border-radius:16px;font-size:12px;color:#8b7e6a;cursor:pointer" onclick="_nvReadChap--;_nvRender()">上一章</span>';
         }
-        h += '<span style="padding:8px 16px;background:#faf8f4;border:1px solid #ddd5c5;border-radius:16px;font-size:12px;color:#8b7e6a;cursor:pointer" onclick="_nvTocOpen=true;_nvRender()">目录</span>';
+        h += '<span style="padding:8px 16px;background:rgba(250,248,244,.85);border:1px solid #ddd5c5;border-radius:16px;font-size:12px;color:#8b7e6a;cursor:pointer" onclick="_nvTocOpen=true;_nvRender()">目录</span>';
         if (_nvReadChap < novel.chapters.length - 1) {
-            h += '<span style="padding:8px 16px;background:#faf8f4;border:1px solid #ddd5c5;border-radius:16px;font-size:12px;color:#8b7e6a;cursor:pointer" onclick="_nvReadChap++;_nvRender()">下一章</span>';
+            h += '<span style="padding:8px 16px;background:rgba(250,248,244,.85);border:1px solid #ddd5c5;border-radius:16px;font-size:12px;color:#8b7e6a;cursor:pointer" onclick="_nvReadChap++;_nvRender()">下一章</span>';
         }
         h += '</div>';
 
-        /* 生成下一章按钮（无emoji） */
+        /* 生成下一章按钮 */
         var nextIdx = _nvReadChap + 1;
         if (!_nvGenerating && nextIdx < novel.chapters.length && !novel.chapters[nextIdx].content) {
             h += '<div style="text-align:center;padding:8px 0 16px">';
@@ -1065,11 +1026,12 @@ function _nvRenderRead() {
     }
 
     h += '<div style="text-align:center;padding:14px 0">';
-    h += '<span style="font-size:11px;color:#b0a48e;cursor:pointer;padding:6px 14px;border-radius:10px;background:#faf8f4;border:1px solid #ddd5c5" onclick="event.stopPropagation();_nvPickNovelCover(\'' + novel.id + '\')">更换封面</span>';
+    h += '<span style="font-size:11px;color:#b0a48e;cursor:pointer;padding:6px 14px;border-radius:10px;background:rgba(250,248,244,.85);border:1px solid #ddd5c5" onclick="event.stopPropagation();_nvPickNovelCover(\'' + novel.id + '\')">更换封面</span>';
     h += '</div>';
     h += '<div style="text-align:center;padding:10px 0 30px"><span style="font-size:11px;color:#d9534f;cursor:pointer" onclick="_nvDeleteNovel(\'' + novel.id + '\')">删除小说</span></div>';
 
-    h += '</div>';
+    h += '</div>'; /* z-index:1 wrapper end */
+    h += '</div>'; /* nv-create-body end */
 
     /* 目录侧栏 */
     if (_nvTocOpen) {
@@ -1087,8 +1049,164 @@ function _nvRenderRead() {
         h += '</div></div>';
     }
 
-    h += '</div>';
+    /* ===== 阅读设置面板 ===== */
+    if (_nvSettingsOpen) {
+        h += '<div class="nv-reader-settings-mask show" onclick="_nvSettingsOpen=false;_nvRender()">';
+        h += '<div class="nv-reader-settings-panel" onclick="event.stopPropagation()">';
+        h += '<div class="nv-rs-handle"></div>';
+        h += '<div class="nv-rs-title">阅读设置</div>';
+
+        /* 背景颜色 */
+        h += '<div class="nv-rs-section">';
+        h += '<div class="nv-rs-label">背景颜色</div>';
+        h += '<div class="nv-rs-colors">';
+        var bgPresets = [
+            { c: '#f5f0ea', n: '默认' },
+            { c: '#ffffff', n: '纯白' },
+            { c: '#e8e0d2', n: '羊皮纸' },
+            { c: '#cce8cf', n: '护眼绿' },
+            { c: '#d4e4f7', n: '浅蓝' },
+            { c: '#f5e6d0', n: '暖黄' },
+            { c: '#e8d5e0', n: '浅粉' },
+            { c: '#2b2b2b', n: '夜间' },
+            { c: '#1a1a2e', n: '深蓝夜' }
+        ];
+        for (var bi = 0; bi < bgPresets.length; bi++) {
+            var bgActive = rs.bgColor === bgPresets[bi].c ? ' active' : '';
+            h += '<div class="nv-rs-color-dot' + bgActive + '" style="background:' + bgPresets[bi].c + '" onclick="_nvSetBgColor(\'' + bgPresets[bi].c + '\')" title="' + bgPresets[bi].n + '"></div>';
+        }
+        /* 自定义颜色 */
+        h += '<div class="nv-rs-color-custom" title="自定义颜色">+';
+        h += '<input type="color" value="' + rs.bgColor + '" onchange="_nvSetBgColor(this.value)">';
+        h += '</div>';
+        h += '</div>';
+
+        /* 背景图片 */
+        h += '<div style="margin-top:8px">';
+        h += '<span class="nv-rs-bgimg-btn" onclick="_nvPickReaderBg()">选择背景图片</span>';
+        if (rs.bgImage && rs.bgImage !== '__idb__') {
+            h += '<span class="nv-rs-bgimg-clear" onclick="_nvClearReaderBg()">清除背景图</span>';
+        }
+        h += '</div>';
+        h += '</div>';
+
+        /* 背景透明度（背景图时有用） */
+        h += '<div class="nv-rs-section">';
+        h += '<div class="nv-rs-label">背景图透明度</div>';
+        h += '<div class="nv-rs-row">';
+        h += '<input type="range" min="10" max="100" value="' + rs.bgOpacity + '" oninput="_nvSetSetting(\'bgOpacity\',parseInt(this.value))">';
+        h += '<div class="nv-rs-row-val">' + rs.bgOpacity + '%</div>';
+        h += '</div></div>';
+
+        /* 字体颜色 */
+        h += '<div class="nv-rs-section">';
+        h += '<div class="nv-rs-label">字体颜色</div>';
+        h += '<div class="nv-rs-colors">';
+        var fontPresets = [
+            { c: '#5a4e3c', n: '默认' },
+            { c: '#333333', n: '深灰' },
+            { c: '#000000', n: '纯黑' },
+            { c: '#666666', n: '灰色' },
+            { c: '#e8e0d2', n: '浅色' },
+            { c: '#f5f0ea', n: '白色' }
+        ];
+        for (var fi = 0; fi < fontPresets.length; fi++) {
+            var fActive = rs.fontColor === fontPresets[fi].c ? ' active' : '';
+            h += '<div class="nv-rs-color-dot' + fActive + '" style="background:' + fontPresets[fi].c + '" onclick="_nvSetFontColor(\'' + fontPresets[fi].c + '\')" title="' + fontPresets[fi].n + '"></div>';
+        }
+        h += '<div class="nv-rs-color-custom" title="自定义颜色">+';
+        h += '<input type="color" value="' + rs.fontColor + '" onchange="_nvSetFontColor(this.value)">';
+        h += '</div>';
+        h += '</div></div>';
+
+        /* 字体大小 */
+        h += '<div class="nv-rs-section">';
+        h += '<div class="nv-rs-label">字体大小</div>';
+        h += '<div class="nv-rs-row">';
+        h += '<input type="range" min="12" max="24" value="' + rs.fontSize + '" oninput="_nvSetSetting(\'fontSize\',parseInt(this.value))">';
+        h += '<div class="nv-rs-row-val">' + rs.fontSize + 'px</div>';
+        h += '</div></div>';
+
+        /* 行间距 */
+        h += '<div class="nv-rs-section">';
+        h += '<div class="nv-rs-label">行间距</div>';
+        h += '<div class="nv-rs-row">';
+        h += '<input type="range" min="14" max="36" value="' + Math.round(rs.lineHeight * 10) + '" oninput="_nvSetSetting(\'lineHeight\',parseInt(this.value)/10)">';
+        h += '<div class="nv-rs-row-val">' + rs.lineHeight.toFixed(1) + '</div>';
+        h += '</div></div>';
+
+        /* 字间距 */
+        h += '<div class="nv-rs-section">';
+        h += '<div class="nv-rs-label">字间距</div>';
+        h += '<div class="nv-rs-row">';
+        h += '<input type="range" min="0" max="8" value="' + rs.letterSpacing + '" oninput="_nvSetSetting(\'letterSpacing\',parseInt(this.value))">';
+        h += '<div class="nv-rs-row-val">' + rs.letterSpacing + 'px</div>';
+        h += '</div></div>';
+
+        /* 段间距 */
+        h += '<div class="nv-rs-section">';
+        h += '<div class="nv-rs-label">段间距</div>';
+        h += '<div class="nv-rs-row">';
+        h += '<input type="range" min="0" max="40" value="' + rs.paragraphSpacing + '" oninput="_nvSetSetting(\'paragraphSpacing\',parseInt(this.value))">';
+        h += '<div class="nv-rs-row-val">' + rs.paragraphSpacing + 'px</div>';
+        h += '</div></div>';
+
+        /* 重置按钮 */
+        h += '<div style="text-align:center;padding-top:6px">';
+        h += '<span style="font-size:11px;color:#c07a6a;cursor:pointer;padding:6px 16px;border-radius:10px;background:rgba(0,0,0,.03)" onclick="_nvResetReaderSettings()">恢复默认</span>';
+        h += '</div>';
+
+        h += '</div></div>'; /* panel + mask end */
+    }
+
+    h += '</div>'; /* nv-create-overlay end */
     return h;
+}
+
+/* ===== 阅读设置操作函数 ===== */
+function _nvSetBgColor(c) {
+    _nvReaderSettings.bgColor = c;
+    _nvSaveReaderSettings(); _nvRender();
+}
+function _nvSetFontColor(c) {
+    _nvReaderSettings.fontColor = c;
+    _nvSaveReaderSettings(); _nvRender();
+}
+function _nvSetSetting(key, val) {
+    _nvReaderSettings[key] = val;
+    _nvSaveReaderSettings(); _nvRender();
+}
+function _nvPickReaderBg() {
+    var input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.onchange = function () {
+        if (!input.files || !input.files[0]) return;
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            _nvReaderSettings.bgImage = e.target.result;
+            _nvSaveReaderSettings(); _nvRender();
+        };
+        reader.readAsDataURL(input.files[0]);
+    };
+    input.click();
+}
+function _nvClearReaderBg() {
+    _nvReaderSettings.bgImage = '';
+    _nvSaveReaderSettings(); _nvRender();
+}
+function _nvResetReaderSettings() {
+    _nvReaderSettings = {
+        bgColor: '#f5f0ea',
+        bgImage: '',
+        bgOpacity: 100,
+        fontColor: '#5a4e3c',
+        fontSize: 15,
+        lineHeight: 2.0,
+        letterSpacing: 0,
+        paragraphSpacing: 12
+    };
+    _nvSaveReaderSettings(); _nvRender();
+    if (typeof showToast === 'function') showToast('已恢复默认');
 }
 
 /* 继续生成（找第一个空章节） */
