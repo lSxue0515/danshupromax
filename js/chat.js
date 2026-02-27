@@ -1626,7 +1626,6 @@ function openChatSettings() {
     var customLabel = role.customLabel || '';
     var curGroup = role.group || '默认';
 
-    // 挂载名
     var pn = role.personaId ? findPersona(role.personaId) : null;
     var _wbIds = role.worldBookIds || (role.worldBookId ? [role.worldBookId] : []);
     var _wbNames = []; for (var _wi = 0; _wi < _wbIds.length; _wi++) { var _wbi = findWorldBook(_wbIds[_wi]); if (_wbi) _wbNames.push(_wbi.name); }
@@ -1634,6 +1633,13 @@ function openChatSettings() {
     var _skIds = role.stickerIds || (role.stickerId ? [role.stickerId] : []);
     var _skNames = []; for (var _si = 0; _si < _skIds.length; _si++) { var _ski = findStickerPack(_skIds[_si]); if (_ski) _skNames.push(_ski.name); }
     var sn = _skNames.length ? { name: _skNames.join(', ') } : null;
+
+    // ★★★ 新增：读取记忆总结和时间感知状态
+    var _memEnabled = role.memoryAutoEnabled || false;
+    var _timeEnabled = role.timeAwareEnabled || false;
+    var _timeZone = role.timeAwareZone || 'Asia/Shanghai';
+    var _memSummaries = role.memorySummaries || [];
+    var _memMsgCount = role.memoryMsgCount || 0;
 
     var h = '<div class="chat-settings-overlay show" id="chatSettingsOverlay" onclick="if(event.target===this)closeChatSettingsPanel()">';
     h += '<div class="chat-settings-panel">';
@@ -1665,7 +1671,7 @@ function openChatSettings() {
     h += '<input type="text" class="chat-settings-input" id="csCustomLabel" value="' + esc(customLabel) + '" placeholder="顶栏名称下方的小字描述">';
     h += '</div>';
 
-    // 修改分组 — ★ 使用统一分组系统，排除固定分组
+    // 修改分组
     h += '<div class="chat-settings-section">';
     h += '<div class="chat-settings-label">修改分组</div>';
     h += '<select class="chat-settings-select" id="csGroup">';
@@ -1673,7 +1679,6 @@ function openChatSettings() {
     for (var gi = 0; gi < csGroups.length; gi++) {
         h += '<option value="' + esc(csGroups[gi]) + '"' + (curGroup === csGroups[gi] ? ' selected' : '') + '>' + esc(csGroups[gi]) + '</option>';
     }
-    // 如果当前分组是固定分组或不在列表中，也要加上
     var csGroupInList = false;
     for (var cgi = 0; cgi < csGroups.length; cgi++) { if (csGroups[cgi] === curGroup) { csGroupInList = true; break; } }
     if (!csGroupInList && curGroup) {
@@ -1686,7 +1691,7 @@ function openChatSettings() {
     h += '</div>';
     h += '</div>';
 
-    // 修改角色信息（跳转创建角色编辑器）
+    // 修改角色信息
     h += '<div class="chat-settings-item" onclick="closeChatSettingsPanel();openCreateRole(\'' + role.id + '\')">';
     h += '<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
     h += '<span>修改角色信息</span>';
@@ -1728,13 +1733,6 @@ function openChatSettings() {
     }
     h += '<input type="file" id="csWallpaperFile" style="display:none" accept="image/*" onchange="handleChatWallpaperFile(event)">';
 
-    // 开关：线下模式
-    h += '<div class="chat-settings-toggle-row">';
-    h += '<div><div class="chat-settings-toggle-label">线下模式</div>';
-    h += '<div class="chat-settings-toggle-desc">开启后允许出现括号包含的动作/心理描写</div></div>';
-    h += '<label class="chat-cr-toggle"><input type="checkbox" id="csOfflineMode"' + (role.offlineMode ? ' checked' : '') + '><span class="chat-cr-toggle-track"></span></label>';
-    h += '</div>';
-
     // 开关：翻译
     h += '<div class="chat-settings-toggle-row">';
     h += '<div><div class="chat-settings-toggle-label">启用翻译</div>';
@@ -1749,7 +1747,7 @@ function openChatSettings() {
     h += '<label class="chat-cr-toggle"><input type="checkbox" id="csBgMode"' + (role.bgMsg ? ' checked' : '') + '><span class="chat-cr-toggle-track"></span></label>';
     h += '</div>';
 
-    // ★ 主动消息开关（只保留1次）
+    // 主动消息开关
     if (typeof buildAutoMessageToggle === 'function') {
         h += buildAutoMessageToggle(role);
     }
@@ -1761,6 +1759,106 @@ function openChatSettings() {
     h += '<input type="range" class="chat-cr-range" id="csMemory" min="5" max="100" value="' + (role.memory || 20) + '" oninput="document.getElementById(\'csMemoryVal\').textContent=this.value+\'轮\'">';
     h += '<div class="chat-cr-memory-val" id="csMemoryVal">' + (role.memory || 20) + '轮</div>';
     h += '</div></div>';
+
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ 新增：记忆总结 模块
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    h += '<div class="cs-adv-divider"><span>🧠 智能功能</span></div>';
+
+    // 记忆总结开关
+    h += '<div class="chat-settings-toggle-row">';
+    h += '<div><div class="chat-settings-toggle-label">记忆总结</div>';
+    h += '<div class="chat-settings-toggle-desc">每20条自动总结记忆，灌输给AI保持连贯</div></div>';
+    h += '<label class="chat-cr-toggle"><input type="checkbox" id="csMemoryAuto"' + (_memEnabled ? ' checked' : '') + ' onchange="toggleMemoryPanel(this.checked)"><span class="chat-cr-toggle-track"></span></label>';
+    h += '</div>';
+
+    // 记忆总结面板（可展开）
+    h += '<div class="cs-memory-panel' + (_memEnabled ? ' active' : '') + '" id="csMemoryPanel">';
+
+    // 记忆进度
+    var _memProg = _memMsgCount % 20;
+    var _memPct = Math.round((_memProg / 20) * 100);
+    h += '<div class="cs-mem-status">';
+    h += '<div class="cs-mem-status-row">';
+    h += '<span class="cs-mem-label">距下次自动总结</span>';
+    h += '<span class="cs-mem-count" id="csMemCountDisplay">' + _memProg + ' / 20 条</span>';
+    h += '</div>';
+    h += '<div class="cs-mem-bar"><div class="cs-mem-bar-fill" id="csMemBarFill" style="width:' + _memPct + '%"></div></div>';
+    h += '</div>';
+
+    // 记忆存档列表
+    h += '<div class="cs-mem-list-header">';
+    h += '<span>📋 记忆存档 (' + _memSummaries.length + ')</span>';
+    h += '<span class="cs-mem-clear-all" onclick="clearAllMemorySummaries()">清空全部</span>';
+    h += '</div>';
+    h += '<div class="cs-mem-list" id="csMemList">';
+    if (_memSummaries.length === 0) {
+        h += '<div class="cs-mem-empty">📭 暂无记忆总结<br><span>对话满20条后将自动生成</span></div>';
+    } else {
+        for (var mi = _memSummaries.length - 1; mi >= 0; mi--) {
+            h += '<div class="cs-mem-item">';
+            h += '<div class="cs-mem-item-time">' + esc(_memSummaries[mi].time) + '</div>';
+            h += '<div class="cs-mem-item-text">' + esc(_memSummaries[mi].text) + '</div>';
+            h += '<div class="cs-mem-item-del" onclick="deleteMemorySummary(' + mi + ')">✕</div>';
+            h += '</div>';
+        }
+    }
+    h += '</div>';
+
+    // 手动总结按钮
+    h += '<div class="cs-mem-manual-btn" onclick="triggerManualMemorySummary()">✦ 立即手动总结</div>';
+    h += '</div>'; // .cs-memory-panel
+
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ 新增：时间感知 模块
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    h += '<div class="chat-settings-toggle-row">';
+    h += '<div><div class="chat-settings-toggle-label">时间感知</div>';
+    h += '<div class="chat-settings-toggle-desc">AI同步所选地区真实时间，知晓当前时刻</div></div>';
+    h += '<label class="chat-cr-toggle"><input type="checkbox" id="csTimeAware"' + (_timeEnabled ? ' checked' : '') + ' onchange="toggleTimePanel(this.checked)"><span class="chat-cr-toggle-track"></span></label>';
+    h += '</div>';
+
+    // 时间感知面板
+    h += '<div class="cs-time-panel' + (_timeEnabled ? ' active' : '') + '" id="csTimePanel">';
+
+    // 实时时钟
+    var _tzInfo = getTimeZoneData(_timeZone);
+    h += '<div class="cs-time-clock-card">';
+    h += '<div class="cs-time-zone-label" id="csTimeZoneLabel">' + _tzInfo.flag + ' ' + _tzInfo.name + '</div>';
+    h += '<div class="cs-time-clock" id="csTimeClock">' + formatTimeForZone(_timeZone) + '</div>';
+    h += '<div class="cs-time-date" id="csTimeDate">' + formatDateForZone(_timeZone) + '</div>';
+    h += '<div class="cs-time-offset">' + _tzInfo.label + '</div>';
+    h += '</div>';
+
+    // 国家选择
+    h += '<div class="cs-time-country-box">';
+    h += '<div class="cs-time-country-top" onclick="toggleTimeCountryList()">';
+    h += '<div class="cs-time-country-cur">';
+    h += '<span class="cs-time-country-flag" id="csTimeCurFlag">' + _tzInfo.flag + '</span>';
+    h += '<div>';
+    h += '<div class="cs-time-country-name" id="csTimeCurName">' + _tzInfo.name + '</div>';
+    h += '<div class="cs-time-country-tz" id="csTimeCurTz">' + _tzInfo.label + '</div>';
+    h += '</div>';
+    h += '</div>';
+    h += '<span class="cs-time-country-arrow" id="csTimeArrow">▼</span>';
+    h += '</div>';
+
+    // 国家下拉
+    h += '<div class="cs-time-country-dropdown" id="csTimeDropdown">';
+    h += '<div class="cs-time-search-wrap"><input type="text" id="csTimeSearch" placeholder="搜索国家或地区..." oninput="filterTimeCountries(this.value)"></div>';
+    h += '<div class="cs-time-country-list" id="csTimeCountryList">';
+    h += buildTimeCountryListHTML(_timeZone, '');
+    h += '</div>';
+    h += '</div>';
+    h += '</div>'; // .cs-time-country-box
+
+    // 提示
+    h += '<div class="cs-time-hint">';
+    h += '<span>AI（角色）将严格遵守并知晓所选时区的真实时间。例如选择日本，北京时间15:42时角色感知到的是16:42。</span>';
+    h += '</div>';
+
+    h += '</div>'; // .cs-time-panel
+    // ★★★ 新增模块结束 ★★★
 
     // 危险操作
     h += '<div class="chat-settings-danger-zone">';
@@ -1775,9 +1873,12 @@ function openChatSettings() {
     h += '<div class="chat-settings-save-btn" onclick="saveChatSettings()">保存设置</div>';
     h += '</div>';
 
-    h += '</div></div>'; // .chat-settings-panel .chat-settings-overlay
+    h += '</div></div>';
 
     conv.insertAdjacentHTML('beforeend', h);
+
+    // ★★★ 新增：启动实时时钟
+    if (_timeEnabled) startSettingsClock();
 }
 
 function closeChatSettingsPanel() {
@@ -2055,19 +2156,29 @@ function saveChatSettings() {
     role.nickname = nickname;
     role.customLabel = document.getElementById('csCustomLabel').value.trim();
     role.group = document.getElementById('csGroup').value;
-    role.offlineMode = document.getElementById('csOfflineMode').checked;
     role.translateOn = document.getElementById('csTranslate').checked;
     role.bgMsg = document.getElementById('csBgMode').checked;
-    // ★ 新增：保存主动消息开关
+
     var autoMsgEl = document.getElementById('csAutoMessage');
     if (autoMsgEl && typeof setCharAutoEnabled === 'function') {
         setCharAutoEnabled(role.id, autoMsgEl.checked);
     }
 
     role.memory = parseInt(document.getElementById('csMemory').value) || 20;
+
+    // ★★★ 新增：保存记忆总结和时间感知
+    var memAutoEl = document.getElementById('csMemoryAuto');
+    if (memAutoEl) role.memoryAutoEnabled = memAutoEl.checked;
+
+    var timeAwareEl = document.getElementById('csTimeAware');
+    if (timeAwareEl) role.timeAwareEnabled = timeAwareEl.checked;
+
+    // 时区已在选择时实时保存，这里确认一下
+    if (role.timeAwareZone === undefined) role.timeAwareZone = 'Asia/Shanghai';
+
     saveChatRoles();
+    stopSettingsClock();
     closeChatSettingsPanel();
-    // ★ 直接重建整个对话页，确保头像、名字、标签、壁纸等全部刷新
     openConversation(role.id);
     showToast('设置已保存');
 }
@@ -2249,6 +2360,7 @@ function sendChatMessage() {
         if (_chatQuoteData) { imgMsg.quoteText = _chatQuoteData.text; imgMsg.quoteName = _chatQuoteData.name; }
         role.msgs.push(imgMsg);
         role.lastMsg = '[图片]'; role.lastTime = now.getTime(); role.lastTimeStr = ts;
+        onChatMessageForMemory(role);
         saveChatRoles();
 
         var body = document.getElementById('chatConvBody');
@@ -2304,6 +2416,7 @@ function sendChatMessage() {
     if (_chatQuoteData) { msgObj.quoteText = _chatQuoteData.text; msgObj.quoteName = _chatQuoteData.name; }
     role.msgs.push(msgObj);
     role.lastMsg = text; role.lastTime = now.getTime(); role.lastTimeStr = ts;
+    onChatMessageForMemory(role);
     saveChatRoles();
 
     var body2 = document.getElementById('chatConvBody');
@@ -2509,6 +2622,7 @@ function continueChat() {
 
             role.lastMsg = cleanSegments[cleanSegments.length - 1];
             role.lastTime = now.getTime(); role.lastTimeStr = ts;
+            onChatMessageForMemory(role);
             saveChatRoles();
 
             if (typeof triggerNotification === 'function') {
@@ -2973,6 +3087,32 @@ function buildChatMessages(role) {
         messages.push({ role: 'system', content: aftContent });
     }
 
+    // ★★★ 时间感知注入 ★★★
+    if (role.timeAwareEnabled) {
+        var _tz = role.timeAwareZone || 'Asia/Shanghai';
+        var _tzInfo = getTimeZoneData(_tz);
+        var _tod = getTimePeriod(_tz);
+        var timeContent = '# 时间感知（重要）\n';
+        timeContent += '你当前所处时区：' + _tzInfo.name + '（' + _tzInfo.label + '）\n';
+        timeContent += '当前日期：' + formatDateForZone(_tz) + '\n';
+        timeContent += '当前时间：' + formatTimeForZone(_tz) + '\n';
+        timeContent += '当前时段：' + _tod.p + '\n';
+        timeContent += '你必须按以上时间来感知和回应。深夜表现困倦，清晨说早安，中午聊午饭等。自然融入对话，不要每句都刻意提时间。不要说"我不知道现在几点"。\n';
+        messages.push({ role: 'system', content: timeContent });
+    }
+
+    // ★★★ 记忆总结注入 ★★★
+    if (role.memoryAutoEnabled && role.memorySummaries && role.memorySummaries.length > 0) {
+        var memContent = '# 对话记忆（保持对话连贯性）\n';
+        memContent += '以下是你和对方之前对话的记忆摘要，请自然地引用和延续：\n\n';
+        var _recentMem = role.memorySummaries.slice(-5);
+        for (var _mi = 0; _mi < _recentMem.length; _mi++) {
+            memContent += '- 记忆' + (_mi + 1) + '（' + _recentMem[_mi].time + '）：' + _recentMem[_mi].text + '\n';
+        }
+        memContent += '\n自然地运用这些记忆，不要说"根据我的记忆..."，像真的记得一样。\n';
+        messages.push({ role: 'system', content: memContent });
+    }
+
     return messages;
 }
 
@@ -3074,6 +3214,7 @@ function sendVoiceTextMessage() {
     role.lastTime = now.getTime();
     role.lastTimeStr = ts;
     saveChatRoles();
+    onChatMessageForMemory(role);
 
     var body = document.getElementById('chatConvBody');
     if (body) {
@@ -3252,6 +3393,7 @@ function sendTransfer() {
     role.lastMsg = '[转账] ¥' + amountVal.toFixed(2);
     role.lastTime = now.getTime(); role.lastTimeStr = ts;
     saveChatRoles();
+    onChatMessageForMemory(role);
 
     appendBubbleToBody(role, msgObj);
     closeTransferPanel();
@@ -4187,4 +4329,505 @@ function showGiftCardDetail(orderNo) {
 function closeGiftCardDetail() {
     var ov = document.getElementById('giftCardDetailPopup');
     if (ov) ov.remove();
+}
+
+/* ================================================================
+   记忆总结 & 时间感知 — 功能函数
+   ================================================================ */
+
+// ============ 时区数据库 ============
+var _TIME_ZONES = [
+    // 东亚
+    { code: 'CN', name: '中国', tz: 'Asia/Shanghai', label: 'UTC+8 北京时间' },
+    { code: 'HK', name: '中国香港', tz: 'Asia/Hong_Kong', label: 'UTC+8 香港时间' },
+    { code: 'TW', name: '中国台湾', tz: 'Asia/Taipei', label: 'UTC+8 台北时间' },
+    { code: 'MO', name: '中国澳门', tz: 'Asia/Macau', label: 'UTC+8 澳门时间' },
+    { code: 'JP', name: '日本', tz: 'Asia/Tokyo', label: 'UTC+9 日本标准时间' },
+    { code: 'KR', name: '韩国', tz: 'Asia/Seoul', label: 'UTC+9 韩国标准时间' },
+    { code: 'KP', name: '朝鲜', tz: 'Asia/Pyongyang', label: 'UTC+9 平壤时间' },
+    { code: 'MN', name: '蒙古', tz: 'Asia/Ulaanbaatar', label: 'UTC+8 乌兰巴托时间' },
+    // 东南亚
+    { code: 'SG', name: '新加坡', tz: 'Asia/Singapore', label: 'UTC+8 新加坡时间' },
+    { code: 'MY', name: '马来西亚', tz: 'Asia/Kuala_Lumpur', label: 'UTC+8 马来西亚时间' },
+    { code: 'PH', name: '菲律宾', tz: 'Asia/Manila', label: 'UTC+8 菲律宾时间' },
+    { code: 'TH', name: '泰国', tz: 'Asia/Bangkok', label: 'UTC+7 泰国时间' },
+    { code: 'VN', name: '越南', tz: 'Asia/Ho_Chi_Minh', label: 'UTC+7 越南时间' },
+    { code: 'ID', name: '印度尼西亚(西部)', tz: 'Asia/Jakarta', label: 'UTC+7 印尼西部时间' },
+    { code: 'ID', name: '印度尼西亚(中部)', tz: 'Asia/Makassar', label: 'UTC+8 印尼中部时间' },
+    { code: 'ID', name: '印度尼西亚(东部)', tz: 'Asia/Jayapura', label: 'UTC+9 印尼东部时间' },
+    { code: 'MM', name: '缅甸', tz: 'Asia/Yangon', label: 'UTC+6:30 缅甸时间' },
+    { code: 'KH', name: '柬埔寨', tz: 'Asia/Phnom_Penh', label: 'UTC+7 柬埔寨时间' },
+    { code: 'LA', name: '老挝', tz: 'Asia/Vientiane', label: 'UTC+7 老挝时间' },
+    { code: 'BN', name: '文莱', tz: 'Asia/Brunei', label: 'UTC+8 文莱时间' },
+    { code: 'TL', name: '东帝汶', tz: 'Asia/Dili', label: 'UTC+9 东帝汶时间' },
+    // 南亚
+    { code: 'IN', name: '印度', tz: 'Asia/Kolkata', label: 'UTC+5:30 印度时间' },
+    { code: 'PK', name: '巴基斯坦', tz: 'Asia/Karachi', label: 'UTC+5 巴基斯坦时间' },
+    { code: 'BD', name: '孟加拉国', tz: 'Asia/Dhaka', label: 'UTC+6 孟加拉时间' },
+    { code: 'LK', name: '斯里兰卡', tz: 'Asia/Colombo', label: 'UTC+5:30 斯里兰卡时间' },
+    { code: 'NP', name: '尼泊尔', tz: 'Asia/Kathmandu', label: 'UTC+5:45 尼泊尔时间' },
+    { code: 'AF', name: '阿富汗', tz: 'Asia/Kabul', label: 'UTC+4:30 阿富汗时间' },
+    { code: 'MV', name: '马尔代夫', tz: 'Indian/Maldives', label: 'UTC+5 马尔代夫时间' },
+    // 中亚
+    { code: 'KZ', name: '哈萨克斯坦(阿拉木图)', tz: 'Asia/Almaty', label: 'UTC+6 阿拉木图时间' },
+    { code: 'UZ', name: '乌兹别克斯坦', tz: 'Asia/Tashkent', label: 'UTC+5 乌兹别克时间' },
+    { code: 'KG', name: '吉尔吉斯斯坦', tz: 'Asia/Bishkek', label: 'UTC+6 吉尔吉斯时间' },
+    { code: 'TJ', name: '塔吉克斯坦', tz: 'Asia/Dushanbe', label: 'UTC+5 塔吉克时间' },
+    { code: 'TM', name: '土库曼斯坦', tz: 'Asia/Ashgabat', label: 'UTC+5 土库曼时间' },
+    // 西亚/中东
+    { code: 'AE', name: '阿联酋', tz: 'Asia/Dubai', label: 'UTC+4 海湾时间' },
+    { code: 'SA', name: '沙特阿拉伯', tz: 'Asia/Riyadh', label: 'UTC+3 阿拉伯时间' },
+    { code: 'TR', name: '土耳其', tz: 'Europe/Istanbul', label: 'UTC+3 土耳其时间' },
+    { code: 'IR', name: '伊朗', tz: 'Asia/Tehran', label: 'UTC+3:30 伊朗时间' },
+    { code: 'IQ', name: '伊拉克', tz: 'Asia/Baghdad', label: 'UTC+3 伊拉克时间' },
+    { code: 'IL', name: '以色列', tz: 'Asia/Jerusalem', label: 'UTC+2 以色列时间' },
+    { code: 'JO', name: '约旦', tz: 'Asia/Amman', label: 'UTC+3 约旦时间' },
+    { code: 'LB', name: '黎巴嫩', tz: 'Asia/Beirut', label: 'UTC+2 黎巴嫩时间' },
+    { code: 'KW', name: '科威特', tz: 'Asia/Kuwait', label: 'UTC+3 科威特时间' },
+    { code: 'QA', name: '卡塔尔', tz: 'Asia/Qatar', label: 'UTC+3 卡塔尔时间' },
+    { code: 'BH', name: '巴林', tz: 'Asia/Bahrain', label: 'UTC+3 巴林时间' },
+    { code: 'OM', name: '阿曼', tz: 'Asia/Muscat', label: 'UTC+4 阿曼时间' },
+    { code: 'YE', name: '也门', tz: 'Asia/Aden', label: 'UTC+3 也门时间' },
+    { code: 'SY', name: '叙利亚', tz: 'Asia/Damascus', label: 'UTC+3 叙利亚时间' },
+    { code: 'GE', name: '格鲁吉亚', tz: 'Asia/Tbilisi', label: 'UTC+4 格鲁吉亚时间' },
+    { code: 'AM', name: '亚美尼亚', tz: 'Asia/Yerevan', label: 'UTC+4 亚美尼亚时间' },
+    { code: 'AZ', name: '阿塞拜疆', tz: 'Asia/Baku', label: 'UTC+4 阿塞拜疆时间' },
+    { code: 'CY', name: '塞浦路斯', tz: 'Asia/Nicosia', label: 'UTC+2 塞浦路斯时间' },
+    // 欧洲 - 西欧
+    { code: 'GB', name: '英国', tz: 'Europe/London', label: 'UTC+0 格林威治时间' },
+    { code: 'IE', name: '爱尔兰', tz: 'Europe/Dublin', label: 'UTC+0 爱尔兰时间' },
+    { code: 'FR', name: '法国', tz: 'Europe/Paris', label: 'UTC+1 中欧时间' },
+    { code: 'DE', name: '德国', tz: 'Europe/Berlin', label: 'UTC+1 中欧时间' },
+    { code: 'NL', name: '荷兰', tz: 'Europe/Amsterdam', label: 'UTC+1 中欧时间' },
+    { code: 'BE', name: '比利时', tz: 'Europe/Brussels', label: 'UTC+1 中欧时间' },
+    { code: 'LU', name: '卢森堡', tz: 'Europe/Luxembourg', label: 'UTC+1 中欧时间' },
+    { code: 'CH', name: '瑞士', tz: 'Europe/Zurich', label: 'UTC+1 中欧时间' },
+    { code: 'AT', name: '奥地利', tz: 'Europe/Vienna', label: 'UTC+1 中欧时间' },
+    { code: 'LI', name: '列支敦士登', tz: 'Europe/Vaduz', label: 'UTC+1 中欧时间' },
+    { code: 'MC', name: '摩纳哥', tz: 'Europe/Monaco', label: 'UTC+1 中欧时间' },
+    // 欧洲 - 南欧
+    { code: 'IT', name: '意大利', tz: 'Europe/Rome', label: 'UTC+1 中欧时间' },
+    { code: 'ES', name: '西班牙', tz: 'Europe/Madrid', label: 'UTC+1 中欧时间' },
+    { code: 'PT', name: '葡萄牙', tz: 'Europe/Lisbon', label: 'UTC+0 西欧时间' },
+    { code: 'GR', name: '希腊', tz: 'Europe/Athens', label: 'UTC+2 东欧时间' },
+    { code: 'MT', name: '马耳他', tz: 'Europe/Malta', label: 'UTC+1 中欧时间' },
+    { code: 'HR', name: '克罗地亚', tz: 'Europe/Zagreb', label: 'UTC+1 中欧时间' },
+    { code: 'SI', name: '斯洛文尼亚', tz: 'Europe/Ljubljana', label: 'UTC+1 中欧时间' },
+    { code: 'RS', name: '塞尔维亚', tz: 'Europe/Belgrade', label: 'UTC+1 中欧时间' },
+    { code: 'BA', name: '波黑', tz: 'Europe/Sarajevo', label: 'UTC+1 中欧时间' },
+    { code: 'ME', name: '黑山', tz: 'Europe/Podgorica', label: 'UTC+1 中欧时间' },
+    { code: 'MK', name: '北马其顿', tz: 'Europe/Skopje', label: 'UTC+1 中欧时间' },
+    { code: 'AL', name: '阿尔巴尼亚', tz: 'Europe/Tirane', label: 'UTC+1 中欧时间' },
+    // 欧洲 - 北欧
+    { code: 'SE', name: '瑞典', tz: 'Europe/Stockholm', label: 'UTC+1 中欧时间' },
+    { code: 'NO', name: '挪威', tz: 'Europe/Oslo', label: 'UTC+1 中欧时间' },
+    { code: 'DK', name: '丹麦', tz: 'Europe/Copenhagen', label: 'UTC+1 中欧时间' },
+    { code: 'FI', name: '芬兰', tz: 'Europe/Helsinki', label: 'UTC+2 东欧时间' },
+    { code: 'IS', name: '冰岛', tz: 'Atlantic/Reykjavik', label: 'UTC+0 冰岛时间' },
+    // 欧洲 - 东欧
+    { code: 'PL', name: '波兰', tz: 'Europe/Warsaw', label: 'UTC+1 中欧时间' },
+    { code: 'CZ', name: '捷克', tz: 'Europe/Prague', label: 'UTC+1 中欧时间' },
+    { code: 'SK', name: '斯洛伐克', tz: 'Europe/Bratislava', label: 'UTC+1 中欧时间' },
+    { code: 'HU', name: '匈牙利', tz: 'Europe/Budapest', label: 'UTC+1 中欧时间' },
+    { code: 'RO', name: '罗马尼亚', tz: 'Europe/Bucharest', label: 'UTC+2 东欧时间' },
+    { code: 'BG', name: '保加利亚', tz: 'Europe/Sofia', label: 'UTC+2 东欧时间' },
+    { code: 'UA', name: '乌克兰', tz: 'Europe/Kyiv', label: 'UTC+2 东欧时间' },
+    { code: 'MD', name: '摩尔多瓦', tz: 'Europe/Chisinau', label: 'UTC+2 东欧时间' },
+    { code: 'BY', name: '白俄罗斯', tz: 'Europe/Minsk', label: 'UTC+3 莫斯科时间' },
+    { code: 'LT', name: '立陶宛', tz: 'Europe/Vilnius', label: 'UTC+2 东欧时间' },
+    { code: 'LV', name: '拉脱维亚', tz: 'Europe/Riga', label: 'UTC+2 东欧时间' },
+    { code: 'EE', name: '爱沙尼亚', tz: 'Europe/Tallinn', label: 'UTC+2 东欧时间' },
+    // 俄罗斯
+    { code: 'RU', name: '俄罗斯(莫斯科)', tz: 'Europe/Moscow', label: 'UTC+3 莫斯科时间' },
+    { code: 'RU', name: '俄罗斯(叶卡捷琳堡)', tz: 'Asia/Yekaterinburg', label: 'UTC+5 叶卡捷琳堡时间' },
+    { code: 'RU', name: '俄罗斯(新西伯利亚)', tz: 'Asia/Novosibirsk', label: 'UTC+7 新西伯利亚时间' },
+    { code: 'RU', name: '俄罗斯(海参崴)', tz: 'Asia/Vladivostok', label: 'UTC+10 海参崴时间' },
+    { code: 'RU', name: '俄罗斯(堪察加)', tz: 'Asia/Kamchatka', label: 'UTC+12 堪察加时间' },
+    // 北美
+    { code: 'US', name: '美国(东部)', tz: 'America/New_York', label: 'UTC-5 美东时间' },
+    { code: 'US', name: '美国(中部)', tz: 'America/Chicago', label: 'UTC-6 美中时间' },
+    { code: 'US', name: '美国(山地)', tz: 'America/Denver', label: 'UTC-7 美山地时间' },
+    { code: 'US', name: '美国(西部)', tz: 'America/Los_Angeles', label: 'UTC-8 美西时间' },
+    { code: 'US', name: '美国(阿拉斯加)', tz: 'America/Anchorage', label: 'UTC-9 阿拉斯加时间' },
+    { code: 'US', name: '美国(夏威夷)', tz: 'Pacific/Honolulu', label: 'UTC-10 夏威夷时间' },
+    { code: 'CA', name: '加拿大(东部)', tz: 'America/Toronto', label: 'UTC-5 加东时间' },
+    { code: 'CA', name: '加拿大(中部)', tz: 'America/Winnipeg', label: 'UTC-6 加中时间' },
+    { code: 'CA', name: '加拿大(山地)', tz: 'America/Edmonton', label: 'UTC-7 加山地时间' },
+    { code: 'CA', name: '加拿大(西部)', tz: 'America/Vancouver', label: 'UTC-8 加西时间' },
+    { code: 'CA', name: '加拿大(大西洋)', tz: 'America/Halifax', label: 'UTC-4 大西洋时间' },
+    { code: 'CA', name: '加拿大(纽芬兰)', tz: 'America/St_Johns', label: 'UTC-3:30 纽芬兰时间' },
+    { code: 'MX', name: '墨西哥(中部)', tz: 'America/Mexico_City', label: 'UTC-6 墨西哥时间' },
+    { code: 'MX', name: '墨西哥(太平洋)', tz: 'America/Mazatlan', label: 'UTC-7 墨太平洋时间' },
+    { code: 'MX', name: '墨西哥(西北)', tz: 'America/Tijuana', label: 'UTC-8 墨西北时间' },
+    // 中美洲 & 加勒比
+    { code: 'GT', name: '危地马拉', tz: 'America/Guatemala', label: 'UTC-6 危地马拉时间' },
+    { code: 'BZ', name: '伯利兹', tz: 'America/Belize', label: 'UTC-6 伯利兹时间' },
+    { code: 'SV', name: '萨尔瓦多', tz: 'America/El_Salvador', label: 'UTC-6 萨尔瓦多时间' },
+    { code: 'HN', name: '洪都拉斯', tz: 'America/Tegucigalpa', label: 'UTC-6 洪都拉斯时间' },
+    { code: 'NI', name: '尼加拉瓜', tz: 'America/Managua', label: 'UTC-6 尼加拉瓜时间' },
+    { code: 'CR', name: '哥斯达黎加', tz: 'America/Costa_Rica', label: 'UTC-6 哥斯达黎加时间' },
+    { code: 'PA', name: '巴拿马', tz: 'America/Panama', label: 'UTC-5 巴拿马时间' },
+    { code: 'CU', name: '古巴', tz: 'America/Havana', label: 'UTC-5 古巴时间' },
+    { code: 'JM', name: '牙买加', tz: 'America/Jamaica', label: 'UTC-5 牙买加时间' },
+    { code: 'HT', name: '海地', tz: 'America/Port-au-Prince', label: 'UTC-5 海地时间' },
+    { code: 'DO', name: '多米尼加', tz: 'America/Santo_Domingo', label: 'UTC-4 多米尼加时间' },
+    { code: 'PR', name: '波多黎各', tz: 'America/Puerto_Rico', label: 'UTC-4 波多黎各时间' },
+    { code: 'TT', name: '特立尼达和多巴哥', tz: 'America/Port_of_Spain', label: 'UTC-4 特多时间' },
+    // 南美
+    { code: 'BR', name: '巴西(圣保罗)', tz: 'America/Sao_Paulo', label: 'UTC-3 巴西时间' },
+    { code: 'BR', name: '巴西(马瑙斯)', tz: 'America/Manaus', label: 'UTC-4 亚马逊时间' },
+    { code: 'AR', name: '阿根廷', tz: 'America/Argentina/Buenos_Aires', label: 'UTC-3 阿根廷时间' },
+    { code: 'CL', name: '智利', tz: 'America/Santiago', label: 'UTC-4 智利时间' },
+    { code: 'CO', name: '哥伦比亚', tz: 'America/Bogota', label: 'UTC-5 哥伦比亚时间' },
+    { code: 'PE', name: '秘鲁', tz: 'America/Lima', label: 'UTC-5 秘鲁时间' },
+    { code: 'VE', name: '委内瑞拉', tz: 'America/Caracas', label: 'UTC-4 委内瑞拉时间' },
+    { code: 'EC', name: '厄瓜多尔', tz: 'America/Guayaquil', label: 'UTC-5 厄瓜多尔时间' },
+    { code: 'BO', name: '玻利维亚', tz: 'America/La_Paz', label: 'UTC-4 玻利维亚时间' },
+    { code: 'PY', name: '巴拉圭', tz: 'America/Asuncion', label: 'UTC-4 巴拉圭时间' },
+    { code: 'UY', name: '乌拉圭', tz: 'America/Montevideo', label: 'UTC-3 乌拉圭时间' },
+    { code: 'GY', name: '圭亚那', tz: 'America/Guyana', label: 'UTC-4 圭亚那时间' },
+    { code: 'SR', name: '苏里南', tz: 'America/Paramaribo', label: 'UTC-3 苏里南时间' },
+    // 非洲
+    { code: 'EG', name: '埃及', tz: 'Africa/Cairo', label: 'UTC+2 东欧时间' },
+    { code: 'ZA', name: '南非', tz: 'Africa/Johannesburg', label: 'UTC+2 南非时间' },
+    { code: 'NG', name: '尼日利亚', tz: 'Africa/Lagos', label: 'UTC+1 西非时间' },
+    { code: 'KE', name: '肯尼亚', tz: 'Africa/Nairobi', label: 'UTC+3 东非时间' },
+    { code: 'ET', name: '埃塞俄比亚', tz: 'Africa/Addis_Ababa', label: 'UTC+3 东非时间' },
+    { code: 'TZ', name: '坦桑尼亚', tz: 'Africa/Dar_es_Salaam', label: 'UTC+3 东非时间' },
+    { code: 'GH', name: '加纳', tz: 'Africa/Accra', label: 'UTC+0 格林威治时间' },
+    { code: 'CI', name: '科特迪瓦', tz: 'Africa/Abidjan', label: 'UTC+0 格林威治时间' },
+    { code: 'SN', name: '塞内加尔', tz: 'Africa/Dakar', label: 'UTC+0 格林威治时间' },
+    { code: 'CM', name: '喀麦隆', tz: 'Africa/Douala', label: 'UTC+1 西非时间' },
+    { code: 'CD', name: '刚果(金)', tz: 'Africa/Kinshasa', label: 'UTC+1 西非时间' },
+    { code: 'AO', name: '安哥拉', tz: 'Africa/Luanda', label: 'UTC+1 西非时间' },
+    { code: 'MA', name: '摩洛哥', tz: 'Africa/Casablanca', label: 'UTC+1 摩洛哥时间' },
+    { code: 'TN', name: '突尼斯', tz: 'Africa/Tunis', label: 'UTC+1 中欧时间' },
+    { code: 'DZ', name: '阿尔及利亚', tz: 'Africa/Algiers', label: 'UTC+1 中欧时间' },
+    { code: 'LY', name: '利比亚', tz: 'Africa/Tripoli', label: 'UTC+2 东欧时间' },
+    { code: 'SD', name: '苏丹', tz: 'Africa/Khartoum', label: 'UTC+2 东非时间' },
+    { code: 'UG', name: '乌干达', tz: 'Africa/Kampala', label: 'UTC+3 东非时间' },
+    { code: 'RW', name: '卢旺达', tz: 'Africa/Kigali', label: 'UTC+2 中非时间' },
+    { code: 'MG', name: '马达加斯加', tz: 'Africa/Antananarivo', label: 'UTC+3 东非时间' },
+    { code: 'MU', name: '毛里求斯', tz: 'Indian/Mauritius', label: 'UTC+4 毛里求斯时间' },
+    // 大洋洲
+    { code: 'AU', name: '澳大利亚(悉尼)', tz: 'Australia/Sydney', label: 'UTC+10 澳东时间' },
+    { code: 'AU', name: '澳大利亚(墨尔本)', tz: 'Australia/Melbourne', label: 'UTC+10 澳东时间' },
+    { code: 'AU', name: '澳大利亚(布里斯班)', tz: 'Australia/Brisbane', label: 'UTC+10 澳东时间(无夏令时)' },
+    { code: 'AU', name: '澳大利亚(珀斯)', tz: 'Australia/Perth', label: 'UTC+8 澳西时间' },
+    { code: 'AU', name: '澳大利亚(阿德莱德)', tz: 'Australia/Adelaide', label: 'UTC+9:30 澳中时间' },
+    { code: 'AU', name: '澳大利亚(达尔文)', tz: 'Australia/Darwin', label: 'UTC+9:30 澳中时间(无夏令时)' },
+    { code: 'NZ', name: '新西兰', tz: 'Pacific/Auckland', label: 'UTC+12 新西兰时间' },
+    { code: 'FJ', name: '斐济', tz: 'Pacific/Fiji', label: 'UTC+12 斐济时间' },
+    { code: 'PG', name: '巴布亚新几内亚', tz: 'Pacific/Port_Moresby', label: 'UTC+10 巴新时间' },
+    { code: 'WS', name: '萨摩亚', tz: 'Pacific/Apia', label: 'UTC+13 萨摩亚时间' },
+    { code: 'TO', name: '汤加', tz: 'Pacific/Tongatapu', label: 'UTC+13 汤加时间' },
+    { code: 'GU', name: '关岛', tz: 'Pacific/Guam', label: 'UTC+10 关岛时间' },
+    { code: 'NC', name: '新喀里多尼亚', tz: 'Pacific/Noumea', label: 'UTC+11 新喀时间' },
+    // 特殊地区
+    { code: 'GL', name: '格陵兰', tz: 'America/Godthab', label: 'UTC-3 格陵兰时间' },
+];
+
+function getTimeZoneData(tzId) {
+    for (var i = 0; i < _TIME_ZONES.length; i++) {
+        if (_TIME_ZONES[i].tz === tzId) return _TIME_ZONES[i];
+    }
+    return _TIME_ZONES[0];
+}
+
+function formatTimeForZone(tzId) {
+    try {
+        return new Date().toLocaleTimeString('zh-CN', { timeZone: tzId, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    } catch (e) {
+        return new Date().toLocaleTimeString('zh-CN', { hour12: false });
+    }
+}
+
+function formatDateForZone(tzId) {
+    try {
+        return new Date().toLocaleDateString('zh-CN', { timeZone: tzId, year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+    } catch (e) {
+        return new Date().toLocaleDateString('zh-CN');
+    }
+}
+
+function getTimePeriod(tzId) {
+    var h;
+    try {
+        h = parseInt(new Date().toLocaleTimeString('en-US', { timeZone: tzId, hour: 'numeric', hour12: false }), 10);
+    } catch (e) {
+        h = new Date().getHours();
+    }
+    if (h >= 5 && h < 8) return { p: '清晨' };
+    if (h >= 8 && h < 11) return { p: '上午' };
+    if (h >= 11 && h < 13) return { p: '中午' };
+    if (h >= 13 && h < 17) return { p: '下午' };
+    if (h >= 17 && h < 19) return { p: '傍晚' };
+    if (h >= 19 && h < 22) return { p: '晚上' };
+    return { p: '深夜' };
+}
+
+// ============ 面板展开/收起 ============
+function toggleMemoryPanel(on) {
+    var p = document.getElementById('csMemoryPanel');
+    if (p) { if (on) p.classList.add('active'); else p.classList.remove('active'); }
+}
+
+function toggleTimePanel(on) {
+    var p = document.getElementById('csTimePanel');
+    if (p) { if (on) { p.classList.add('active'); startSettingsClock(); } else { p.classList.remove('active'); stopSettingsClock(); } }
+}
+
+// ============ 实时时钟 ============
+var _settingsClockTimer = null;
+
+function startSettingsClock() {
+    stopSettingsClock();
+    _settingsClockTimer = setInterval(function () {
+        var role = findRole(_chatCurrentConv);
+        var tz = (role && role.timeAwareZone) || 'Asia/Shanghai';
+        var cl = document.getElementById('csTimeClock');
+        var dt = document.getElementById('csTimeDate');
+        if (cl) cl.textContent = formatTimeForZone(tz);
+        if (dt) dt.textContent = formatDateForZone(tz);
+    }, 1000);
+}
+
+function stopSettingsClock() {
+    if (_settingsClockTimer) { clearInterval(_settingsClockTimer); _settingsClockTimer = null; }
+}
+
+// ============ 国家列表 ============
+function buildTimeCountryListHTML(selectedTz, filter) {
+    var h = '', f = (filter || '').toLowerCase();
+    for (var i = 0; i < _TIME_ZONES.length; i++) {
+        var t = _TIME_ZONES[i];
+        if (f && t.name.toLowerCase().indexOf(f) === -1 && t.tz.toLowerCase().indexOf(f) === -1 && t.code.toLowerCase().indexOf(f) === -1) continue;
+        var sel = t.tz === selectedTz;
+        h += '<div class="cs-time-opt' + (sel ? ' sel' : '') + '" onclick="selectTimeCountry(\'' + t.tz + '\')">';
+        h += '<span class="cs-time-opt-flag">' + t.code + '</span>';
+        h += '<div class="cs-time-opt-info">';
+        h += '<div class="cs-time-opt-name">' + t.name + '</div>';
+        h += '<div class="cs-time-opt-tz">' + t.label + '</div>';
+        h += '</div>';
+        h += '<span class="cs-time-opt-chk">' + (sel ? '✓' : '') + '</span>';
+        h += '</div>';
+    }
+    if (!h) h = '<div class="cs-time-empty">没有匹配的国家</div>';
+    return h;
+}
+
+function toggleTimeCountryList() {
+    var dd = document.getElementById('csTimeDropdown');
+    var ar = document.getElementById('csTimeArrow');
+    if (dd) dd.classList.toggle('open');
+    if (ar) ar.classList.toggle('open');
+}
+
+function filterTimeCountries(val) {
+    var role = findRole(_chatCurrentConv);
+    var tz = (role && role.timeAwareZone) || 'Asia/Shanghai';
+    var el = document.getElementById('csTimeCountryList');
+    if (el) el.innerHTML = buildTimeCountryListHTML(tz, val);
+}
+
+function selectTimeCountry(tzId) {
+    var role = findRole(_chatCurrentConv); if (!role) return;
+    role.timeAwareZone = tzId;
+    saveChatRoles();
+
+    var info = getTimeZoneData(tzId);
+    var e;
+    e = document.getElementById('csTimeCurFlag'); if (e) e.textContent = info.code;
+    e = document.getElementById('csTimeCurName'); if (e) e.textContent = info.name;
+    e = document.getElementById('csTimeCurTz'); if (e) e.textContent = info.label;
+    e = document.getElementById('csTimeZoneLabel'); if (e) e.textContent = info.code + ' ' + info.name;
+    e = document.getElementById('csTimeClock'); if (e) e.textContent = formatTimeForZone(tzId);
+    e = document.getElementById('csTimeDate'); if (e) e.textContent = formatDateForZone(tzId);
+
+    var el = document.getElementById('csTimeCountryList');
+    var sv = document.getElementById('csTimeSearch');
+    if (el) el.innerHTML = buildTimeCountryListHTML(tzId, sv ? sv.value : '');
+
+    toggleTimeCountryList();
+    showToast('已切换至 ' + info.name);
+}
+
+// ============ 记忆总结功能 ============
+
+// 删除单条记忆
+function deleteMemorySummary(idx) {
+    var role = findRole(_chatCurrentConv); if (!role) return;
+    if (!role.memorySummaries) return;
+    role.memorySummaries.splice(idx, 1);
+    saveChatRoles();
+    refreshMemoryList();
+    showToast('已删除');
+}
+
+// 清空全部记忆
+function clearAllMemorySummaries() {
+    if (!confirm('确认清空所有记忆总结？')) return;
+    var role = findRole(_chatCurrentConv); if (!role) return;
+    role.memorySummaries = [];
+    role.memoryMsgCount = 0;
+    saveChatRoles();
+    refreshMemoryList();
+    showToast('记忆已清空');
+}
+
+// 刷新记忆列表UI
+function refreshMemoryList() {
+    var role = findRole(_chatCurrentConv); if (!role) return;
+    var list = role.memorySummaries || [];
+    var count = role.memoryMsgCount || 0;
+    var prog = count % 20;
+    var pct = Math.round((prog / 20) * 100);
+
+    var ce = document.getElementById('csMemCountDisplay');
+    if (ce) ce.textContent = prog + ' / 20 条';
+    var bf = document.getElementById('csMemBarFill');
+    if (bf) bf.style.width = pct + '%';
+
+    var ml = document.getElementById('csMemList');
+    if (!ml) return;
+    var h = '';
+    if (list.length === 0) {
+        h = '<div class="cs-mem-empty">暂无记忆总结<br><span>对话满20条后将自动生成</span></div>';
+    } else {
+        for (var i = list.length - 1; i >= 0; i--) {
+            h += '<div class="cs-mem-item">';
+            h += '<div class="cs-mem-item-time">' + esc(list[i].time) + '</div>';
+            h += '<div class="cs-mem-item-text">' + esc(list[i].text) + '</div>';
+            h += '<div class="cs-mem-item-del" onclick="deleteMemorySummary(' + i + ')">✕</div>';
+            h += '</div>';
+        }
+    }
+    ml.innerHTML = h;
+}
+
+// 手动触发总结
+function triggerManualMemorySummary() {
+    var role = findRole(_chatCurrentConv); if (!role) return;
+    var msgs = role.msgs || [];
+    if (msgs.length === 0) { showToast('暂无消息可总结'); return; }
+
+    var recent = msgs.slice(-20);
+    var text = buildMemorySummaryText(recent, role);
+
+    if (!role.memorySummaries) role.memorySummaries = [];
+    role.memorySummaries.push({
+        time: new Date().toLocaleString('zh-CN') + ' (手动)',
+        text: text,
+        count: recent.length
+    });
+    saveChatRoles();
+    refreshMemoryList();
+    showToast('记忆总结已生成');
+}
+
+/**
+ * 每条消息发送后调用 — 记忆自动计数+自动总结
+ * ★ 在你的发送消息函数中调用：onChatMessageForMemory(role)
+ */
+function onChatMessageForMemory(role) {
+    if (!role || !role.memoryAutoEnabled) return;
+    if (!role.memoryMsgCount) role.memoryMsgCount = 0;
+    role.memoryMsgCount++;
+
+    if (role.memoryMsgCount % 20 === 0) {
+        // 自动总结
+        var msgs = role.msgs || [];
+        var recent = msgs.slice(-20);
+        var text = buildMemorySummaryText(recent, role);
+
+        if (!role.memorySummaries) role.memorySummaries = [];
+        role.memorySummaries.push({
+            time: new Date().toLocaleString('zh-CN') + ' (自动)',
+            text: text,
+            count: 20
+        });
+    }
+
+    saveChatRoles();
+}
+
+// 构建总结文本（提取最近消息的关键内容）
+function buildMemorySummaryText(msgs, role) {
+    var userMsgs = [], charMsgs = [];
+    var charName = role.nickname || role.name || 'Char';
+
+    for (var i = 0; i < msgs.length; i++) {
+        var m = msgs[i];
+        var txt = (m.text || m.content || '').trim();
+        if (!txt) continue;
+        if (m.who === 'self' || m.role === 'user' || m.sender === 'user') {
+            userMsgs.push(txt);
+        } else {
+            charMsgs.push(txt);
+        }
+    }
+
+    var s = '【第' + Math.ceil((role.memoryMsgCount || 1) / 20) + '轮记忆】';
+    s += ' 共' + msgs.length + '条对话。';
+
+    if (userMsgs.length > 0) {
+        var lu = userMsgs.slice(-3);
+        s += ' User说了: ';
+        for (var a = 0; a < lu.length; a++) {
+            s += '"' + lu[a].substring(0, 40) + (lu[a].length > 40 ? '...' : '') + '"';
+            if (a < lu.length - 1) s += ', ';
+        }
+        s += '。';
+    }
+
+    if (charMsgs.length > 0) {
+        var lc = charMsgs.slice(-3);
+        s += ' ' + charName + '回应: ';
+        for (var b = 0; b < lc.length; b++) {
+            s += '"' + lc[b].substring(0, 40) + (lc[b].length > 40 ? '...' : '') + '"';
+            if (b < lc.length - 1) s += ', ';
+        }
+        s += '。';
+    }
+
+    return s;
+}
+
+/**
+ * 获取AI系统提示 — 在发送消息给AI时调用
+ * ★ 将返回值追加到 system prompt 中
+ * 用法：var extra = getMemoryAndTimePrompt(role);
+ */
+function getMemoryAndTimePrompt(role) {
+    if (!role) return '';
+    var parts = [];
+
+    // 时间感知
+    if (role.timeAwareEnabled) {
+        var tz = role.timeAwareZone || 'Asia/Shanghai';
+        var info = getTimeZoneData(tz);
+        var tod = getTimePeriod(tz);
+        parts.push(
+            '[时间感知]\n' +
+            '当前地区: ' + info.name + '（' + info.label + '）\n' +
+            '日期: ' + formatDateForZone(tz) + '\n' +
+            '时间: ' + formatTimeForZone(tz) + '\n' +
+            '时段: ' + tod.p + '\n' +
+            '你（角色）正处于' + info.name + '时间，请自然地将时间融入对话，' +
+            '比如深夜可以表现困倦，早上可以说早安。不要生硬报时。'
+        );
+    }
+
+    // 记忆总结
+    if (role.memoryAutoEnabled && role.memorySummaries && role.memorySummaries.length > 0) {
+        var ms = role.memorySummaries.slice(-5); // 最近5条
+        var mt = '[对话记忆]\n以下是与User的历史记忆摘要，请据此保持对话连贯:\n\n';
+        for (var i = 0; i < ms.length; i++) {
+            mt += '记忆' + (i + 1) + ' (' + ms[i].time + '): ' + ms[i].text + '\n';
+        }
+        mt += '\n自然地运用这些记忆，不要告诉User你在查看记忆。';
+        parts.push(mt);
+    }
+
+    return parts.join('\n\n');
 }

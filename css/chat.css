@@ -4804,3 +4804,806 @@
     font-size: 11px;
     color: rgba(50, 40, 55, 0.35);
 }
+
+/* ================================================================
+   记忆总结 & 时间感知 — 聊天设置内嵌样式
+   ================================================================ */
+
+/* 分割线 */
+.cs-adv-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 18px 0 10px;
+    position: relative;
+}
+.cs-adv-divider::before,
+.cs-adv-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(180,170,155,.12), transparent);
+}
+.cs-adv-divider span {
+    padding: 0 12px;
+    font-size: 10.5px;
+    color: rgba(120,110,90,.35);
+    letter-spacing: 1px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ===== 记忆面板 ===== */
+.cs-memory-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .4s cubic-bezier(.4,0,.2,1), opacity .3s, padding .3s;
+    opacity: 0;
+    padding: 0 2px;
+}
+.cs-memory-panel.active {
+    max-height: 800px;
+    opacity: 1;
+    padding: 8px 2px 12px;
+}
+
+/* 记忆状态 */
+.cs-mem-status {
+    background: rgba(248,245,240,.6);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+}
+.cs-mem-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.cs-mem-label {
+    font-size: 10.5px;
+    color: rgba(120,110,90,.4);
+}
+.cs-mem-count {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #7a6a58;
+}
+.cs-mem-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(180,170,155,.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.cs-mem-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #c4b5a0, #8b7a65);
+    transition: width .5s ease;
+}
+
+/* 记忆列表 */
+.cs-mem-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 10.5px;
+    color: rgba(120,110,90,.4);
+    font-weight: 600;
+}
+.cs-mem-clear-all {
+    font-size: 9.5px;
+    color: rgba(200,80,70,.35);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all .2s;
+}
+.cs-mem-clear-all:active {
+    background: rgba(200,80,70,.08);
+    color: rgba(200,80,70,.6);
+}
+
+.cs-mem-list {
+    max-height: 200px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.cs-mem-list::-webkit-scrollbar { width: 2px; }
+.cs-mem-list::-webkit-scrollbar-thumb { background: rgba(180,170,155,.15); border-radius: 1px; }
+
+.cs-mem-empty {
+    text-align: center;
+    padding: 20px 0;
+    font-size: 10.5px;
+    color: rgba(140,130,115,.28);
+    line-height: 1.8;
+}
+.cs-mem-empty span {
+    font-size: 9.5px;
+    color: rgba(150,140,120,.2);
+}
+
+.cs-mem-item {
+    background: rgba(248,245,240,.5);
+    border-radius: 8px;
+    padding: 10px 30px 10px 12px;
+    margin-bottom: 6px;
+    position: relative;
+    transition: background .15s;
+}
+.cs-mem-item:active {
+    background: rgba(240,235,225,.7);
+}
+.cs-mem-item-time {
+    font-size: 9px;
+    color: rgba(140,130,115,.35);
+    margin-bottom: 4px;
+}
+.cs-mem-item-text {
+    font-size: 11px;
+    color: #5a5045;
+    line-height: 1.55;
+    word-break: break-all;
+}
+.cs-mem-item-del {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(200,80,70,.06);
+    color: rgba(200,80,70,.3);
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all .2s;
+}
+.cs-mem-item-del:active {
+    background: rgba(200,80,70,.15);
+    color: rgba(200,80,70,.7);
+}
+
+/* 手动总结按钮 */
+.cs-mem-manual-btn {
+    width: 100%;
+    padding: 10px 0;
+    border: 1.5px dashed rgba(180,170,155,.18);
+    border-radius: 8px;
+    background: transparent;
+    font-size: 11px;
+    color: rgba(120,110,90,.35);
+    text-align: center;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all .2s;
+}
+.cs-mem-manual-btn:active {
+    border-color: rgba(140,120,95,.4);
+    color: rgba(100,85,65,.6);
+    background: rgba(245,240,233,.5);
+}
+
+/* ===== 时间感知面板 ===== */
+.cs-time-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .4s cubic-bezier(.4,0,.2,1), opacity .3s, padding .3s;
+    opacity: 0;
+    padding: 0 2px;
+}
+.cs-time-panel.active {
+    max-height: 900px;
+    opacity: 1;
+    padding: 8px 2px 12px;
+}
+
+/* 时钟卡片 */
+.cs-time-clock-card {
+    background: linear-gradient(135deg, #f8f6f2, #f0ede8);
+    border-radius: 12px;
+    padding: 18px 16px;
+    text-align: center;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+}
+.cs-time-clock-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(200,215,235,.12), transparent 60%);
+    pointer-events: none;
+}
+.cs-time-zone-label {
+    font-size: 10px;
+    color: rgba(100,95,85,.35);
+    letter-spacing: 1px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+.cs-time-clock {
+    font-size: 38px;
+    font-weight: 300;
+    color: #5a5045;
+    letter-spacing: 2px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+.cs-time-date {
+    font-size: 10.5px;
+    color: rgba(110,100,85,.3);
+    margin-top: 5px;
+}
+.cs-time-offset {
+    font-size: 9px;
+    color: rgba(130,120,100,.25);
+    margin-top: 8px;
+    padding: 3px 10px;
+    background: rgba(255,255,255,.45);
+    border-radius: 10px;
+    display: inline-block;
+}
+
+/* 国家选择器 */
+.cs-time-country-box {
+    background: rgba(248,245,240,.5);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+.cs-time-country-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: background .15s;
+}
+.cs-time-country-top:active {
+    background: rgba(0,0,0,.02);
+}
+.cs-time-country-cur {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.cs-time-country-flag {
+    font-size: 20px;
+    line-height: 1;
+}
+.cs-time-country-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #3a3530;
+}
+.cs-time-country-tz {
+    font-size: 9.5px;
+    color: rgba(140,130,115,.35);
+    margin-top: 1px;
+}
+.cs-time-country-arrow {
+    font-size: 10px;
+    color: rgba(160,150,130,.3);
+    transition: transform .3s;
+}
+.cs-time-country-arrow.open {
+    transform: rotate(180deg);
+}
+
+/* 国家下拉 */
+.cs-time-country-dropdown {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .35s cubic-bezier(.4,0,.2,1);
+    border-top: 1px solid rgba(0,0,0,.03);
+}
+.cs-time-country-dropdown.open {
+    max-height: 280px;
+    overflow-y: auto;
+}
+.cs-time-country-dropdown::-webkit-scrollbar { width: 2px; }
+.cs-time-country-dropdown::-webkit-scrollbar-thumb { background: rgba(180,170,155,.15); border-radius: 1px; }
+
+.cs-time-search-wrap {
+    position: sticky;
+    top: 0;
+    background: rgba(248,245,240,.95);
+    padding: 8px 12px;
+    z-index: 1;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.cs-time-search-wrap input {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid rgba(180,170,155,.12);
+    border-radius: 8px;
+    font-size: 11.5px;
+    color: #3a3530;
+    background: rgba(255,255,255,.6);
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color .2s;
+}
+.cs-time-search-wrap input:focus {
+    border-color: rgba(140,120,95,.3);
+}
+.cs-time-search-wrap input::placeholder {
+    color: rgba(160,150,130,.35);
+}
+
+/* 国家选项 */
+.cs-time-opt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background .12s;
+    border-bottom: 1px solid rgba(0,0,0,.02);
+}
+.cs-time-opt:active {
+    background: rgba(0,0,0,.03);
+}
+.cs-time-opt.sel {
+    background: rgba(140,125,100,.05);
+}
+.cs-time-opt-flag {
+    font-size: 16px;
+    width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.cs-time-opt-info {
+    flex: 1;
+    min-width: 0;
+}
+.cs-time-opt-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #3a3530;
+}
+.cs-time-opt-tz {
+    font-size: 9.5px;
+    color: rgba(140,130,115,.35);
+    margin-top: 1px;
+}
+.cs-time-opt-chk {
+    font-size: 13px;
+    color: #8b7a65;
+    font-weight: 700;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.cs-time-empty {
+    text-align: center;
+    padding: 16px;
+    font-size: 11px;
+    color: rgba(140,130,115,.3);
+}
+
+/* 提示条 */
+.cs-time-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: rgba(245,240,233,.4);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+.cs-time-hint span:first-child {
+    font-size: 13px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.cs-time-hint span:last-child {
+    font-size: 10px;
+    color: rgba(110,100,85,.35);
+    line-height: 1.65;
+}
+
+/* ================================================================
+   记忆总结 & 时间感知 — 聊天设置内嵌样式
+   ================================================================ */
+
+/* 分割线 */
+.cs-adv-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 18px 0 10px;
+    position: relative;
+}
+.cs-adv-divider::before,
+.cs-adv-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(180,170,155,.12), transparent);
+}
+.cs-adv-divider span {
+    padding: 0 12px;
+    font-size: 10.5px;
+    color: rgba(120,110,90,.35);
+    letter-spacing: 1px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ===== 记忆面板 ===== */
+.cs-memory-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .4s cubic-bezier(.4,0,.2,1), opacity .3s, padding .3s;
+    opacity: 0;
+    padding: 0 2px;
+}
+.cs-memory-panel.active {
+    max-height: 800px;
+    opacity: 1;
+    padding: 8px 2px 12px;
+}
+
+/* 记忆状态 */
+.cs-mem-status {
+    background: rgba(248,245,240,.6);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+}
+.cs-mem-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.cs-mem-label {
+    font-size: 10.5px;
+    color: rgba(120,110,90,.4);
+}
+.cs-mem-count {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #7a6a58;
+}
+.cs-mem-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(180,170,155,.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.cs-mem-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #c4b5a0, #8b7a65);
+    transition: width .5s ease;
+}
+
+/* 记忆列表 */
+.cs-mem-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 10.5px;
+    color: rgba(120,110,90,.4);
+    font-weight: 600;
+}
+.cs-mem-clear-all {
+    font-size: 9.5px;
+    color: rgba(200,80,70,.35);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all .2s;
+}
+.cs-mem-clear-all:active {
+    background: rgba(200,80,70,.08);
+    color: rgba(200,80,70,.6);
+}
+
+.cs-mem-list {
+    max-height: 200px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.cs-mem-list::-webkit-scrollbar { width: 2px; }
+.cs-mem-list::-webkit-scrollbar-thumb { background: rgba(180,170,155,.15); border-radius: 1px; }
+
+.cs-mem-empty {
+    text-align: center;
+    padding: 20px 0;
+    font-size: 10.5px;
+    color: rgba(140,130,115,.28);
+    line-height: 1.8;
+}
+.cs-mem-empty span {
+    font-size: 9.5px;
+    color: rgba(150,140,120,.2);
+}
+
+.cs-mem-item {
+    background: rgba(248,245,240,.5);
+    border-radius: 8px;
+    padding: 10px 30px 10px 12px;
+    margin-bottom: 6px;
+    position: relative;
+    transition: background .15s;
+}
+.cs-mem-item:active {
+    background: rgba(240,235,225,.7);
+}
+.cs-mem-item-time {
+    font-size: 9px;
+    color: rgba(140,130,115,.35);
+    margin-bottom: 4px;
+}
+.cs-mem-item-text {
+    font-size: 11px;
+    color: #5a5045;
+    line-height: 1.55;
+    word-break: break-all;
+}
+.cs-mem-item-del {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(200,80,70,.06);
+    color: rgba(200,80,70,.3);
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all .2s;
+}
+.cs-mem-item-del:active {
+    background: rgba(200,80,70,.15);
+    color: rgba(200,80,70,.7);
+}
+
+/* 手动总结按钮 */
+.cs-mem-manual-btn {
+    width: 100%;
+    padding: 10px 0;
+    border: 1.5px dashed rgba(180,170,155,.18);
+    border-radius: 8px;
+    background: transparent;
+    font-size: 11px;
+    color: rgba(120,110,90,.35);
+    text-align: center;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all .2s;
+}
+.cs-mem-manual-btn:active {
+    border-color: rgba(140,120,95,.4);
+    color: rgba(100,85,65,.6);
+    background: rgba(245,240,233,.5);
+}
+
+/* ===== 时间感知面板 ===== */
+.cs-time-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .4s cubic-bezier(.4,0,.2,1), opacity .3s, padding .3s;
+    opacity: 0;
+    padding: 0 2px;
+}
+.cs-time-panel.active {
+    max-height: 900px;
+    opacity: 1;
+    padding: 8px 2px 12px;
+}
+
+/* 时钟卡片 */
+.cs-time-clock-card {
+    background: linear-gradient(135deg, #f8f6f2, #f0ede8);
+    border-radius: 12px;
+    padding: 18px 16px;
+    text-align: center;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+}
+.cs-time-clock-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(200,215,235,.12), transparent 60%);
+    pointer-events: none;
+}
+.cs-time-zone-label {
+    font-size: 10px;
+    color: rgba(100,95,85,.35);
+    letter-spacing: 1px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+.cs-time-clock {
+    font-size: 38px;
+    font-weight: 300;
+    color: #5a5045;
+    letter-spacing: 2px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+.cs-time-date {
+    font-size: 10.5px;
+    color: rgba(110,100,85,.3);
+    margin-top: 5px;
+}
+.cs-time-offset {
+    font-size: 9px;
+    color: rgba(130,120,100,.25);
+    margin-top: 8px;
+    padding: 3px 10px;
+    background: rgba(255,255,255,.45);
+    border-radius: 10px;
+    display: inline-block;
+}
+
+/* 国家选择器 */
+.cs-time-country-box {
+    background: rgba(248,245,240,.5);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+.cs-time-country-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: background .15s;
+}
+.cs-time-country-top:active {
+    background: rgba(0,0,0,.02);
+}
+.cs-time-country-cur {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.cs-time-country-flag {
+    font-size: 20px;
+    line-height: 1;
+}
+.cs-time-country-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #3a3530;
+}
+.cs-time-country-tz {
+    font-size: 9.5px;
+    color: rgba(140,130,115,.35);
+    margin-top: 1px;
+}
+.cs-time-country-arrow {
+    font-size: 10px;
+    color: rgba(160,150,130,.3);
+    transition: transform .3s;
+}
+.cs-time-country-arrow.open {
+    transform: rotate(180deg);
+}
+
+/* 国家下拉 */
+.cs-time-country-dropdown {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .35s cubic-bezier(.4,0,.2,1);
+    border-top: 1px solid rgba(0,0,0,.03);
+}
+.cs-time-country-dropdown.open {
+    max-height: 280px;
+    overflow-y: auto;
+}
+.cs-time-country-dropdown::-webkit-scrollbar { width: 2px; }
+.cs-time-country-dropdown::-webkit-scrollbar-thumb { background: rgba(180,170,155,.15); border-radius: 1px; }
+
+.cs-time-search-wrap {
+    position: sticky;
+    top: 0;
+    background: rgba(248,245,240,.95);
+    padding: 8px 12px;
+    z-index: 1;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.cs-time-search-wrap input {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid rgba(180,170,155,.12);
+    border-radius: 8px;
+    font-size: 11.5px;
+    color: #3a3530;
+    background: rgba(255,255,255,.6);
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color .2s;
+}
+.cs-time-search-wrap input:focus {
+    border-color: rgba(140,120,95,.3);
+}
+.cs-time-search-wrap input::placeholder {
+    color: rgba(160,150,130,.35);
+}
+
+/* 国家选项 */
+.cs-time-opt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background .12s;
+    border-bottom: 1px solid rgba(0,0,0,.02);
+}
+.cs-time-opt:active {
+    background: rgba(0,0,0,.03);
+}
+.cs-time-opt.sel {
+    background: rgba(140,125,100,.05);
+}
+.cs-time-opt-flag {
+    font-size: 16px;
+    width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.cs-time-opt-info {
+    flex: 1;
+    min-width: 0;
+}
+.cs-time-opt-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #3a3530;
+}
+.cs-time-opt-tz {
+    font-size: 9.5px;
+    color: rgba(140,130,115,.35);
+    margin-top: 1px;
+}
+.cs-time-opt-chk {
+    font-size: 13px;
+    color: #8b7a65;
+    font-weight: 700;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.cs-time-empty {
+    text-align: center;
+    padding: 16px;
+    font-size: 11px;
+    color: rgba(140,130,115,.3);
+}
+
+/* 提示条 */
+.cs-time-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: rgba(245,240,233,.4);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+.cs-time-hint span:last-child {
+    font-size: 10px;
+    color: rgba(110,100,85,.35);
+    line-height: 1.65;
+}
