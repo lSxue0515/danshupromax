@@ -1406,24 +1406,165 @@ function _muDoBatchImport() { if (!_muParsedSongs.length) { if (typeof showToast
    ★ JSON导出/导入
    ======================================== */
 function _muExportAll() {
-    var data = { version: 1, songs: [], playlists: [], dailyList: [] };
-    for (var i = 0; i < _muSongs.length; i++) data.songs.push({ name: _muSongs[i].name, artist: _muSongs[i].artist, url: _muSongs[i].url || '', lyrics: _muSongs[i].lyrics || '' });
-    for (var pi = 0; pi < _muPlaylists.length; pi++) { var pl = { name: _muPlaylists[pi].name, songs: [] }; if (_muPlaylists[pi].songs) { for (var si = 0; si < _muPlaylists[pi].songs.length; si++) { var s = _muPlaylists[pi].songs[si]; pl.songs.push({ name: s.name, artist: s.artist, url: s.url || '', lyrics: s.lyrics || '' }); } } data.playlists.push(pl); }
-    for (var di = 0; di < _muDailyList.length; di++)data.dailyList.push({ name: _muDailyList[di].name, artist: _muDailyList[di].artist, url: _muDailyList[di].url || '' });
-    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'music_export_' + new Date().toISOString().slice(0, 10) + '.json'; a.click();
-    if (typeof showToast === 'function') showToast('已导出');
+    if (typeof showToast === 'function') showToast('正在打包导出，请稍候...');
+    var data = { songs: [], playlists: [], version: 2 };
+    var allSongIds = [];
+
+    /* 收集全部歌曲（全局 + 歌单内） */
+    for (var i = 0; i < _muSongs.length; i++) {
+        var s = _muSongs[i];
+        data.songs.push({ id: s.id, name: s.name, artist: s.artist, url: s.url || '', lyrics: s.lyrics || '', cover: '' });
+        allSongIds.push(s.id);
+    }
+    for (var pi = 0; pi < _muPlaylists.length; pi++) {
+        var pl = { name: _muPlaylists[pi].name, songs: [] };
+        if (_muPlaylists[pi].songs) {
+            for (var si = 0; si < _muPlaylists[pi].songs.length; si++) {
+                var s = _muPlaylists[pi].songs[si];
+                pl.songs.push({ id: s.id, name: s.name, artist: s.artist, url: s.url || '', lyrics: s.lyrics || '', cover: '' });
+                allSongIds.push(s.id);
+            }
+        }
+        data.playlists.push(pl);
+    }
+
+    /* 从 IndexedDB 读出所有本地音频，打包成 base64 */
+    data.audioData = {};
+    var pending = allSongIds.length;
+    if (pending === 0) { _muDoExportDownload(data); return; }
+
+    var done = 0;
+    for (var ai = 0; ai < allSongIds.length; ai++) {
+        (function (sid) {
+            _muLoadAudioRawFromDB(sid, function (result) {
+                if (result && result.arrayBuffer) {
+                    /* ArrayBuffer → base64 */
+                    var bytes = new Uint8Array(result.arrayBuffer);
+                    var binary = '';
+                    for (var bi = 0; bi < bytes.length; bi++) binary += String.fromCharCode(bytes[bi]);
+                    data.audioData[sid] = {
+                        base64: btoa(binary),
+                        mime: result.mimeType || 'audio/mpeg'
+                    };
+                }
+                done++;
+                if (done >= pending) _muDoExportDownload(data);
+            });
+        })(allSongIds[ai]);
+    }
 }
 
-function _muRenderJsonImportModal() { return '<div class="mu-import-overlay"><div class="mu-import-modal"><div class="mu-import-modal-title">导入歌单数据</div><div class="mu-import-modal-sub">粘贴JSON数据或选择文件</div><textarea class="mu-import-textarea" id="muJsonInput" placeholder="粘贴JSON..."></textarea><div class="mu-import-modal-btns"><div class="mu-import-modal-btn cancel" onclick="_muImportModal=\'\';_muRender()">取消</div><div class="mu-import-modal-btn ok" style="flex:0.7" onclick="_muPickJsonFile()">选文件</div><div class="mu-import-modal-btn ok" onclick="_muDoJsonImport()">导入</div></div></div></div>'; }
+function _muDoExportDownload(data) {
+    var json = JSON.stringify(data);
+    var blob = new Blob([json], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'music_export_' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+    var sizeMB = (blob.size / 1024 / 1024).toFixed(1);
+    var audioCount = Object.keys(data.audioData || {}).length;
+    if (typeof showToast === 'function') showToast('导出完成 (' + sizeMB + 'MB, 含' + audioCount + '首音频)');
+}
+
+/* 从IndexedDB读取原始音频数据（ArrayBuffer + mimeType） */
+function _muLoadAudioRawFromDB(songId, callback) {
+    try {
+        var req = indexedDB.open('MusicLocalAudioDB', 1);
+        req.onupgradeneeded = function (e) {
+            var db = e.target.result;
+            if (!db.objectStoreNames.contains('audios'))
+                db.createObjectStore('audios', { keyPath: 'id' });
+        };
+        req.onsuccess = function (e) {
+            var db = e.target.result;
+            try {
+                var tx = db.transaction('audios', 'readonly');
+                var store = tx.objectStore('audios');
+                var getReq = store.get(songId);
+                getReq.onsuccess = function () {
+                    if (getReq.result) {
+                        callback({ arrayBuffer: getReq.result.data, mimeType: getReq.result.mime || 'audio/mpeg' });
+                    } else {
+                        callback(null);
+                    }
+                };
+                getReq.onerror = function () { callback(null); };
+            } catch (e) { callback(null); }
+        };
+        req.onerror = function () { callback(null); };
+    } catch (e) { callback(null); }
+}
+
+function _muRenderJsonImportModal() { return '<div class="mu-import-overlay"><div class="mu-import-modal"><div class="mu-import-modal-title">导入歌单数据</div><div class="mu-import-modal-sub">粘贴JSON数据或选择文件（支持含音频的v2格式）</div><textarea class="mu-import-textarea" id="muJsonInput" placeholder="粘贴JSON..."></textarea><div class="mu-import-modal-btns"><div class="mu-import-modal-btn cancel" onclick="_muImportModal=\'\';_muRender()">取消</div><div class="mu-import-modal-btn ok" style="flex:0.7" onclick="_muPickJsonFile()">选文件</div><div class="mu-import-modal-btn ok" onclick="_muDoJsonImport()">导入</div></div></div></div>'; }
 function _muPickJsonFile() { var inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json'; inp.onchange = function () { if (!inp.files || !inp.files[0]) return; var r = new FileReader(); r.onload = function (e) { var el = document.getElementById('muJsonInput'); if (el) el.value = e.target.result; }; r.readAsText(inp.files[0]); }; inp.click(); }
 function _muDoJsonImport() {
-    var el = document.getElementById('muJsonInput'); if (!el || !el.value.trim()) { if (typeof showToast === 'function') showToast('请粘贴JSON'); return; }
-    var data; try { data = JSON.parse(el.value.trim()); } catch (e) { if (typeof showToast === 'function') showToast('JSON格式错误'); return; }
-    var sc = 0, pc = 0;
-    if (data.songs) for (var i = 0; i < data.songs.length; i++) { _muSongs.push({ id: _muGenId(), name: data.songs[i].name || '未知', artist: data.songs[i].artist || '', url: data.songs[i].url || '', cover: '', lyrics: data.songs[i].lyrics || '' }); sc++; }
-    if (data.playlists) for (var pi = 0; pi < data.playlists.length; pi++) { var pl = data.playlists[pi], np = { id: 'pl_' + Date.now() + '_' + pi, name: pl.name || '导入歌单', songs: [] }; if (pl.songs) for (var si = 0; si < pl.songs.length; si++) { np.songs.push({ id: _muGenId(), name: pl.songs[si].name || '未知', artist: pl.songs[si].artist || '', url: pl.songs[si].url || '', cover: '', lyrics: pl.songs[si].lyrics || '' }); sc++; } _muPlaylists.push(np); pc++; }
-    if (data.dailyList) for (var di = 0; di < data.dailyList.length && _muDailyList.length < 5; di++)_muDailyList.push({ id: 'dr_' + Date.now() + '_' + di, name: data.dailyList[di].name || '推荐', artist: data.dailyList[di].artist || '', url: data.dailyList[di].url || '', cover: '', coverEmoji: '🎵', songRef: '' });
-    _muImportModal = ''; _muSave(); _muRender(); if (typeof showToast === 'function') showToast('导入 ' + sc + ' 首歌，' + pc + ' 个歌单');
+    var el = document.getElementById('muJsonInput');
+    if (!el || !el.value.trim()) { if (typeof showToast === 'function') showToast('请粘贴JSON'); return; }
+    try { var data = JSON.parse(el.value); } catch (e) { if (typeof showToast === 'function') showToast('JSON格式错误'); return; }
+
+    var sc = 0, pc = 0, audioCount = 0;
+    var audioData = data.audioData || {};
+    /* 记录旧id → 新id的映射，用于匹配音频数据 */
+    var idMap = {};
+
+    if (data.songs) {
+        for (var i = 0; i < data.songs.length; i++) {
+            var s = data.songs[i];
+            var newId = _muGenId();
+            var oldId = s.id || '';
+            if (oldId) idMap[oldId] = newId;
+            _muSongs.push({
+                id: newId, name: s.name || '未知', artist: s.artist || '',
+                url: s.url || '', cover: '', lyrics: s.lyrics || ''
+            });
+            sc++;
+        }
+    }
+
+    if (data.playlists) {
+        for (var pi = 0; pi < data.playlists.length; pi++) {
+            var pl = data.playlists[pi];
+            var np = { id: 'pl_' + Date.now() + '_' + pi, name: pl.name || '导入歌单', songs: [] };
+            if (pl.songs) {
+                for (var si = 0; si < pl.songs.length; si++) {
+                    var s = pl.songs[si];
+                    var newId = _muGenId();
+                    var oldId = s.id || '';
+                    if (oldId) idMap[oldId] = newId;
+                    np.songs.push({
+                        id: newId, name: s.name || '未知', artist: s.artist || '',
+                        url: s.url || '', cover: '', lyrics: s.lyrics || ''
+                    });
+                    sc++;
+                }
+            }
+            _muPlaylists.push(np);
+            pc++;
+        }
+    }
+
+    /* 还原音频数据到 IndexedDB */
+    var audioKeys = Object.keys(audioData);
+    for (var ak = 0; ak < audioKeys.length; ak++) {
+        var oldSongId = audioKeys[ak];
+        var newSongId = idMap[oldSongId] || oldSongId;
+        var ad = audioData[oldSongId];
+        if (ad && ad.base64) {
+            try {
+                var binaryStr = atob(ad.base64);
+                var bytes = new Uint8Array(binaryStr.length);
+                for (var bi = 0; bi < binaryStr.length; bi++) bytes[bi] = binaryStr.charCodeAt(bi);
+                _muSaveAudioToDB(newSongId, bytes.buffer, ad.mime || 'audio/mpeg');
+                audioCount++;
+            } catch (e) { console.warn('Audio restore error for ' + oldSongId, e); }
+        }
+    }
+
+    _muImportModal = ''; _muSave(); _muRender();
+    var msg = '导入 ' + sc + ' 首歌, ' + pc + ' 个歌单';
+    if (audioCount > 0) msg += ', ' + audioCount + ' 首含音频';
+    else if (sc > 0 && audioKeys.length === 0) msg += ' (无音频数据，需手动绑定音源)';
+    if (typeof showToast === 'function') showToast(msg);
 }
 
 /* ============================================

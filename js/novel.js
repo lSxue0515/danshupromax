@@ -412,6 +412,7 @@ function _nvRenderMe() {
 /* ===== 弹窗 ===== */
 function _nvRenderModal() {
     if (_nvModal === 'editProfile') return _nvRenderEditProfile();
+    if (_nvModal === 'editNovel') return _nvRenderEditNovel();
     return '';
 }
 function _nvRenderEditProfile() {
@@ -718,11 +719,17 @@ function _nvGenerateOneChapter(novelId, chapIdx) {
 
     /* ===== 构建 System Prompt（强化人设贴合度） ===== */
     var sp = '你是一位顶级中文小说作家。请严格按照以下设定创作。\n';
-
-    sp += '\n=== 小说信息 ===\n';
-    sp += '书名：' + novel.title + '\n';
+    sp += '小说名：' + novel.title + '\n';
+    sp += '总章数：' + novel.totalChapters + '\n';
     sp += '分类：' + novel.category + '\n';
     if (novel.tags && novel.tags.length) sp += '标签：' + novel.tags.join('、') + '\n';
+    sp += '\n【重要约束】你必须严格遵守以上分类和标签设定。';
+    sp += '分类是"' + novel.category + '"，就只能写' + novel.category + '题材的内容。';
+    if (novel.tags && novel.tags.length) {
+        sp += '标签是"' + novel.tags.join('、') + '"，只能包含这些元素。';
+    }
+    sp += '绝对禁止出现用户未选择的元素（如用户没选穿越就不准写穿越，没选重生就不准写重生，没选古代就不准写古代背景等）。';
+    sp += '故事的世界观、时代背景、情节走向必须与分类和标签完全吻合，不得偏离。\n';
     sp += '总章节数：' + totalChap + '章\n';
 
     if (novel.userRole) {
@@ -942,8 +949,6 @@ function _nvRenderRead() {
     if (!novel) return '';
 
     var rs = _nvReaderSettings;
-
-    /* 阅读区背景样式 */
     var readBodyStyle = 'padding-bottom:80px;position:relative;';
     readBodyStyle += 'background-color:' + rs.bgColor + ';';
     if (rs.bgImage && rs.bgImage !== '__idb__') {
@@ -959,20 +964,21 @@ function _nvRenderRead() {
     h += '<div style="display:flex;gap:6px">';
     /* 目录按钮 */
     h += '<div class="nv-back" onclick="_nvTocOpen=true;_nvRender()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></div>';
+    /* 编辑信息按钮 */
+    h += '<div class="nv-back" onclick="_nvEditNovelId=\'' + novel.id + '\';_nvModal=\'editNovel\';_nvRender()"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>';
     /* 设置按钮 */
     h += '<div class="nv-back" onclick="_nvSettingsOpen=!_nvSettingsOpen;_nvRender()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>';
     h += '</div></div>';
 
-    /* 阅读主体 - 带透明度覆盖层 */
+    /* 阅读主体 */
     h += '<div class="nv-create-body" style="' + readBodyStyle + '">';
 
-    /* 透明度遮罩层（用白色半透明覆盖让背景图变淡） */
+    /* 透明度遮罩层 */
     if (rs.bgImage && rs.bgImage !== '__idb__' && rs.bgOpacity < 100) {
         var maskAlpha = (100 - rs.bgOpacity) / 100;
         h += '<div style="position:absolute;inset:0;background:rgba(255,255,255,' + maskAlpha.toFixed(2) + ');pointer-events:none;z-index:0"></div>';
     }
 
-    /* 内容区域 z-index 保证在遮罩上方 */
     h += '<div style="position:relative;z-index:1">';
 
     /* 生成中提示 */
@@ -994,6 +1000,13 @@ function _nvRenderRead() {
                 if (line) h += '<p style="text-indent:2em;margin:0 0 ' + rs.paragraphSpacing + 'px 0">' + _nvEsc(line) + '</p>';
             }
             h += '</div>';
+
+            /* 重新生成本章按钮 */
+            if (!_nvGenerating) {
+                h += '<div style="text-align:center;padding:16px 0 4px">';
+                h += '<span style="display:inline-block;padding:8px 18px;background:rgba(250,248,244,.85);border:1px solid #ddd5c5;border-radius:16px;font-size:11px;color:#c07a6a;cursor:pointer" onclick="_nvRegenerateChapter(\'' + novel.id + '\',' + _nvReadChap + ')">重新生成本章</span>';
+                h += '</div>';
+            }
         } else {
             h += '<div style="text-align:center;padding:40px 0;color:#c4b9a8;font-size:13px">';
             if (_nvGenerating && _nvGenNovelId === novel.id) {
@@ -1025,6 +1038,24 @@ function _nvRenderRead() {
         }
     }
 
+    /* 小说信息卡片 */
+    h += '<div style="margin:16px 0;padding:14px 16px;background:rgba(250,248,244,.85);border-radius:16px;border:1px solid rgba(0,0,0,.04)">';
+    h += '<div style="font-size:12px;font-weight:700;color:#5a4e3c;margin-bottom:8px">小说信息</div>';
+    h += '<div style="font-size:11px;color:#8b7e6a;line-height:1.8">';
+    h += '<div>分类: ' + _nvEsc(novel.category) + '</div>';
+    if (novel.tags && novel.tags.length) {
+        h += '<div>标签: ';
+        for (var ti = 0; ti < novel.tags.length; ti++) {
+            h += '<span style="display:inline-block;padding:1px 6px;border-radius:6px;background:#ede6da;color:#8b7355;font-size:9px;font-weight:600;margin:1px 2px">' + _nvEsc(novel.tags[ti]) + '</span>';
+        }
+        h += '</div>';
+    }
+    if (novel.synopsis) h += '<div style="margin-top:4px">简介: ' + _nvEsc(novel.synopsis).substring(0, 80) + (novel.synopsis.length > 80 ? '...' : '') + '</div>';
+    h += '</div>';
+    h += '<div style="margin-top:8px;text-align:center">';
+    h += '<span style="font-size:11px;color:#8b7355;cursor:pointer;padding:4px 14px;border-radius:10px;background:#faf8f4;border:1px solid #ddd5c5" onclick="_nvEditNovelId=\'' + novel.id + '\';_nvModal=\'editNovel\';_nvRender()">编辑信息</span>';
+    h += '</div></div>';
+
     h += '<div style="text-align:center;padding:14px 0">';
     h += '<span style="font-size:11px;color:#b0a48e;cursor:pointer;padding:6px 14px;border-radius:10px;background:rgba(250,248,244,.85);border:1px solid #ddd5c5" onclick="event.stopPropagation();_nvPickNovelCover(\'' + novel.id + '\')">更换封面</span>';
     h += '</div>';
@@ -1049,117 +1080,67 @@ function _nvRenderRead() {
         h += '</div></div>';
     }
 
-    /* ===== 阅读设置面板 ===== */
+    /* 阅读设置面板 */
     if (_nvSettingsOpen) {
         h += '<div class="nv-reader-settings-mask show" onclick="_nvSettingsOpen=false;_nvRender()">';
         h += '<div class="nv-reader-settings-panel" onclick="event.stopPropagation()">';
         h += '<div class="nv-rs-handle"></div>';
         h += '<div class="nv-rs-title">阅读设置</div>';
 
-        /* 背景颜色 */
-        h += '<div class="nv-rs-section">';
-        h += '<div class="nv-rs-label">背景颜色</div>';
-        h += '<div class="nv-rs-colors">';
+        h += '<div class="nv-rs-section"><div class="nv-rs-label">背景颜色</div><div class="nv-rs-colors">';
         var bgPresets = [
-            { c: '#f5f0ea', n: '默认' },
-            { c: '#ffffff', n: '纯白' },
-            { c: '#e8e0d2', n: '羊皮纸' },
-            { c: '#cce8cf', n: '护眼绿' },
-            { c: '#d4e4f7', n: '浅蓝' },
-            { c: '#f5e6d0', n: '暖黄' },
-            { c: '#e8d5e0', n: '浅粉' },
-            { c: '#2b2b2b', n: '夜间' },
-            { c: '#1a1a2e', n: '深蓝夜' }
+            { c: '#f5f0ea', n: '默认' }, { c: '#ffffff', n: '纯白' }, { c: '#e8e0d2', n: '羊皮纸' },
+            { c: '#cce8cf', n: '护眼绿' }, { c: '#d4e4f7', n: '浅蓝' }, { c: '#f5e6d0', n: '暖黄' },
+            { c: '#e8d5e0', n: '浅粉' }, { c: '#2b2b2b', n: '夜间' }, { c: '#1a1a2e', n: '深蓝夜' }
         ];
         for (var bi = 0; bi < bgPresets.length; bi++) {
             var bgActive = rs.bgColor === bgPresets[bi].c ? ' active' : '';
             h += '<div class="nv-rs-color-dot' + bgActive + '" style="background:' + bgPresets[bi].c + '" onclick="_nvSetBgColor(\'' + bgPresets[bi].c + '\')" title="' + bgPresets[bi].n + '"></div>';
         }
-        /* 自定义颜色 */
-        h += '<div class="nv-rs-color-custom" title="自定义颜色">+';
-        h += '<input type="color" value="' + rs.bgColor + '" onchange="_nvSetBgColor(this.value)">';
+        h += '<div class="nv-rs-color-custom" title="自定义颜色">+<input type="color" value="' + rs.bgColor + '" onchange="_nvSetBgColor(this.value)"></div>';
         h += '</div>';
-        h += '</div>';
-
-        /* 背景图片 */
-        h += '<div style="margin-top:8px">';
-        h += '<span class="nv-rs-bgimg-btn" onclick="_nvPickReaderBg()">选择背景图片</span>';
-        if (rs.bgImage && rs.bgImage !== '__idb__') {
-            h += '<span class="nv-rs-bgimg-clear" onclick="_nvClearReaderBg()">清除背景图</span>';
-        }
-        h += '</div>';
-        h += '</div>';
-
-        /* 背景透明度（背景图时有用） */
-        h += '<div class="nv-rs-section">';
-        h += '<div class="nv-rs-label">背景图透明度</div>';
-        h += '<div class="nv-rs-row">';
-        h += '<input type="range" min="10" max="100" value="' + rs.bgOpacity + '" oninput="_nvSetSetting(\'bgOpacity\',parseInt(this.value))">';
-        h += '<div class="nv-rs-row-val">' + rs.bgOpacity + '%</div>';
+        h += '<div style="margin-top:8px"><span class="nv-rs-bgimg-btn" onclick="_nvPickReaderBg()">选择背景图片</span>';
+        if (rs.bgImage && rs.bgImage !== '__idb__') h += '<span class="nv-rs-bgimg-clear" onclick="_nvClearReaderBg()">清除背景图</span>';
         h += '</div></div>';
 
-        /* 字体颜色 */
-        h += '<div class="nv-rs-section">';
-        h += '<div class="nv-rs-label">字体颜色</div>';
-        h += '<div class="nv-rs-colors">';
+        h += '<div class="nv-rs-section"><div class="nv-rs-label">背景图透明度</div><div class="nv-rs-row">';
+        h += '<input type="range" min="10" max="100" value="' + rs.bgOpacity + '" oninput="_nvSetSetting(\'bgOpacity\',parseInt(this.value))">';
+        h += '<div class="nv-rs-row-val">' + rs.bgOpacity + '%</div></div></div>';
+
+        h += '<div class="nv-rs-section"><div class="nv-rs-label">字体颜色</div><div class="nv-rs-colors">';
         var fontPresets = [
-            { c: '#5a4e3c', n: '默认' },
-            { c: '#333333', n: '深灰' },
-            { c: '#000000', n: '纯黑' },
-            { c: '#666666', n: '灰色' },
-            { c: '#e8e0d2', n: '浅色' },
-            { c: '#f5f0ea', n: '白色' }
+            { c: '#5a4e3c', n: '默认' }, { c: '#333333', n: '深灰' }, { c: '#000000', n: '纯黑' },
+            { c: '#666666', n: '灰色' }, { c: '#e8e0d2', n: '浅色' }, { c: '#f5f0ea', n: '白色' }
         ];
         for (var fi = 0; fi < fontPresets.length; fi++) {
             var fActive = rs.fontColor === fontPresets[fi].c ? ' active' : '';
             h += '<div class="nv-rs-color-dot' + fActive + '" style="background:' + fontPresets[fi].c + '" onclick="_nvSetFontColor(\'' + fontPresets[fi].c + '\')" title="' + fontPresets[fi].n + '"></div>';
         }
-        h += '<div class="nv-rs-color-custom" title="自定义颜色">+';
-        h += '<input type="color" value="' + rs.fontColor + '" onchange="_nvSetFontColor(this.value)">';
-        h += '</div>';
+        h += '<div class="nv-rs-color-custom" title="自定义颜色">+<input type="color" value="' + rs.fontColor + '" onchange="_nvSetFontColor(this.value)"></div>';
         h += '</div></div>';
 
-        /* 字体大小 */
-        h += '<div class="nv-rs-section">';
-        h += '<div class="nv-rs-label">字体大小</div>';
-        h += '<div class="nv-rs-row">';
+        h += '<div class="nv-rs-section"><div class="nv-rs-label">字体大小</div><div class="nv-rs-row">';
         h += '<input type="range" min="12" max="24" value="' + rs.fontSize + '" oninput="_nvSetSetting(\'fontSize\',parseInt(this.value))">';
-        h += '<div class="nv-rs-row-val">' + rs.fontSize + 'px</div>';
-        h += '</div></div>';
+        h += '<div class="nv-rs-row-val">' + rs.fontSize + 'px</div></div></div>';
 
-        /* 行间距 */
-        h += '<div class="nv-rs-section">';
-        h += '<div class="nv-rs-label">行间距</div>';
-        h += '<div class="nv-rs-row">';
+        h += '<div class="nv-rs-section"><div class="nv-rs-label">行间距</div><div class="nv-rs-row">';
         h += '<input type="range" min="14" max="36" value="' + Math.round(rs.lineHeight * 10) + '" oninput="_nvSetSetting(\'lineHeight\',parseInt(this.value)/10)">';
-        h += '<div class="nv-rs-row-val">' + rs.lineHeight.toFixed(1) + '</div>';
-        h += '</div></div>';
+        h += '<div class="nv-rs-row-val">' + rs.lineHeight.toFixed(1) + '</div></div></div>';
 
-        /* 字间距 */
-        h += '<div class="nv-rs-section">';
-        h += '<div class="nv-rs-label">字间距</div>';
-        h += '<div class="nv-rs-row">';
+        h += '<div class="nv-rs-section"><div class="nv-rs-label">字间距</div><div class="nv-rs-row">';
         h += '<input type="range" min="0" max="8" value="' + rs.letterSpacing + '" oninput="_nvSetSetting(\'letterSpacing\',parseInt(this.value))">';
-        h += '<div class="nv-rs-row-val">' + rs.letterSpacing + 'px</div>';
-        h += '</div></div>';
+        h += '<div class="nv-rs-row-val">' + rs.letterSpacing + 'px</div></div></div>';
 
-        /* 段间距 */
-        h += '<div class="nv-rs-section">';
-        h += '<div class="nv-rs-label">段间距</div>';
-        h += '<div class="nv-rs-row">';
+        h += '<div class="nv-rs-section"><div class="nv-rs-label">段间距</div><div class="nv-rs-row">';
         h += '<input type="range" min="0" max="40" value="' + rs.paragraphSpacing + '" oninput="_nvSetSetting(\'paragraphSpacing\',parseInt(this.value))">';
-        h += '<div class="nv-rs-row-val">' + rs.paragraphSpacing + 'px</div>';
-        h += '</div></div>';
+        h += '<div class="nv-rs-row-val">' + rs.paragraphSpacing + 'px</div></div></div>';
 
-        /* 重置按钮 */
         h += '<div style="text-align:center;padding-top:6px">';
         h += '<span style="font-size:11px;color:#c07a6a;cursor:pointer;padding:6px 16px;border-radius:10px;background:rgba(0,0,0,.03)" onclick="_nvResetReaderSettings()">恢复默认</span>';
-        h += '</div>';
-
-        h += '</div></div>'; /* panel + mask end */
+        h += '</div></div></div>';
     }
 
-    h += '</div>'; /* nv-create-overlay end */
+    h += '</div>';
     return h;
 }
 
@@ -1224,6 +1205,132 @@ function _nvContinueGenerate(novelId) {
         }
     }
     if (typeof showToast === 'function') showToast('所有章节已生成');
+}
+
+/* ===== 重新生成本章 ===== */
+var _nvEditNovelId = '';
+
+function _nvRegenerateChapter(novelId, chapIdx) {
+    if (_nvGenerating) {
+        if (typeof showToast === 'function') showToast('正在生成中，请等待');
+        return;
+    }
+    if (!confirm('确定重新生成本章吗？当前内容将被覆盖。')) return;
+
+    /* 清空当前章节内容 */
+    for (var i = 0; i < _nvNovels.length; i++) {
+        if (_nvNovels[i].id === novelId) {
+            if (_nvNovels[i].chapters[chapIdx]) {
+                _nvNovels[i].chapters[chapIdx].content = '';
+                _nvNovels[i].chapters[chapIdx].title = '第' + (chapIdx + 1) + '章';
+            }
+            break;
+        }
+    }
+    _nvSave(); _nvRender();
+
+    /* 重新生成 */
+    _nvGenerateOneChapter(novelId, chapIdx);
+    if (typeof showToast === 'function') showToast('正在重新生成第 ' + (chapIdx + 1) + ' 章...');
+}
+
+/* ===== 编辑小说信息弹窗 ===== */
+function _nvRenderEditNovel() {
+    var novel = null;
+    for (var i = 0; i < _nvNovels.length; i++) {
+        if (_nvNovels[i].id === _nvEditNovelId) { novel = _nvNovels[i]; break; }
+    }
+    if (!novel) { _nvModal = ''; return ''; }
+
+    var h = '<div class="nv-modal-overlay show" onclick="_nvModal=\'\';_nvRender()">';
+    h += '<div class="nv-modal" onclick="event.stopPropagation()" style="max-height:85vh">';
+    h += '<div class="nv-modal-header"><div class="nv-modal-title">编辑小说信息</div>';
+    h += '<div class="nv-modal-close" onclick="_nvModal=\'\';_nvRender()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>';
+    h += '<div class="nv-modal-body">';
+
+    /* 书名 */
+    h += '<div class="nv-field"><div class="nv-field-label">书名</div>';
+    h += '<input class="nv-field-input" id="nvEditTitle" value="' + _nvEsc(novel.title) + '" placeholder="小说名称"></div>';
+
+    /* 分类 */
+    h += '<div class="nv-field"><div class="nv-field-label">分类</div>';
+    h += '<div class="nv-tag-picker" id="nvEditCategory">';
+    for (var c = 0; c < _nvCategories.length; c++) {
+        var cSel = novel.category === _nvCategories[c] ? ' selected' : '';
+        h += '<span class="nv-tag-opt' + cSel + '" onclick="_nvTmpEditCategory(this,\'' + _nvEsc(_nvCategories[c]) + '\')">' + _nvEsc(_nvCategories[c]) + '</span>';
+    }
+    h += '</div></div>';
+
+    /* 标签 */
+    h += '<div class="nv-field"><div class="nv-field-label">标签 (点击选中/取消)</div>';
+    h += '<div class="nv-tag-picker" id="nvEditTags">';
+    var currentTags = novel.tags || [];
+    for (var t = 0; t < _nvTagPool.length; t++) {
+        var tSel = currentTags.indexOf(_nvTagPool[t]) >= 0 ? ' selected' : '';
+        h += '<span class="nv-tag-opt' + tSel + '" onclick="this.classList.toggle(\'selected\')">' + _nvEsc(_nvTagPool[t]) + '</span>';
+    }
+    h += '</div></div>';
+
+    /* 简介 */
+    h += '<div class="nv-field"><div class="nv-field-label">简介</div>';
+    h += '<textarea class="nv-field-textarea" id="nvEditSynopsis" placeholder="故事简介" style="min-height:80px">' + _nvEsc(novel.synopsis || '') + '</textarea></div>';
+
+    /* 风格 */
+    h += '<div class="nv-field"><div class="nv-field-label">文风 (选填)</div>';
+    h += '<input class="nv-field-input" id="nvEditStyle" value="' + _nvEsc(novel.style || '') + '" placeholder="如: 轻松幽默 / 虐心 / 慢热"></div>';
+
+    /* 保存 */
+    h += '<div class="nv-modal-save" onclick="_nvSaveNovelInfo()">保存修改</div>';
+    h += '</div></div></div>';
+    return h;
+}
+
+/* 分类单选临时切换 */
+function _nvTmpEditCategory(el, cat) {
+    var siblings = el.parentNode.querySelectorAll('.nv-tag-opt');
+    for (var i = 0; i < siblings.length; i++) siblings[i].classList.remove('selected');
+    el.classList.add('selected');
+}
+
+/* 保存小说信息 */
+function _nvSaveNovelInfo() {
+    var novel = null;
+    for (var i = 0; i < _nvNovels.length; i++) {
+        if (_nvNovels[i].id === _nvEditNovelId) { novel = _nvNovels[i]; break; }
+    }
+    if (!novel) return;
+
+    /* 读取书名 */
+    var elTitle = document.getElementById('nvEditTitle');
+    if (elTitle && elTitle.value.trim()) novel.title = elTitle.value.trim();
+
+    /* 读取分类 */
+    var catContainer = document.getElementById('nvEditCategory');
+    if (catContainer) {
+        var catSelected = catContainer.querySelector('.nv-tag-opt.selected');
+        if (catSelected) novel.category = catSelected.textContent.trim();
+    }
+
+    /* 读取标签 */
+    var tagContainer = document.getElementById('nvEditTags');
+    if (tagContainer) {
+        var tagEls = tagContainer.querySelectorAll('.nv-tag-opt.selected');
+        var newTags = [];
+        for (var t = 0; t < tagEls.length; t++) newTags.push(tagEls[t].textContent.trim());
+        novel.tags = newTags;
+    }
+
+    /* 读取简介 */
+    var elSyn = document.getElementById('nvEditSynopsis');
+    if (elSyn) novel.synopsis = elSyn.value.trim();
+
+    /* 读取风格 */
+    var elStyle = document.getElementById('nvEditStyle');
+    if (elStyle) novel.style = elStyle.value.trim();
+
+    _nvModal = '';
+    _nvSave(); _nvRender();
+    if (typeof showToast === 'function') showToast('小说信息已更新');
 }
 
 /* ===== 初始化 ===== */
