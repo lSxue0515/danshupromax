@@ -1,0 +1,323 @@
+/* ============================================
+   蛋薯机 DanShu Pro v2 — base.css
+   ============================================ */
+
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --phone-width: 375px;
+    --phone-height: 812px;
+    --phone-radius: 50px;
+    --phone-border: 4px;
+
+    --glass-bg: rgba(255, 255, 255, 0.62);
+    --glass-bg-strong: rgba(255, 255, 255, 0.35);
+    --glass-border: rgba(255, 255, 255, 0.55);
+    --glass-blur: 18px;
+    --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.85);
+    --text-muted: rgba(255, 255, 255, 0.6);
+
+    --status-bar-height: 48px;
+    --dock-height: 84px;
+    --home-indicator-height: 20px;
+    --page-dots-height: 24px;
+
+    /* 统一图标尺寸 */
+    --icon-size: 54px;
+    --icon-radius: 15px;
+    --icon-svg: 24px;
+}
+
+html {
+    font-size: 16px;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #e8e8ec;
+    font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+}
+
+/* 手机外壳 */
+.phone-frame {
+    position: relative;
+    width: var(--phone-width);
+    height: var(--phone-height);
+    border-radius: var(--phone-radius);
+    border: var(--phone-border) solid rgba(200, 200, 210, 0.5);
+    background: #000;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.1),
+        0 30px 80px rgba(0, 0, 0, 0.35),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.phone-frame::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 15%;
+    right: 15%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    z-index: 200;
+}
+
+/* 壁纸 */
+.wallpaper {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: url('https://s3.bmp.ovh/2026/02/28/K5YATqIp.jpg') center/cover no-repeat;
+    border-radius: 44px;
+}
+
+.wallpaper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg,
+            rgba(0, 0, 0, 0.05) 0%,
+            rgba(0, 0, 0, 0.0) 30%,
+            rgba(0, 0, 0, 0.0) 70%,
+            rgba(0, 0, 0, 0.1) 100%);
+}
+
+/* 状态栏 */
+.status-bar {
+    height: var(--status-bar-height);
+    padding: 16px 26px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    color: var(--text-primary);
+}
+
+.status-time {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.status-brand {
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.status-icons {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.status-icons svg {
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+}
+
+/* 底部横条 */
+.home-indicator {
+    height: var(--home-indicator-height);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    padding-bottom: 6px;
+    position: relative;
+    z-index: 10;
+}
+
+.home-indicator::after {
+    content: '';
+    width: 134px;
+    height: 5px;
+    border-radius: 100px;
+    background: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+[contenteditable]:focus {
+    outline: 1.5px dashed rgba(255, 255, 255, 0.5);
+    outline-offset: 3px;
+    border-radius: 6px;
+}
+
+::selection {
+    background: rgba(255, 255, 255, 0.35);
+    color: #fff;
+}
+
+::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+/* ========== 隐藏浏览器 contenteditable 编辑提示气泡 ========== */
+[contenteditable]:focus {
+    outline: none !important;
+    -webkit-user-modify: read-write-plaintext-only;
+}
+
+/* Chrome / Edge 编辑提示气泡 */
+[contenteditable]::before,
+[contenteditable]::after {
+    display: none !important;
+}
+
+/* 隐藏 Chrome 的 editcontext / 编辑菜单提示 */
+::-webkit-editing-host,
+::-webkit-textfield-decoration-container {
+    display: none !important;
+}
+
+/* 全局禁止浏览器编辑提示 tooltip */
+[title] {
+    pointer-events: auto;
+}
+
+/* 隐藏移动端/桌面端的选择手柄和提示 */
+::selection {
+    background: rgba(248, 164, 184, 0.3);
+}
+
+*:focus {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 禁用 contenteditable 的拼写检查红线 */
+[contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+    spellcheck: false;
+}
+
+/* ========== 隐藏 contenteditable 编辑提示 ========== */
+[contenteditable] {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ========== 移动端全屏自适应 ========== */
+@media screen and (max-width: 500px) {
+    body {
+        background: #000;
+        align-items: stretch;
+        justify-content: stretch;
+    }
+
+    .phone-frame {
+        width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .phone-frame::before {
+        display: none;
+    }
+}
+
+/* ========== Toast 提示（定位到手机内部） ========== */
+.toast {
+    position: absolute;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    padding: 10px 24px;
+    border-radius: 20px;
+    background: rgba(60, 45, 55, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-width: 85%;
+    text-align: center;
+}
+
+.toast.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ===== 手机端全屏铺满，去除黑角 ===== */
+@media screen and (max-width: 768px) {
+    body {
+        margin: 0;
+        padding: 0;
+        background: #000;
+        overflow: hidden;
+    }
+
+    .phone-frame {
+        width: 100vw !important;
+        height: 100vh !important;
+        max-width: none !important;
+        max-height: none !important;
+        min-width: none !important;
+        min-height: none !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        transform: none !important;
+    }
+
+    /* 所有全屏overlay也去圆角 */
+    .novel-overlay,
+    .forum-overlay,
+    .chat-overlay,
+    .moments-overlay,
+    .theater-overlay,
+    .music-overlay,
+    .game-overlay {
+        border-radius: 0 !important;
+    }
+}
