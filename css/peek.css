@@ -1,0 +1,1023 @@
+/* ============================================
+   蛋薯机 DanShu Pro v2 — peek.css
+   偷偷看 — 查看角色的手机
+   ============================================ */
+
+/* ===== 覆盖层 ===== */
+.peek-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 810;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease;
+    background: rgba(20, 18, 25, 0.92);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    overflow: hidden;
+}
+
+.peek-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ===== 选择角色页 ===== */
+.peek-select-header {
+    padding: 52px 18px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+.peek-select-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 1px;
+}
+
+.peek-close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.peek-close-btn:active {
+    transform: scale(0.9);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.peek-close-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke: rgba(255, 255, 255, 0.7);
+    stroke-width: 2;
+    fill: none;
+}
+
+.peek-select-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 18px 30px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    align-content: start;
+}
+
+.peek-char-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 6px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.peek-char-card:active {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(0.96);
+}
+
+.peek-char-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.peek-char-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.peek-char-avatar svg {
+    width: 24px;
+    height: 24px;
+    stroke: rgba(255, 255, 255, 0.3);
+    stroke-width: 1.5;
+    fill: none;
+}
+
+.peek-char-name {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.75);
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ===== 角色手机容器 ===== */
+.peek-phone-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: #f5f2f8;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease;
+    overflow: hidden;
+}
+
+.peek-phone-wrap.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ===== 状态栏 ===== */
+.peek-status-bar {
+    height: 48px;
+    padding: 16px 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 5;
+}
+
+.peek-status-time {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(50, 40, 55, 0.8);
+}
+
+.peek-status-name {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    color: rgba(50, 40, 55, 0.4);
+    text-transform: uppercase;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.peek-status-icons {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.peek-status-icons svg {
+    width: 13px;
+    height: 13px;
+    stroke: rgba(50, 40, 55, 0.35);
+    stroke-width: 1.5;
+    fill: none;
+}
+
+/* ===== 主屏幕 ===== */
+.peek-home {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 14px 90px;
+}
+
+/* ★ 2列网格：左列4个app格子，右列2个正方形小组件 */
+.peek-home-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    gap: 10px;
+}
+
+.peek-home-left {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.peek-home-right {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* APP格子 */
+.peek-app-tile {
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    padding: 14px;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.peek-app-tile:active {
+    transform: scale(0.97);
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.peek-app-tile-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.peek-app-tile-icon svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 1.8;
+    fill: none;
+}
+
+.peek-app-tile-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(50, 40, 55, 0.8);
+}
+
+.peek-app-tile-sub {
+    font-size: 10px;
+    color: rgba(50, 40, 55, 0.4);
+    line-height: 1.3;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+/* 各app图标颜色 */
+.peek-tile-chat .peek-app-tile-icon {
+    background: rgba(255, 180, 200, 0.3);
+}
+
+.peek-tile-chat .peek-app-tile-icon svg {
+    stroke: #d4678c;
+}
+
+.peek-tile-forum .peek-app-tile-icon {
+    background: rgba(120, 160, 255, 0.2);
+}
+
+.peek-tile-forum .peek-app-tile-icon svg {
+    stroke: #5b7fd4;
+}
+
+.peek-tile-memo .peek-app-tile-icon {
+    background: rgba(255, 200, 100, 0.25);
+}
+
+.peek-tile-memo .peek-app-tile-icon svg {
+    stroke: #c49530;
+}
+
+.peek-tile-calendar .peek-app-tile-icon {
+    background: rgba(100, 200, 160, 0.2);
+}
+
+.peek-tile-calendar .peek-app-tile-icon svg {
+    stroke: #3d9a6e;
+}
+
+/* ★ 右列正方形小组件 */
+.peek-widget-square {
+    border-radius: 16px;
+    aspect-ratio: 1 / 1;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    transition: all .2s;
+}
+
+.peek-widget-square:active {
+    transform: scale(0.97);
+}
+
+.peek-widget-square img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.peek-widget-square-hint {
+    font-size: 10px;
+    color: rgba(50, 40, 55, 0.25);
+    text-align: center;
+}
+
+.peek-widget-square-hint svg {
+    display: block;
+    margin: 0 auto 4px;
+    width: 22px;
+    height: 22px;
+    stroke: rgba(50, 40, 55, 0.15);
+    stroke-width: 1.5;
+    fill: none;
+}
+
+/* ===== 底部导航 ===== */
+.peek-dock {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 36px;
+    z-index: 10;
+    padding-bottom: 6px;
+}
+
+.peek-dock-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    transition: all .15s;
+    padding: 4px 10px;
+}
+
+.peek-dock-btn:active {
+    transform: scale(0.9);
+}
+
+.peek-dock-btn svg {
+    width: 20px;
+    height: 20px;
+    stroke: rgba(50, 40, 55, 0.3);
+    stroke-width: 1.8;
+    fill: none;
+}
+
+.peek-dock-btn span {
+    font-size: 9px;
+    color: rgba(50, 40, 55, 0.3);
+    font-weight: 500;
+}
+
+.peek-dock-btn.active svg {
+    stroke: rgba(50, 40, 55, 0.85);
+}
+
+.peek-dock-btn.active span {
+    color: rgba(50, 40, 55, 0.85);
+}
+
+/* ===== 子页面通用 ===== */
+.peek-subpage {
+    position: absolute;
+    inset: 0;
+    background: #f5f2f8;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+    z-index: 20;
+}
+
+.peek-subpage.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.peek-sub-header {
+    padding: 52px 16px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.peek-sub-back {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.peek-sub-back:active {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.peek-sub-back svg {
+    width: 16px;
+    height: 16px;
+    stroke: rgba(50, 40, 55, 0.6);
+    stroke-width: 2;
+    fill: none;
+}
+
+.peek-sub-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(50, 40, 55, 0.85);
+    flex: 1;
+}
+
+.peek-sub-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px 24px;
+}
+
+/* ===== Chat列表 ===== */
+.peek-chat-list-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.peek-chat-list-item:active {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.peek-chat-list-av {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(255, 180, 200, 0.15);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.peek-chat-list-av img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.peek-chat-list-av svg {
+    width: 20px;
+    height: 20px;
+    stroke: rgba(50, 40, 55, 0.2);
+    stroke-width: 1.5;
+    fill: none;
+}
+
+.peek-chat-list-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.peek-chat-list-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(50, 40, 55, 0.8);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.peek-chat-list-msg {
+    font-size: 11px;
+    color: rgba(50, 40, 55, 0.4);
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.peek-chat-list-time {
+    font-size: 10px;
+    color: rgba(50, 40, 55, 0.25);
+    flex-shrink: 0;
+}
+
+/* ===== Chat 对话 ===== */
+.peek-conv-header {
+    padding: 52px 16px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.peek-conv-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 14px 12px;
+}
+
+.peek-conv-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px 20px;
+    flex-shrink: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.peek-conv-input {
+    flex: 1;
+    height: 34px;
+    border-radius: 17px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.8);
+    padding: 0 14px;
+    font-size: 13px;
+    color: rgba(50, 40, 55, 0.8);
+    outline: none;
+}
+
+.peek-conv-input:focus {
+    border-color: rgba(255, 180, 200, 0.5);
+}
+
+.peek-conv-send-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(255, 180, 200, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.peek-conv-send-btn:active {
+    background: rgba(255, 180, 200, 0.85);
+}
+
+.peek-conv-send-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke: #fff;
+    stroke-width: 2;
+    fill: none;
+}
+
+.peek-msg-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: flex-end;
+}
+
+.peek-msg-row.self {
+    flex-direction: row-reverse;
+}
+
+.peek-msg-av {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.peek-msg-av img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.peek-msg-bubble {
+    max-width: 70%;
+    padding: 8px 12px;
+    border-radius: 14px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(50, 40, 55, 0.85);
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    word-break: break-word;
+}
+
+.peek-msg-row.self .peek-msg-bubble {
+    background: rgba(255, 180, 200, 0.25);
+    border-color: rgba(255, 180, 200, 0.15);
+}
+
+.peek-msg-time-divider {
+    text-align: center;
+    font-size: 10px;
+    color: rgba(50, 40, 55, 0.2);
+    margin: 10px 0;
+}
+
+/* user代发标记 */
+.peek-msg-proxy-tag {
+    font-size: 9px;
+    color: rgba(255, 120, 160, 0.5);
+    margin-top: 2px;
+    text-align: right;
+}
+
+.peek-msg-row:not(.self) .peek-msg-proxy-tag {
+    text-align: left;
+}
+
+/* ===== 备忘录 ===== */
+.peek-memo-item {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.peek-memo-item:active {
+    background: rgba(255, 255, 255, 0.95);
+    transform: scale(0.99);
+}
+
+.peek-memo-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(50, 40, 55, 0.8);
+    margin-bottom: 4px;
+}
+
+.peek-memo-text {
+    font-size: 11px;
+    color: rgba(50, 40, 55, 0.45);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.peek-memo-date {
+    font-size: 9px;
+    color: rgba(50, 40, 55, 0.2);
+    margin-top: 6px;
+}
+
+.peek-memo-pin {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(255, 200, 100, 0.2);
+    color: #c49530;
+    font-size: 9px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+/* 备忘录编辑器 */
+.peek-memo-editor {
+    position: absolute;
+    inset: 0;
+    z-index: 25;
+    background: #f5f2f8;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+}
+
+.peek-memo-editor.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.peek-memo-edit-title {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(50, 40, 55, 0.85);
+    padding: 0;
+    outline: none;
+    margin-bottom: 10px;
+}
+
+.peek-memo-edit-body {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    color: rgba(50, 40, 55, 0.7);
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+}
+
+/* ===== 日历 ===== */
+.peek-cal-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.peek-cal-month-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: rgba(50, 40, 55, 0.85);
+    text-align: center;
+}
+
+.peek-cal-nav-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.peek-cal-nav-btn:active {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.peek-cal-nav-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke: rgba(50, 40, 55, 0.5);
+    stroke-width: 2;
+    fill: none;
+}
+
+.peek-cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 10px;
+    color: rgba(50, 40, 55, 0.3);
+    margin-bottom: 6px;
+}
+
+.peek-cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.peek-cal-day {
+    height: 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 12px;
+    color: rgba(50, 40, 55, 0.7);
+    cursor: pointer;
+    transition: all .15s;
+    position: relative;
+}
+
+.peek-cal-day:active {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.peek-cal-day.today {
+    background: rgba(100, 200, 160, 0.15);
+    color: #3d9a6e;
+    font-weight: 700;
+}
+
+.peek-cal-day.has-event::after {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #d4678c;
+    position: absolute;
+    bottom: 3px;
+}
+
+.peek-cal-day.other-month {
+    color: rgba(50, 40, 55, 0.15);
+}
+
+.peek-cal-day.selected {
+    background: rgba(255, 180, 200, 0.3);
+    color: #d4678c;
+    font-weight: 600;
+}
+
+.peek-cal-events {
+    margin-top: 16px;
+}
+
+.peek-cal-event-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.peek-cal-event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #d4678c;
+    flex-shrink: 0;
+}
+
+.peek-cal-event-text {
+    font-size: 12px;
+    color: rgba(50, 40, 55, 0.7);
+    flex: 1;
+}
+
+.peek-cal-event-del {
+    cursor: pointer;
+    padding: 2px 6px;
+    font-size: 10px;
+    color: rgba(50, 40, 55, 0.25);
+}
+
+.peek-cal-event-del:active {
+    color: #e05050;
+}
+
+.peek-cal-add-wrap {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.peek-cal-add-input {
+    flex: 1;
+    height: 32px;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.8);
+    padding: 0 12px;
+    font-size: 12px;
+    color: rgba(50, 40, 55, 0.7);
+    outline: none;
+}
+
+.peek-cal-add-btn {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 16px;
+    background: rgba(100, 200, 160, 0.3);
+    color: #3d9a6e;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    border: none;
+    flex-shrink: 0;
+}
+
+.peek-cal-add-btn:active {
+    background: rgba(100, 200, 160, 0.5);
+}
+
+/* ===== 论坛 ===== */
+.peek-forum-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 0 16px;
+    flex-shrink: 0;
+}
+
+.peek-forum-tab {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(50, 40, 55, 0.4);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all .15s;
+}
+
+.peek-forum-tab.active {
+    color: rgba(50, 40, 55, 0.85);
+    border-bottom-color: #5b7fd4;
+}
+
+.peek-forum-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 16px 24px;
+}
+
+.peek-forum-post {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.peek-forum-post-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.peek-forum-post-av {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.peek-forum-post-av img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.peek-forum-post-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(50, 40, 55, 0.7);
+}
+
+.peek-forum-post-time {
+    font-size: 9px;
+    color: rgba(50, 40, 55, 0.25);
+    margin-left: auto;
+}
+
+.peek-forum-post-text {
+    font-size: 12px;
+    color: rgba(50, 40, 55, 0.65);
+    line-height: 1.5;
+}
+
+.peek-forum-post-img {
+    margin-top: 6px;
+    border-radius: 8px;
+    max-width: 100%;
+    max-height: 160px;
+    object-fit: cover;
+}
+
+/* ===== 响应式 ===== */
+@media screen and (max-width: 768px) {
+    .peek-overlay {
+        border-radius: 0 !important;
+    }
+}
