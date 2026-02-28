@@ -87,7 +87,7 @@ body {
     inset: 0;
     z-index: 0;
     background: url('https://s3.bmp.ovh/2026/02/28/K5YATqIp.jpg') center/cover no-repeat;
-    border-radius: 44px;
+    border-radius: var(--phone-radius);
 }
 
 .wallpaper::after {
@@ -228,28 +228,6 @@ body {
     -webkit-tap-highlight-color: transparent;
 }
 
-/* ========== 移动端全屏自适应 ========== */
-@media screen and (max-width: 500px) {
-    body {
-        background: #000;
-        align-items: stretch;
-        justify-content: stretch;
-    }
-
-    .phone-frame {
-        width: 100vw !important;
-        height: 100vh !important;
-        height: 100dvh !important;
-        border-radius: 0 !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-
-    .phone-frame::before {
-        display: none;
-    }
-}
-
 /* ========== Toast 提示（定位到手机内部） ========== */
 .toast {
     position: absolute;
@@ -283,8 +261,14 @@ body {
     transform: translateX(-50%) translateY(0);
 }
 
-/* ===== 手机端全屏铺满，去除黑角 ===== */
+/* ===== 手机端全屏铺满，彻底去除黑角 ===== */
 @media screen and (max-width: 768px) {
+
+    :root {
+        --phone-radius: 0px;
+        --phone-border: 0px;
+    }
+
     body {
         margin: 0;
         padding: 0;
@@ -295,10 +279,9 @@ body {
     .phone-frame {
         width: 100vw !important;
         height: 100vh !important;
+        height: 100dvh !important;
         max-width: none !important;
         max-height: none !important;
-        min-width: none !important;
-        min-height: none !important;
         border-radius: 0 !important;
         border: none !important;
         box-shadow: none !important;
@@ -308,16 +291,30 @@ body {
         top: 0 !important;
         left: 0 !important;
         transform: none !important;
+        background: transparent !important;
     }
 
-    /* 所有全屏overlay也去圆角 */
+    .phone-frame::before {
+        display: none !important;
+    }
+
+    /* 壁纸铺满 */
+    .wallpaper {
+        border-radius: 0 !important;
+    }
+
+    /* 所有APP覆盖层去圆角 */
+    .chat-app-overlay,
     .novel-overlay,
     .forum-overlay,
-    .chat-overlay,
     .moments-overlay,
     .theater-overlay,
     .music-overlay,
-    .game-overlay {
+    .game-overlay,
+    .chat-wallet-overlay,
+    .chat-transfer-overlay,
+    .chat-conv-overlay,
+    [class*="-overlay"] {
         border-radius: 0 !important;
     }
 }

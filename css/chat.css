@@ -5724,3 +5724,11 @@
     color: rgba(110, 100, 85, .35);
     line-height: 1.65;
 }
+
+/* ===== 亲密付卡片气泡 ===== */
+.chat-bubble[data-type="familyCard"] .chat-bubble-text {
+    padding: 0 !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
