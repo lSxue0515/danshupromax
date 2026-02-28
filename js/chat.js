@@ -25,6 +25,32 @@ var _stkMountGroupFilter = '全部'; // 表情包挂载分组筛选
 var _convLetAvatar = '';
 var _convRightAvatar = '';
 var _pendingImageData = null; // 待发送的图片base64
+
+// ★ 亲密付系统
+var _familyCards = [];
+var FAMILY_CARD_KEY = 'ds_chat_family_cards';
+
+function loadFamilyCards() {
+    try { _familyCards = JSON.parse(localStorage.getItem(FAMILY_CARD_KEY) || '[]'); } catch (e) { _familyCards = []; }
+}
+function saveFamilyCards() {
+    try { localStorage.setItem(FAMILY_CARD_KEY, JSON.stringify(_familyCards)); } catch (e) { }
+}
+function findFamilyCard(roleId, direction) {
+    for (var i = 0; i < _familyCards.length; i++) {
+        if (_familyCards[i].roleId === roleId && _familyCards[i].direction === direction) return _familyCards[i];
+    }
+    return null;
+}
+function getFamilyCardBillsForRole(roleId) {
+    var bills = [];
+    var txs = _chatWallet.transactions || [];
+    for (var i = 0; i < txs.length; i++) {
+        if (txs[i].familyCardRoleId === roleId) bills.push(txs[i]);
+    }
+    return bills;
+}
+
 // ★ 统一分组系统
 var _contactGroups = [];        // 自定义分组列表
 var _contactActiveGroup = '全部'; // 联系人当前选中的分组 tab
@@ -83,6 +109,7 @@ function loadChatRoles() {
     try { _chatWorldBookLib = JSON.parse(localStorage.getItem('ds_chat_worldbooks') || '[]'); } catch (e) { _chatWorldBookLib = []; }
     try { _chatStickerLib = JSON.parse(localStorage.getItem('ds_chat_stickers') || '[]'); } catch (e) { _chatStickerLib = []; }
     loadWallet();
+    loadFamilyCards();
     syncChatWorldBookFromApp();
 }
 function saveChatRoles() { safeSetItem('ds_chat_roles', JSON.stringify(_chatRoles)); }
@@ -1279,6 +1306,7 @@ function openConversation(rid) {
     h += '<div class="chat-conv-tool" onclick="openTransferPanel()"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>转账</span></div>';
     h += '<div class="chat-conv-tool" onclick="openVideoCall()"><svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg><span>视频</span></div>';
     h += '<div class="chat-conv-tool" onclick="openLocationPanel()"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>定位</span></div>';
+    h += '<div class="chat-conv-tool" onclick="openFamilyCardPanel()"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span>亲密付</span></div>';
     h += '</div>';
 
     // 引用预览条
@@ -1348,6 +1376,7 @@ function renderBubbleRow(m, idx, myAv, roleAv) {
     if (m.sticker) return renderStickerBubbleRow(m, idx, myAv, roleAv);
     if (m.shareCard) return renderShareCardBubbleRow(m, idx, myAv, roleAv);
     if (m.transfer) return renderTransferBubbleRow(m, idx, myAv, roleAv);
+    if (m.familyCard) return renderFamilyCardBubbleRow(m, idx, myAv, roleAv);
     if (m.novelCard) return renderNovelCardBubbleRow(m, idx, myAv, roleAv);
     if (m.location) return renderLocationBubbleRow(m, idx, myAv, roleAv);
     if (m.videoCall) return renderVideoCallBubbleRow(m, idx, myAv, roleAv);
@@ -2630,6 +2659,15 @@ function continueChat() {
                     }
                 }
 
+                // ★ 检测AI发亲密付卡片 [send_family_card:额度]
+                var _fcSendMatch = txt.match(/\[send_family_card[:：](\d+)\]/i);
+                if (_fcSendMatch) {
+                    var _fcSendLimit = parseInt(_fcSendMatch[1]) || 5000;
+                    charSendFamilyCardToUser(_chatCurrentConv, _fcSendLimit);
+                    txt = txt.replace(/\[send_family_card[:：]\d+\]/gi, '').trim();
+                    msgObj.text = txt;
+                }
+
                 // ★ 检测AI对转账的决策标记 [accept_transfer:txId] 或 [refuse_transfer:txId]
                 var acceptMatch = txt.match(/\[accept_transfer:([^\]]+)\]/);
                 var refuseMatch = txt.match(/\[refuse_transfer:([^\]]+)\]/);
@@ -3398,6 +3436,18 @@ function openTransferPanel() {
 
     h += '<div class="chat-transfer-remark-area">';
     h += '<input type="text" class="chat-transfer-remark-input" id="transferRemark" placeholder="添加转账说明（可选）" maxlength="30">';
+
+    // ★ 亲属卡选择
+    var _fcToUser = findFamilyCard(role.id, 'toUser');
+    if (_fcToUser && (_fcToUser.limit - (_fcToUser.spent || 0)) > 0) {
+        var _fcRemain = _fcToUser.limit - (_fcToUser.spent || 0);
+        h += '<div style="margin:10px 0;padding:10px 12px;background:linear-gradient(135deg,#fff5e6,#ffe0c2);border-radius:10px;border:1px solid rgba(232,160,76,0.2)">';
+        h += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:#8b6914">';
+        h += '<input type="checkbox" id="useFamilyCardCheck" style="width:16px;height:16px;accent-color:#e8a04c">';
+        h += '<div><div style="font-weight:500">使用 ' + dn + ' 的亲密付</div>';
+        h += '<div style="font-size:10px;opacity:0.7">可用额度 ¥' + _fcRemain.toFixed(2) + '</div></div></label>';
+        h += '</div>';
+    }
     h += '</div>';
 
     h += '<div class="chat-transfer-balance" id="transferBalanceHint">当前余额：¥' + _chatWallet.balance.toFixed(2) + '</div>';
@@ -3435,10 +3485,33 @@ function sendTransfer() {
     var role = findRole(_chatCurrentConv); if (!role) return;
     var amountVal = parseFloat(document.getElementById('transferAmount').value);
     if (!amountVal || amountVal <= 0) { showToast('请输入转账金额'); return; }
-    if (amountVal > _chatWallet.balance) { showToast('余额不足'); return; }
     var remark = (document.getElementById('transferRemark').value || '').trim();
+    var txId = 'tx_' + Date.now();
 
-    _chatWallet.balance -= amountVal;
+    // ★ 亲属卡扣款判断
+    var _useFc = false;
+    var _fcCk = document.getElementById('useFamilyCardCheck');
+    if (_fcCk && _fcCk.checked) _useFc = true;
+
+    if (_useFc) {
+        var _fcCard = findFamilyCard(_chatCurrentConv, 'toUser');
+        if (!_fcCard) { showToast('亲属卡不存在'); return; }
+        var _fcRem = _fcCard.limit - (_fcCard.spent || 0);
+        if (amountVal > _fcRem) { showToast('亲属卡额度不足（剩余¥' + _fcRem.toFixed(2) + '）'); return; }
+        _fcCard.spent = (_fcCard.spent || 0) + amountVal;
+        saveFamilyCards();
+        _chatWallet.transactions.push({
+            id: txId + '_fc', type: 'family_spend', amount: amountVal,
+            desc: '亲密付转账', familyCardRoleId: _chatCurrentConv,
+            target: findRole(_chatCurrentConv) ? (findRole(_chatCurrentConv).nickname || findRole(_chatCurrentConv).name) : '',
+            time: Date.now(), ts: Date.now()
+        });
+        saveWallet();
+    } else {
+        if (amountVal > _chatWallet.balance) { showToast('余额不足'); return; }
+        _chatWallet.balance -= amountVal;
+    }
+
     var txId = 'tx' + Date.now() + Math.random().toString(36).substr(2, 4);
     _chatWallet.transactions.unshift({
         id: txId, type: 'transfer_out', amount: amountVal,
@@ -3893,6 +3966,44 @@ function buildWalletHTML() {
     h += '</div>';
 
     // 账单
+    // ★ 亲密付区块
+    h += '<div style="padding:0 16px;margin-top:14px;margin-bottom:14px">';
+    h += '<div style="font-size:14px;font-weight:600;color:var(--chat-text);margin-bottom:10px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>亲密付</div>';
+    var _fcMyCards = [], _fcCharCards = [];
+    for (var _fci = 0; _fci < _familyCards.length; _fci++) {
+        if (_familyCards[_fci].direction === 'toChar') _fcMyCards.push(_familyCards[_fci]);
+        else _fcCharCards.push(_familyCards[_fci]);
+    }
+    if (_fcMyCards.length === 0 && _fcCharCards.length === 0) {
+        h += '<div style="text-align:center;color:var(--chat-text-sub);font-size:11px;padding:12px 0;background:var(--chat-glass);border-radius:10px;border:1px solid var(--chat-glass-border)">暂未开通亲密付<br>可在聊天对话中给对方开通</div>';
+    } else {
+        h += '<div style="background:var(--chat-glass);border-radius:10px;border:1px solid var(--chat-glass-border);overflow:hidden">';
+        for (var _fcm = 0; _fcm < _fcMyCards.length; _fcm++) {
+            var _fcMc = _fcMyCards[_fcm];
+            var _fcRole = findRole(_fcMc.roleId);
+            var _fcRn = _fcRole ? (_fcRole.nickname || _fcRole.name) : _fcMc.roleName;
+            var _fcAv = _fcRole && _fcRole.avatar ? '<img src="' + _fcRole.avatar + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover">' : SVG_USER_SM;
+            h += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(0,0,0,0.04);cursor:pointer" onclick="openFamilyCardDetail(\'' + _fcMc.id + '\')">';
+            h += '<div style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0">' + _fcAv + '</div>';
+            h += '<div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--chat-text);font-weight:500">' + esc(_fcRn) + '</div>';
+            h += '<div style="font-size:10px;color:var(--chat-text-sub)">额度 ¥' + _fcMc.limit.toFixed(0) + ' · 已用 ¥' + (_fcMc.spent || 0).toFixed(2) + '</div></div>';
+            h += '<div style="font-size:10px;color:var(--chat-pink-text)">我开给TA ›</div></div>';
+        }
+        for (var _fcc = 0; _fcc < _fcCharCards.length; _fcc++) {
+            var _fcCc = _fcCharCards[_fcc];
+            var _fcCr = findRole(_fcCc.roleId);
+            var _fcCrn = _fcCr ? (_fcCr.nickname || _fcCr.name) : _fcCc.roleName;
+            var _fcCav = _fcCr && _fcCr.avatar ? '<img src="' + _fcCr.avatar + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover">' : SVG_USER_SM;
+            h += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(0,0,0,0.04);cursor:pointer" onclick="openFamilyCardDetail(\'' + _fcCc.id + '\')">';
+            h += '<div style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0">' + _fcCav + '</div>';
+            h += '<div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--chat-text);font-weight:500">' + esc(_fcCrn) + '</div>';
+            h += '<div style="font-size:10px;color:var(--chat-text-sub)">额度 ¥' + _fcCc.limit.toFixed(0) + ' · 已用 ¥' + (_fcCc.spent || 0).toFixed(2) + '</div></div>';
+            h += '<div style="font-size:10px;color:#e8a04c">TA开给我 ›</div></div>';
+        }
+        h += '</div>';
+    }
+    h += '</div>';
+
     h += '<div class="chat-wallet-bill-title">交易记录</div>';
     h += '<div class="chat-wallet-bill-list">';
     if (!_chatWallet.transactions.length) {
@@ -3941,6 +4052,263 @@ function buildWalletHTML() {
 
 function closeWalletPage() {
     var el = document.getElementById('chatWalletOverlay'); if (el) el.remove();
+}
+
+
+/* ================================================================
+   亲密付系统 — Family Card 全部函数
+   ================================================================ */
+
+/* ★ 打开开通亲密付面板（从聊天对话工具栏调用） */
+function openFamilyCardPanel() {
+    if (!_chatCurrentConv) return;
+    var role = findRole(_chatCurrentConv);
+    if (!role) return;
+    var dn = esc(role.nickname || role.name);
+    var existing = findFamilyCard(role.id, 'toChar');
+
+    var el = document.getElementById('chatAppOverlay');
+    if (!el) return;
+
+    var h = '<div class="chat-transfer-overlay show" id="familyCardPanel" onclick="if(event.target===this)closeFamilyCardPanel()">';
+    h += '<div class="chat-transfer-panel">';
+    h += '<div class="chat-transfer-header">';
+    h += '<div class="chat-transfer-close" onclick="closeFamilyCardPanel()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>';
+    h += '<div class="chat-transfer-title">' + (existing ? '管理亲密付' : '开通亲密付') + '</div>';
+    h += '</div>';
+    h += '<div class="chat-transfer-body" style="padding:20px">';
+
+    // 头像 + 名字
+    h += '<div style="text-align:center;margin-bottom:20px">';
+    h += '<div style="width:56px;height:56px;border-radius:50%;overflow:hidden;margin:0 auto 8px;border:2px solid var(--chat-pink-light)">';
+    if (role.avatar) h += '<img src="' + role.avatar + '" style="width:100%;height:100%;object-fit:cover">';
+    else h += '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--chat-pink-bg)">' + SVG_USER + '</div>';
+    h += '</div>';
+    h += '<div style="font-size:14px;font-weight:600;color:var(--chat-text)">' + dn + '</div>';
+    h += '<div style="font-size:11px;color:var(--chat-text-sub);margin-top:2px">开通后TA可使用你的额度消费</div>';
+    h += '</div>';
+
+    if (existing) {
+        h += '<div style="background:var(--chat-glass);border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid var(--chat-glass-border)">';
+        h += '<div style="font-size:11px;color:var(--chat-text-sub)">当前额度</div>';
+        h += '<div style="font-size:22px;font-weight:700;color:var(--chat-text)">¥' + existing.limit.toFixed(0) + '</div>';
+        h += '<div style="font-size:11px;color:var(--chat-text-sub);margin-top:4px">已消费 ¥' + (existing.spent || 0).toFixed(2) + ' · 剩余 ¥' + (existing.limit - (existing.spent || 0)).toFixed(2) + '</div>';
+        h += '</div>';
+        h += '<div style="font-size:12px;color:var(--chat-text-sub);margin-bottom:6px">修改额度</div>';
+    } else {
+        h += '<div style="font-size:12px;color:var(--chat-text-sub);margin-bottom:6px">设定每月额度</div>';
+    }
+
+    h += '<input type="number" id="familyCardLimitInput" class="chat-transfer-amount-input" placeholder="输入额度（如5000）" value="' + (existing ? existing.limit : '') + '" style="font-size:18px;text-align:center">';
+    h += '<div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;justify-content:center">';
+    var _fcPresets = [500, 1000, 2000, 5000, 10000, 50000];
+    for (var _fcp = 0; _fcp < _fcPresets.length; _fcp++) {
+        h += '<div style="padding:6px 14px;border-radius:16px;background:var(--chat-pink-bg);color:var(--chat-pink-text);font-size:11px;cursor:pointer" onclick="document.getElementById(\'familyCardLimitInput\').value=' + _fcPresets[_fcp] + '">¥' + _fcPresets[_fcp] + '</div>';
+    }
+    h += '</div>';
+
+    h += '<div class="chat-transfer-send-btn" onclick="confirmFamilyCard(\'' + role.id + '\')" style="margin-top:16px">' + (existing ? '更新额度' : '确认开通') + '</div>';
+
+    if (existing) {
+        h += '<div style="text-align:center;margin-top:12px;cursor:pointer;color:#e05050;font-size:12px" onclick="closeFamilyCardForRole(\'' + role.id + '\')">关闭亲密付</div>';
+    }
+
+    h += '</div></div></div>';
+    var div = document.createElement('div');
+    div.innerHTML = h;
+    el.appendChild(div.firstChild);
+}
+
+function closeFamilyCardPanel() {
+    var p = document.getElementById('familyCardPanel');
+    if (p) p.remove();
+}
+
+/* ★ 确认开通 / 更新亲密付 */
+function confirmFamilyCard(roleId) {
+    var inp = document.getElementById('familyCardLimitInput');
+    var limit = parseFloat(inp ? inp.value : 0);
+    if (!limit || limit <= 0) { showToast('请输入有效额度'); return; }
+
+    var role = findRole(roleId);
+    var rName = role ? (role.nickname || role.name) : '未知';
+    var existing = findFamilyCard(roleId, 'toChar');
+
+    if (existing) {
+        existing.limit = limit;
+        showToast('已更新额度为 ¥' + limit);
+    } else {
+        _familyCards.push({
+            id: genId(), roleId: roleId, roleName: rName,
+            limit: limit, spent: 0, direction: 'toChar',
+            ts: Date.now()
+        });
+        showToast('已为 ' + rName + ' 开通亲密付');
+        sendFamilyCardBubble(roleId, 'toChar', limit);
+    }
+    saveFamilyCards();
+    closeFamilyCardPanel();
+}
+
+/* ★ 关闭亲密付 */
+function closeFamilyCardForRole(roleId) {
+    if (!confirm('确定关闭亲密付？')) return;
+    _familyCards = _familyCards.filter(function (c) { return !(c.roleId === roleId && c.direction === 'toChar'); });
+    saveFamilyCards();
+    showToast('已关闭亲密付');
+    closeFamilyCardPanel();
+}
+
+/* ★ char主动给user发亲属卡（AI触发） */
+function charSendFamilyCardToUser(roleId, limit) {
+    var role = findRole(roleId);
+    if (!role) return;
+    var rName = role.nickname || role.name;
+    var existing = findFamilyCard(roleId, 'toUser');
+    if (existing) { existing.limit = limit; }
+    else {
+        _familyCards.push({
+            id: genId(), roleId: roleId, roleName: rName,
+            limit: limit, spent: 0, direction: 'toUser',
+            ts: Date.now()
+        });
+    }
+    saveFamilyCards();
+    sendFamilyCardBubble(roleId, 'toUser', limit);
+}
+
+/* ★ 发送亲密付卡片气泡（HTML卡片消息） */
+function sendFamilyCardBubble(roleId, direction, limit) {
+    var role = findRole(roleId);
+    if (!role) return;
+    if (!role.msgs) role.msgs = [];
+
+    var rName = esc(role.nickname || role.name);
+    var pName = '我';
+    var pa = getActivePersona(roleId);
+    if (pa) pName = esc(pa.name || '我');
+
+    var fromName = direction === 'toChar' ? pName : rName;
+    var toName = direction === 'toChar' ? rName : pName;
+    var fromSide = direction === 'toChar' ? 'self' : 'other';
+
+    var msgObj = {
+        from: fromSide,
+        text: '',
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        familyCard: true,
+        familyCardDirection: direction,
+        familyCardLimit: limit,
+        familyCardFromName: fromName,
+        familyCardToName: toName
+    };
+    role.msgs.push(msgObj);
+    role.lastMsg = '[亲密付] ' + fromName + ' 开通了亲密付 ¥' + limit;
+    role.lastTime = Date.now();
+    role.lastTimeStr = msgObj.time;
+    saveChatRoles();
+
+    if (_chatCurrentConv === roleId) {
+        var body = document.getElementById('chatConvBody');
+        if (body) {
+            var myAv = '';
+            var pObj = getActivePersona(roleId);
+            if (pObj && pObj.avatar) myAv = pObj.avatar;
+            var idx = role.msgs.length - 1;
+            body.insertAdjacentHTML('beforeend', renderFamilyCardBubbleRow(msgObj, idx, myAv, role.avatar || ''));
+            body.scrollTop = body.scrollHeight;
+        }
+    }
+}
+
+/* ★ 渲染亲密付卡片气泡行 */
+function renderFamilyCardBubbleRow(m, idx, myAv, roleAv) {
+    var isSelf = m.from === 'self';
+    var av = isSelf ? myAv : roleAv;
+    var fromN = m.familyCardFromName || '?';
+    var toN = m.familyCardToName || '?';
+    var limit = m.familyCardLimit || 0;
+
+    var h = '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-msg-idx="' + idx + '">';
+    h += '<div class="chat-bubble-avatar">';
+    if (av) h += '<img src="' + av + '">';
+    else h += SVG_USER;
+    h += '</div>';
+    h += '<div class="chat-bubble-content-wrap">';
+
+    // 卡片主体
+    h += '<div style="background:linear-gradient(135deg,#fff5e6 0%,#ffe0c2 100%);border-radius:12px;padding:14px 16px;max-width:220px;box-shadow:0 2px 10px rgba(232,160,76,0.15);border:1px solid rgba(232,160,76,0.2);cursor:default" onclick="event.stopPropagation()">';
+    h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">';
+    h += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#c47a20" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
+    h += '<span style="font-size:12px;font-weight:700;color:#c47a20;letter-spacing:0.5px">亲密付</span></div>';
+    h += '<div style="font-size:11px;color:#8b6914;line-height:1.4">' + fromN + ' 给 ' + toN + ' 开通了亲密付</div>';
+    h += '<div style="font-size:22px;font-weight:700;color:#c47a20;margin:8px 0 4px">¥' + limit.toFixed(0) + '<span style="font-size:10px;font-weight:400;color:#8b6914;margin-left:2px">/月</span></div>';
+    h += '<div style="font-size:10px;color:#8b6914;opacity:0.65">对方消费将从此额度中扣除</div>';
+    h += '</div>';
+
+    // 时间
+    if (m.time) h += '<div class="chat-bubble-meta">' + m.time + '</div>';
+    h += '</div></div>';
+    return h;
+}
+
+/* ★ 亲密付详情页（在钱包中点击查看） */
+function openFamilyCardDetail(cardId) {
+    var card = null;
+    for (var i = 0; i < _familyCards.length; i++) {
+        if (_familyCards[i].id === cardId) { card = _familyCards[i]; break; }
+    }
+    if (!card) return;
+
+    var role = findRole(card.roleId);
+    var rName = role ? (role.nickname || role.name) : card.roleName;
+    var bills = getFamilyCardBillsForRole(card.roleId);
+
+    var el = document.getElementById('chatAppOverlay');
+    if (!el) return;
+
+    var h = '<div class="chat-wallet-overlay show" id="familyCardDetailOverlay">';
+    h += '<div class="chat-wallet-panel">';
+    h += '<div class="chat-wallet-header">';
+    h += '<div class="chat-wallet-back" onclick="document.getElementById(\'familyCardDetailOverlay\').remove()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>';
+    h += '<div class="chat-wallet-title">亲密付 · ' + esc(rName) + '</div>';
+    h += '</div>';
+
+    h += '<div style="padding:16px;overflow-y:auto;flex:1">';
+
+    // 状态卡片
+    var dirLabel = card.direction === 'toChar' ? '我开给TA' : 'TA开给我';
+    var remain = card.limit - (card.spent || 0);
+    var pct = card.limit > 0 ? Math.min(100, ((card.spent || 0) / card.limit * 100)) : 0;
+    h += '<div style="background:linear-gradient(135deg,#fff5e6 0%,#ffe0c2 100%);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 2px 12px rgba(232,160,76,0.12)">';
+    h += '<div style="font-size:11px;color:#8b6914;font-weight:500">' + dirLabel + '</div>';
+    h += '<div style="font-size:30px;font-weight:700;color:#c47a20;margin:6px 0">¥' + remain.toFixed(2) + '</div>';
+    h += '<div style="font-size:10px;color:#8b6914">额度 ¥' + card.limit.toFixed(0) + ' · 已用 ¥' + (card.spent || 0).toFixed(2) + '</div>';
+    h += '<div style="height:4px;background:rgba(0,0,0,0.08);border-radius:2px;margin-top:10px"><div style="height:100%;background:#e8a04c;border-radius:2px;width:' + pct.toFixed(1) + '%"></div></div>';
+    h += '</div>';
+
+    // 消费流水
+    h += '<div style="font-size:13px;font-weight:600;color:var(--chat-text);margin-bottom:10px">消费流水</div>';
+    if (bills.length === 0) {
+        h += '<div style="text-align:center;color:var(--chat-text-sub);font-size:11px;padding:30px 0;background:var(--chat-glass);border-radius:10px;border:1px solid var(--chat-glass-border)">暂无消费记录</div>';
+    } else {
+        h += '<div style="background:var(--chat-glass);border-radius:10px;border:1px solid var(--chat-glass-border);overflow:hidden">';
+        for (var b = bills.length - 1; b >= 0; b--) {
+            var bill = bills[b];
+            var timeStr = new Date(bill.ts || bill.time).toLocaleString('zh-CN');
+            h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(0,0,0,0.04)">';
+            h += '<div><div style="font-size:12px;color:var(--chat-text)">' + esc(bill.desc || '消费') + '</div>';
+            h += '<div style="font-size:10px;color:var(--chat-text-sub);margin-top:2px">' + timeStr + '</div></div>';
+            h += '<div style="font-size:13px;font-weight:600;color:#e05050">-¥' + (bill.amount || 0).toFixed(2) + '</div>';
+            h += '</div>';
+        }
+        h += '</div>';
+    }
+
+    h += '</div></div></div>';
+    var div = document.createElement('div');
+    div.innerHTML = h;
+    el.appendChild(div.firstChild);
 }
 
 function walletRecharge() {

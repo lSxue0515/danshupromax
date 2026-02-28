@@ -31,6 +31,7 @@
     <link rel="stylesheet" href="css/moments.css">
     <link rel="stylesheet" href="css/theater.css">
     <link rel="stylesheet" href="css/forum.css">
+    <link rel="stylesheet" href="css/peek.css">
 
 
 
@@ -419,7 +420,7 @@
                                     </div>
                                     <div class="app-name">音乐</div>
                                 </div>
-                                <div class="app-cell" data-icon-id="icon_peek">
+                                <div class="app-cell" data-icon-id="icon_peek" onclick="openPeekApp()">
                                     <div class="app-icon glass-icon" id="icon_peek">
                                         <svg viewBox="0 0 24 24">
                                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -1838,6 +1839,7 @@
 
         <!-- ====== 论坛 Forum ====== -->
         <div class="forum-overlay" id="forumOverlay"></div>
+        <div class="peek-overlay" id="peekOverlay"></div>
         <div id="muFloatLyric" class="mu-float-widget"></div>
 
     </div> <!-- /phone-frame -->
@@ -1868,6 +1870,7 @@
     <script src="js/app.js"></script>
     <script src="js/theater.js"></script>
     <script src="js/forum.js"></script>
+    <script src="js/peek.js"></script>
     <script src="js/moments.js"></script>
     <script src="js/page2widget.js"></script>
     <script src="js/page3widget.js"></script>
