@@ -3805,16 +3805,19 @@ function renderTransferBubbleRow(m, idx, myAv, roleAv) {
 /* 渲染小说卡片气泡 */
 function renderNovelCardBubbleRow(m, idx, myAv, roleAv) {
     var isSelf = m.from === 'self';
+    var av = isSelf ? myAv : roleAv;
+
+    /* ★ 和普通气泡完全一致的结构 */
     var h = '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-idx="' + idx + '">';
 
-    if (!isSelf) {
-        h += '<div class="chat-bubble-avatar">';
-        if (roleAv) h += '<img src="' + roleAv + '">';
-        else h += SVG_USER;
-        h += '</div>';
-    }
+    /* 头像 — 统一放在前面，靠 .self 的 CSS row-reverse 自动翻转到右侧 */
+    h += '<div class="chat-bubble-avatar">';
+    if (av) h += '<img src="' + av + '">';
+    else h += SVG_USER;
+    h += '</div>';
 
-    h += '<div class="chat-bubble-col">';
+    /* ★ 用 chat-bubble-content-wrap 而不是 chat-bubble-col，确保和普通气泡CSS一致 */
+    h += '<div class="chat-bubble-content-wrap">';
 
     /* 解析卡片数据 */
     var cardData = null;
@@ -3859,17 +3862,10 @@ function renderNovelCardBubbleRow(m, idx, myAv, roleAv) {
     }
 
     /* 时间 */
-    if (m.time) h += '<div class="chat-bubble-time">' + m.time + '</div>';
-    h += '</div>';
+    if (m.time) h += '<div class="chat-bubble-ts">' + m.time + '</div>';
 
-    if (isSelf) {
-        h += '<div class="chat-bubble-avatar">';
-        if (myAv) h += '<img src="' + myAv + '">';
-        else h += SVG_USER;
-        h += '</div>';
-    }
-
-    h += '</div>';
+    h += '</div>'; /* 关闭 chat-bubble-content-wrap */
+    h += '</div>'; /* 关闭 chat-bubble-row */
     return h;
 }
 
