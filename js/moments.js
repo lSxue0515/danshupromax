@@ -24,6 +24,34 @@ function findMomentPost(id) {
     return null;
 }
 
+/* ---------- 动态图片压缩 ---------- */
+function _mtCompressImage(dataUrl, callback) {
+    var img = new Image();
+    img.onload = function () {
+        var maxW = 600, maxH = 600;
+        var w = img.width, h = img.height;
+        if (w > maxW || h > maxH) {
+            var ratio = Math.min(maxW / w, maxH / h);
+            w = Math.round(w * ratio);
+            h = Math.round(h * ratio);
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        var quality = 0.7;
+        var result = canvas.toDataURL('image/jpeg', quality);
+        // 确保不超过100KB
+        while (result.length > 100 * 1024 && quality > 0.2) {
+            quality -= 0.1;
+            result = canvas.toDataURL('image/jpeg', quality);
+        }
+        callback(result);
+    };
+    img.onerror = function () { callback(dataUrl); };
+    img.src = dataUrl;
+}
+
 /* ==========================================================
    外语检测
    ========================================================== */
@@ -385,7 +413,17 @@ function mtAddPublishImage() { var i = document.getElementById('mtPublishFileInp
 function mtHandlePublishFiles(e) {
     var files = e.target.files; if (!files) return;
     for (var i = 0; i < files.length && _momentsPublishImages.length < 9; i++) {
-        (function (f) { var r = new FileReader(); r.onload = function (ev) { _momentsPublishImages.push(ev.target.result); mtRenderPublishPreview(); }; r.readAsDataURL(f); })(files[i]);
+        (function (f) {
+            var r = new FileReader();
+            r.onload = function (ev) {
+                // 压缩动态图片，避免撑爆存储
+                _mtCompressImage(ev.target.result, function (compressed) {
+                    _momentsPublishImages.push(compressed);
+                    mtRenderPublishPreview();
+                });
+            };
+            r.readAsDataURL(f);
+        })(files[i]);
     }
     e.target.value = '';
 }
@@ -541,7 +579,13 @@ function mtTriggerCharComments(postId) {
     if (!post || post.authorType !== 'self') return;
 
     // 随机抽1-3个char来评论，有概率不评论
-    var shuffled = _chatRoles.slice().sort(function () { return Math.random() - 0.5; });
+    // 只从开启了"主动发动态"的角色中选
+    var enabledForMoment = [];
+    for (var ei = 0; ei < _chatRoles.length; ei++) {
+        if (_chatRoles[ei].momentPostEnabled) enabledForMoment.push(_chatRoles[ei]);
+    }
+    if (enabledForMoment.length === 0) { renderChatTab('moments'); showToast('没有开启动态的角色'); return; }
+    var shuffled = enabledForMoment.sort(function () { return Math.random() - 0.5; });
     var maxCommenters = Math.floor(Math.random() * 3) + 1; // 1~3
     var candidates = [];
     for (var i = 0; i < shuffled.length && candidates.length < maxCommenters; i++) {
@@ -952,7 +996,13 @@ function autoCharPost() {
     var apiConfig = getActiveApiConfig();
     if (!apiConfig || !apiConfig.url || !apiConfig.key || !apiConfig.model) return;
     if (Math.random() > 0.4) return;
-    var role = _chatRoles[Math.floor(Math.random() * _chatRoles.length)];
+    // 只从开启了"主动发动态"的角色中选
+    var enabledRoles = [];
+    for (var ei = 0; ei < _chatRoles.length; ei++) {
+        if (_chatRoles[ei].momentPostEnabled) enabledRoles.push(_chatRoles[ei]);
+    }
+    if (enabledRoles.length === 0) return;
+    var role = enabledRoles[Math.floor(Math.random() * enabledRoles.length)];
     var now = Date.now();
     for (var i = 0; i < _momentsPosts.length; i++) {
         if (_momentsPosts[i].roleId === role.id && now - (_momentsPosts[i].ts || 0) < 600000) return;

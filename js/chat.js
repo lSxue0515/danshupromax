@@ -1416,26 +1416,46 @@ function renderShareCardBubbleRow(m, idx, myAv, roleAv) {
     return h;
 }
 
-/* 渲染图片气泡 */
 function renderImageBubbleRow(m, idx, myAv, roleAv) {
-    var h = '';
-    h += '<div class="chat-bubble-row ' + (m.from === 'self' ? 'self' : '') + '" data-msg-idx="' + idx + '" onclick="showBubbleMenu(event,' + idx + ')">';
+    var isSelf = m.from === 'self';
+    var av = isSelf ? myAv : roleAv;
+    var imgSrc = m.imageData || ''; // 旧数据直接有
+    var needAsync = !imgSrc && m._imgKey; // 新数据需要异步加载
+
+    var h = '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-msg-idx="' + idx + '" onclick="showBubbleMenu(event,' + idx + ')">';
     h += '<div class="chat-bubble-avatar">';
-    if (m.from === 'self') h += myAv ? '<img src="' + myAv + '" alt="">' : SVG_USER_SM;
-    else h += roleAv ? '<img src="' + roleAv + '" alt="">' : SVG_USER_SM;
+    if (av) h += '<img src="' + av + '" alt="">';
+    else h += SVG_USER;
     h += '</div>';
     h += '<div class="chat-bubble-content-wrap">';
-    if (m.quoteText) {
-        h += '<div class="chat-bubble-quote"><span class="chat-bubble-quote-name">' + esc(m.quoteName || '') + '：</span>' + esc(m.quoteText) + '</div>';
+    h += '<div class="chat-bubble">';
+    if (imgSrc) {
+        h += '<img src="' + imgSrc + '" alt="图片" style="max-width:200px;max-height:200px;border-radius:8px;cursor:pointer;display:block;" onclick="event.stopPropagation();openImageViewer(this.src)">';
+    } else if (needAsync) {
+        // 占位图，异步加载
+        h += '<div class="chat-img-loading" data-imgkey="' + m._imgKey + '" style="width:150px;height:100px;background:rgba(255,200,220,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgba(180,140,160,0.5);font-size:11px;">加载中…</div>';
+    } else {
+        h += '<span style="color:rgba(150,130,140,0.5);font-size:11px;">[图片已清理]</span>';
     }
-    h += '<div class="chat-bubble chat-bubble-image" onclick="event.stopPropagation();previewChatImage(\'' + idx + '\')">';
-    h += '<img src="' + m.imageData + '" alt="图片" style="max-width:200px;max-height:200px;border-radius:8px;cursor:pointer;display:block;">';
     h += '</div>';
-    if (m.text && m.text !== '[图片]') {
-        h += '<div class="chat-bubble" style="margin-top:4px;">' + esc(m.text) + '</div>';
-    }
     h += '<div class="chat-bubble-ts">' + (m.time || '') + '</div>';
     h += '</div></div>';
+
+    // 异步加载
+    if (needAsync) {
+        setTimeout(function () {
+            var el = document.querySelector('[data-imgkey="' + m._imgKey + '"]');
+            if (el && typeof dsDBGet === 'function') {
+                dsDBGet(m._imgKey, function (data) {
+                    if (data && el) {
+                        el.outerHTML = '<img src="' + data + '" alt="图片" style="max-width:200px;max-height:200px;border-radius:8px;cursor:pointer;display:block;" onclick="event.stopPropagation();openImageViewer(this.src)">';
+                    } else if (el) {
+                        el.textContent = '[图片已清理]';
+                    }
+                });
+            }
+        }, 50);
+    }
     return h;
 }
 
@@ -1786,6 +1806,13 @@ function openChatSettings() {
     h += '<label class="chat-cr-toggle"><input type="checkbox" id="csBgMode"' + (role.bgMsg ? ' checked' : '') + '><span class="chat-cr-toggle-track"></span></label>';
     h += '</div>';
 
+    // 开关：主动发动态
+    h += '<div class="chat-settings-toggle-row">';
+    h += '<div><div class="chat-settings-toggle-label">主动发动态</div>';
+    h += '<div class="chat-settings-toggle-desc">开启后该角色会在动态页主动发布动态</div></div>';
+    h += '<label class="chat-cr-toggle"><input type="checkbox" id="csMomentPost"' + (role.momentPostEnabled ? ' checked' : '') + '><span class="chat-cr-toggle-track"></span></label>';
+    h += '</div>';
+
     // 主动消息开关
     if (typeof buildAutoMessageToggle === 'function') {
         h += buildAutoMessageToggle(role);
@@ -2051,22 +2078,42 @@ function removeChatWallpaper() {
     openChatSettings();
 }
 
-/* ---- 壁纸独立存储 ---- */
-function saveWallpaper(roleId, dataUrl) {
-    try {
-        if (dataUrl) {
-            localStorage.setItem('ds_wp_' + roleId, dataUrl);
-        } else {
-            localStorage.removeItem('ds_wp_' + roleId);
-        }
-    } catch (e) {
-        showToast('壁纸太大，存储失败，请选择更小的图片');
+/* ---- 壁纸独立存储（IndexedDB） ---- */
+function saveChatWallpaper(roleId, dataUrl) {
+    if (typeof dsSaveWallpaper === 'function') {
+        dsSaveWallpaper(roleId, dataUrl, function (ok) {
+            if (!ok) showToast('壁纸存储失败');
+        });
+    } else {
+        try { localStorage.setItem('ds_wp_' + roleId, dataUrl); }
+        catch (e) { showToast('壁纸太大，存储失败'); }
     }
 }
 
 function loadWallpaper(roleId) {
     // 优先从独立存储读取，兜底读角色数据里的
-    var wp = localStorage.getItem('ds_wp_' + roleId);
+    function loadChatWallpaper(roleId) {
+        if (typeof dsLoadWallpaper === 'function') {
+            dsLoadWallpaper(roleId, function (wp) {
+                _applyChatWallpaper(wp);
+            });
+        } else {
+            var wp = localStorage.getItem('ds_wp_' + roleId);
+            _applyChatWallpaper(wp);
+        }
+    }
+
+    function _applyChatWallpaper(wp) {
+        var el = document.getElementById('chatConvWallpaper');
+        if (!el) return;
+        if (wp) {
+            el.style.backgroundImage = 'url(' + wp + ')';
+            el.style.display = 'block';
+        } else {
+            el.style.backgroundImage = '';
+            el.style.display = 'none';
+        }
+    }
     if (wp) return wp;
     var role = findRole(roleId);
     return (role && role.chatWallpaper) ? role.chatWallpaper : '';
@@ -2197,6 +2244,7 @@ function saveChatSettings() {
     role.group = document.getElementById('csGroup').value;
     role.translateOn = document.getElementById('csTranslate').checked;
     role.bgMsg = document.getElementById('csBgMode').checked;
+    role.momentPostEnabled = document.getElementById('csMomentPost').checked;
 
     var autoMsgEl = document.getElementById('csAutoMessage');
     if (autoMsgEl && typeof setCharAutoEnabled === 'function') {
@@ -2396,6 +2444,8 @@ function sendChatMessage() {
     // 如果有待发送的图片
     if (_pendingImageData) {
         var imgMsg = { from: 'self', text: text || '[图片]', time: ts, image: true, imageData: _pendingImageData };
+        // ★ 图片存IndexedDB，不塞localStorage
+        if (typeof dsSaveImageMsg === 'function') dsSaveImageMsg(_chatCurrentConv, imgMsg);
         if (_chatQuoteData) { imgMsg.quoteText = _chatQuoteData.text; imgMsg.quoteName = _chatQuoteData.name; }
         role.msgs.push(imgMsg);
         role.lastMsg = '[图片]'; role.lastTime = now.getTime(); role.lastTimeStr = ts;
