@@ -282,3 +282,42 @@ body {
     visibility: visible;
     transform: translateX(-50%) translateY(0);
 }
+
+/* ===== 手机端全屏铺满，去除黑角 ===== */
+@media screen and (max-width: 768px) {
+    body {
+        margin: 0;
+        padding: 0;
+        background: #000;
+        overflow: hidden;
+    }
+
+    .phone-frame {
+        width: 100vw !important;
+        height: 100vh !important;
+        max-width: none !important;
+        max-height: none !important;
+        min-width: none !important;
+        min-height: none !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        transform: none !important;
+    }
+
+    /* 所有全屏overlay也去圆角 */
+    .novel-overlay,
+    .forum-overlay,
+    .chat-overlay,
+    .moments-overlay,
+    .theater-overlay,
+    .music-overlay,
+    .game-overlay {
+        border-radius: 0 !important;
+    }
+}
