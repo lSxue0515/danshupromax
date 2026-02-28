@@ -2078,42 +2078,18 @@ function removeChatWallpaper() {
     openChatSettings();
 }
 
-/* ---- 壁纸独立存储（IndexedDB） ---- */
+/* ---- 壁纸独立存储 ---- */
 function saveChatWallpaper(roleId, dataUrl) {
-    if (typeof dsSaveWallpaper === 'function') {
-        dsSaveWallpaper(roleId, dataUrl, function (ok) {
-            if (!ok) showToast('壁纸存储失败');
-        });
-    } else {
-        try { localStorage.setItem('ds_wp_' + roleId, dataUrl); }
-        catch (e) { showToast('壁纸太大，存储失败'); }
+    try {
+        localStorage.setItem('ds_wp_' + roleId, dataUrl);
+    } catch (e) {
+        showToast('壁纸太大，存储失败，请选择更小的图片');
     }
 }
 
 function loadWallpaper(roleId) {
     // 优先从独立存储读取，兜底读角色数据里的
-    function loadChatWallpaper(roleId) {
-        if (typeof dsLoadWallpaper === 'function') {
-            dsLoadWallpaper(roleId, function (wp) {
-                _applyChatWallpaper(wp);
-            });
-        } else {
-            var wp = localStorage.getItem('ds_wp_' + roleId);
-            _applyChatWallpaper(wp);
-        }
-    }
-
-    function _applyChatWallpaper(wp) {
-        var el = document.getElementById('chatConvWallpaper');
-        if (!el) return;
-        if (wp) {
-            el.style.backgroundImage = 'url(' + wp + ')';
-            el.style.display = 'block';
-        } else {
-            el.style.backgroundImage = '';
-            el.style.display = 'none';
-        }
-    }
+    var wp = localStorage.getItem('ds_wp_' + roleId);
     if (wp) return wp;
     var role = findRole(roleId);
     return (role && role.chatWallpaper) ? role.chatWallpaper : '';

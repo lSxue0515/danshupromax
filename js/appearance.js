@@ -6,7 +6,7 @@
 var ICON_LIST = [
     { id: 'icon_api', name: 'API' },
     { id: 'icon_appear', name: '外观' },
-    { id: 'icon_tieba', name: '贴吧' },
+    { id: 'icon_tieba', name: '论坛' },
     { id: 'icon_diary', name: '日记本' },
     { id: 'icon_theater', name: '线下剧场' },
     { id: 'icon_weather', name: '天气' },

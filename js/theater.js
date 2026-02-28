@@ -1,6 +1,6 @@
 /* ============================================
    theater.js — 线下剧场 Offline Theater
-   橙光/Galgame 式演出
+   橙光/Galgame 式演出 + 自定义CSS设置
    ============================================ */
 
 var _thView = 'list';
@@ -12,14 +12,31 @@ var _thSegIdx = 0;
 var _thPhase = 'input';
 var _thInputText = '';
 var _thPersona = null;
+var _thCustomCSS = '';
+var _thStyleEl = null;
 
 try { _thBg = localStorage.getItem('_thBg') || ''; } catch (e) { }
+try { _thCustomCSS = localStorage.getItem('_thCustomCSS') || ''; } catch (e) { }
+
+/* 初始化时注入自定义CSS */
+function _thInitCustomCSS() {
+    if (_thStyleEl) return;
+    _thStyleEl = document.createElement('style');
+    _thStyleEl.id = 'thtrCustomStyle';
+    document.head.appendChild(_thStyleEl);
+    _thApplyCSS();
+}
+function _thApplyCSS() {
+    if (!_thStyleEl) _thInitCustomCSS();
+    _thStyleEl.textContent = _thCustomCSS;
+}
 
 function openTheaterApp() {
     var el = document.getElementById('theaterOverlay'); if (!el) return;
     if (typeof loadChatRoles === 'function') loadChatRoles();
     _thView = 'list'; _thRole = null;
     el.classList.add('show');
+    _thInitCustomCSS();
     _thRenderList();
 }
 function closeTheaterApp() {
@@ -30,24 +47,17 @@ function closeTheaterApp() {
 
 function _thGetApi() {
     var url = '', key = '', model = '';
-
-    /* 优先从 localStorage 读（设置页保存时会写入） */
     try {
         url = localStorage.getItem('apiUrl') || '';
         key = localStorage.getItem('apiKey') || '';
         model = localStorage.getItem('selectedModel') || '';
     } catch (e) { }
-
-    /* fallback：从 DOM 读 */
     if (!url) try { var el = document.getElementById('apiUrl'); if (el) url = el.value.trim(); } catch (e) { }
     if (!key) try { var el = document.getElementById('apiKey'); if (el) key = el.value.trim(); } catch (e) { }
     if (!model) try { var el = document.getElementById('apiModelSelect'); if (el) model = el.value.trim(); } catch (e) { }
-
-    /* 再试其他常见的 localStorage key */
     if (!url) try { url = localStorage.getItem('api_url') || localStorage.getItem('apiBaseUrl') || ''; } catch (e) { }
     if (!key) try { key = localStorage.getItem('api_key') || localStorage.getItem('apiSecretKey') || ''; } catch (e) { }
     if (!model) try { model = localStorage.getItem('apiModel') || localStorage.getItem('model') || ''; } catch (e) { }
-
     if (!model) model = 'gpt-3.5-turbo';
     return { url: url.trim(), key: key.trim(), model: model.trim() };
 }
@@ -107,7 +117,7 @@ function _thRenderList() {
     el.innerHTML = h;
 }
 
-/* ===== 角色详情 + 人设选择 ===== */
+/* ===== 角色详情 ===== */
 function _thSelectRole(roleId) {
     var roles = (typeof _chatRoles !== 'undefined' && _chatRoles) ? _chatRoles : [];
     _thRole = null;
@@ -128,7 +138,6 @@ function _thRenderDetail() {
 
     var h = '';
     h += '<div class="thtr-detail-page">';
-
     h += '<div class="thtr-detail-card">';
     h += '<div class="thtr-detail-top">';
     h += '<div class="thtr-dtag">OFFLINE</div>';
@@ -140,9 +149,7 @@ function _thRenderDetail() {
 
     h += '<div class="thtr-detail-welcome">';
     h += '<div class="thtr-detail-big">WELCOME, ' + _thEsc(r.name || '').toUpperCase() + '</div>';
-    if (r.detail) {
-        h += '<div class="thtr-detail-desc">' + _thEsc((r.detail || '').substring(0, 80)) + '</div>';
-    }
+    if (r.detail) h += '<div class="thtr-detail-desc">' + _thEsc((r.detail || '').substring(0, 80)) + '</div>';
     h += '</div>';
 
     h += '<div class="thtr-detail-avatar">';
@@ -150,10 +157,8 @@ function _thRenderDetail() {
     else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
     h += '</div>';
     h += '<div class="thtr-detail-name">' + _thEsc(r.name || 'unnamed') + '</div>';
-
     h += '</div>';
 
-    /* 人设选择 */
     if (personas.length > 0) {
         h += '<div class="thtr-persona-sec">';
         h += '<div class="thtr-persona-label">YOUR PERSONA 选择人设</div>';
@@ -173,7 +178,6 @@ function _thRenderDetail() {
     }
 
     h += '<div class="thtr-start-btn" onclick="_thEnterStage()">START 开始演出</div>';
-
     h += '</div>';
     el.innerHTML = h;
 }
@@ -209,16 +213,19 @@ function _thRenderStage() {
     h += '<div class="thtr-stage-top">';
     h += '<div class="thtr-stage-name">' + _thEsc(r.name) + '</div>';
     h += '<div class="thtr-stage-btns">';
-    h += '<div class="thtr-stage-btn" onclick="_thPickBg()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+    /* 齿轮设置 */
+    h += '<div class="thtr-stage-btn" onclick="_thOpenStyle()" title="Style Settings 样式设置"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>';
+    /* 换背景 */
+    h += '<div class="thtr-stage-btn" onclick="_thPickBg()" title="Background 背景"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
     h += '<div class="thtr-stage-btn" onclick="_thBackDetail()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>';
     h += '<div class="thtr-stage-btn" onclick="closeTheaterApp()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>';
     h += '</div></div>';
 
-    /* 对话区域 — 橙光/Galgame 式 */
+    /* 对话区 */
     h += '<div class="thtr-stage-dialog">';
 
     if (_thPhase === 'generating') {
-        h += '<div class="thtr-dlg-box">';
+        h += '<div class="thtr-dlg-box thtr-output-box">';
         h += '<div class="thtr-dlg-speaker">' + _thEsc(r.name) + '</div>';
         h += '<div class="thtr-dlg-text"><span class="thtr-typing-anim">Thinking 思考中</span></div>';
         h += '</div>';
@@ -227,12 +234,9 @@ function _thRenderStage() {
         var seg = _thSegments[_thSegIdx] || '';
         var isLast = (_thSegIdx >= _thSegments.length - 1);
 
-        /* 整个对话框可点击 */
-        h += '<div class="thtr-dlg-box clickable" onclick="_thTapDialog()">';
+        h += '<div class="thtr-dlg-box thtr-output-box clickable" onclick="_thTapDialog()">';
         h += '<div class="thtr-dlg-speaker">' + _thEsc(r.name) + '</div>';
         h += '<div class="thtr-dlg-text">' + _thFmt(seg) + '</div>';
-
-        /* 底部提示 */
         h += '<div class="thtr-dlg-hint">';
         if (!isLast) {
             h += '<span class="thtr-hint-arrow"></span>';
@@ -243,14 +247,13 @@ function _thRenderStage() {
         h += '</div>';
 
     } else if (_thPhase === 'waiting') {
-        h += '<div class="thtr-dlg-box">';
+        h += '<div class="thtr-dlg-box thtr-output-box">';
         h += '<div class="thtr-dlg-speaker">SYSTEM 系统</div>';
         h += '<div class="thtr-dlg-text">Scene complete. Enter your next line below.<br>本段演出结束，请在下方输入你的下一句台词。</div>';
         h += '</div>';
 
     } else {
-        /* input 空闲态 — 显示等待提示 */
-        h += '<div class="thtr-dlg-box idle">';
+        h += '<div class="thtr-dlg-box thtr-output-box idle">';
         h += '<div class="thtr-dlg-text idle-text">Enter your line below and tap WRITE to continue.<br>在下方输入台词，点击续写开始演出。</div>';
         h += '</div>';
     }
@@ -260,10 +263,10 @@ function _thRenderStage() {
     /* 底部输入 */
     h += '<div class="thtr-stage-bottom">';
     if (_thHistory.length > 0) {
-        h += '<div class="thtr-log-toggle" onclick="_thShowLog()">SAVE | LOAD | LOG 存档 | 读档 | 记录</div>';
+        h += '<div class="thtr-log-toggle" onclick="_thShowLog()">LOG 记录</div>';
     }
-    h += '<div class="thtr-stage-bar">';
-    h += '<input type="text" class="thtr-stage-inp" id="thtrInput" placeholder="Your line 你的台词..." value="' + _thEsc(_thInputText) + '" ' + (_thPhase === 'generating' ? 'disabled' : '') + ' onkeydown="if(event.key===\'Enter\')_thSend()">';
+    h += '<div class="thtr-stage-bar thtr-input-bar">';
+    h += '<input type="text" class="thtr-stage-inp thtr-input-field" id="thtrInput" placeholder="Your line 你的台词..." value="' + _thEsc(_thInputText) + '" ' + (_thPhase === 'generating' ? 'disabled' : '') + ' onkeydown="if(event.key===\'Enter\')_thSend()">';
     h += '<div class="thtr-bar-btn" onclick="_thSend()">SEND 发送</div>';
     h += '<div class="thtr-bar-btn alt" onclick="_thGenerate()">WRITE 续写</div>';
     h += '</div>';
@@ -278,17 +281,95 @@ function _thRenderStage() {
     }
 }
 
-/* ===== 点击对话框 — 橙光式翻页 ===== */
+/* ===== 点击对话框翻页 ===== */
 function _thTapDialog() {
     if (_thPhase !== 'reading') return;
     if (_thSegIdx < _thSegments.length - 1) {
         _thSegIdx++;
         _thRenderStage();
     } else {
-        /* 最后一段 → 切到等待输入 */
         _thPhase = 'waiting';
         _thRenderStage();
     }
+}
+
+/* ===== 样式设置面板 ===== */
+function _thOpenStyle() {
+    var el = document.getElementById('theaterOverlay'); if (!el) return;
+
+    /* 防止重复打开 */
+    if (document.getElementById('thtrStylePanel')) return;
+
+    var cssVal = _thCustomCSS.replace(/"/g, '&quot;');
+
+    var h = '<div class="thtr-style-overlay">';
+    h += '<div class="thtr-style-card">';
+    h += '<div class="thtr-style-header">';
+    h += '<div class="thtr-style-title">STYLE SETTINGS 样式设置</div>';
+    h += '<div class="thtr-style-close" onclick="_thCloseStyle()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>';
+    h += '</div>';
+
+    h += '<div class="thtr-style-body">';
+    h += '<div class="thtr-style-label">Custom CSS 自定义样式</div>';
+    h += '<div class="thtr-style-hint">Use these classes to customize 使用以下class自定义样式：</div>';
+    h += '<div class="thtr-style-classes">';
+    h += '<code>.thtr-output-box</code> — Output box 输出框<br>';
+    h += '<code>.thtr-dlg-speaker</code> — Speaker name 说话人名<br>';
+    h += '<code>.thtr-dlg-text</code> — Text content 文字内容<br>';
+    h += '<code>.thtr-quote</code> — Dialog「」对话引用<br>';
+    h += '<code>.thtr-action</code> — *Action* 动作描写<br>';
+    h += '<code>.thtr-input-bar</code> — Input bar 输入栏<br>';
+    h += '<code>.thtr-input-field</code> — Input field 输入框<br>';
+    h += '<code>.thtr-bar-btn</code> — Buttons 按钮<br>';
+    h += '</div>';
+
+    h += '<textarea class="thtr-style-textarea" id="thtrCSSInput" placeholder="/* Example 示例 */\n.thtr-output-box {\n  background: rgba(0,0,0,.6);\n  border: 1px solid rgba(255,255,255,.1);\n}\n.thtr-dlg-text {\n  color: #eee;\n  font-size: 13px;\n}\n.thtr-input-bar {\n  background: rgba(0,0,0,.4);\n}\n.thtr-input-field {\n  color: #fff;\n}">' + _thEsc(_thCustomCSS) + '</textarea>';
+
+    h += '<div class="thtr-style-btns">';
+    h += '<div class="thtr-style-btn" onclick="_thPreviewCSS()">PREVIEW 预览</div>';
+    h += '<div class="thtr-style-btn primary" onclick="_thSaveCSS()">SAVE 保存</div>';
+    h += '<div class="thtr-style-btn danger" onclick="_thResetCSS()">RESET 重置</div>';
+    h += '</div>';
+
+    h += '</div></div></div>';
+
+    var panel = document.createElement('div');
+    panel.id = 'thtrStylePanel';
+    panel.style.cssText = 'position:absolute;inset:0;z-index:110;';
+    panel.innerHTML = h;
+    el.appendChild(panel);
+}
+
+function _thCloseStyle() {
+    var p = document.getElementById('thtrStylePanel');
+    if (p) p.remove();
+}
+
+function _thPreviewCSS() {
+    var ta = document.getElementById('thtrCSSInput');
+    if (!ta) return;
+    _thCustomCSS = ta.value;
+    _thApplyCSS();
+    if (typeof showToast === 'function') showToast('Preview applied 预览已生效');
+}
+
+function _thSaveCSS() {
+    var ta = document.getElementById('thtrCSSInput');
+    if (!ta) return;
+    _thCustomCSS = ta.value;
+    _thApplyCSS();
+    try { localStorage.setItem('_thCustomCSS', _thCustomCSS); } catch (e) { }
+    if (typeof showToast === 'function') showToast('Saved 已保存');
+    _thCloseStyle();
+}
+
+function _thResetCSS() {
+    _thCustomCSS = '';
+    _thApplyCSS();
+    try { localStorage.setItem('_thCustomCSS', ''); } catch (e) { }
+    var ta = document.getElementById('thtrCSSInput');
+    if (ta) ta.value = '';
+    if (typeof showToast === 'function') showToast('Reset 已重置');
 }
 
 /* ===== 操作 ===== */
@@ -401,9 +482,8 @@ function _thCallAI() {
         });
 }
 
-/* 智能分段 — 每段控制在 50-150字，更接近橙光/gal的节奏 */
+/* 智能分段 */
 function _thSplitSegs(text) {
-    /* 先按双换行拆 */
     var rawSegs = text.split(/\n\s*\n/);
     var segs = [];
     for (var i = 0; i < rawSegs.length; i++) {
@@ -412,7 +492,6 @@ function _thSplitSegs(text) {
         if (s.length <= 120) {
             segs.push(s);
         } else {
-            /* 按句末标点再拆，目标每段60-120字 */
             var parts = s.split(/(?<=[。！？…」\n])/);
             var buf = '';
             for (var j = 0; j < parts.length; j++) {
@@ -429,10 +508,6 @@ function _thSplitSegs(text) {
     return segs;
 }
 
-function _thNextSeg() {
-    if (_thSegIdx < _thSegments.length - 1) { _thSegIdx++; _thRenderStage(); }
-}
-function _thFinishRead() { _thPhase = 'waiting'; _thRenderStage(); }
 function _thBackDetail() { _thView = 'detail'; _thRenderDetail(); }
 
 /* 背景图 */
@@ -453,7 +528,7 @@ function _thPickBg() {
     inp.click();
 }
 
-/* 历史LOG */
+/* LOG */
 function _thShowLog() {
     var el = document.getElementById('theaterOverlay'); if (!el) return;
     var h = '<div class="thtr-log-overlay">';
