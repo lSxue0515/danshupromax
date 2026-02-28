@@ -164,7 +164,7 @@ function renderChatTab(tab) {
     switch (tab) {
         case 'messages': b.innerHTML = renderMessages(); break;
         case 'contacts': b.innerHTML = renderContacts(); break;
-        case 'moments': b.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;color:rgba(50,40,55,0.3);font-size:13px;gap:12px"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="rgba(255,180,200,0.5)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p style="text-align:center">动态功能搭建中<br>敬请期待 ✨</p></div>'; break;
+        case 'moments': b.innerHTML = renderMoments(); initMomentsAutoPost(); break;
         case 'me': b.innerHTML = renderMe(); break;
     }
 }
@@ -174,10 +174,10 @@ function toggleChatMenu() {
     if (!m) return;
 
     if (_chatCurrentTab === 'moments') {
-        m.innerHTML = '';
-    } else {
-        m.innerHTML = '<div class="chat-plus-menu-item" onclick="closeChatMenu();openCreateRole()"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg><span>创建角色</span></div>'
-            + '<div class="chat-plus-menu-item" onclick="triggerImportRole()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>导入角色卡</span></div>';
+        var m = document.getElementById('chatPlusMenu');
+        m.innerHTML = '<div class="chat-plus-menu-item" onclick="closeChatMenu();openPublishMoment()"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>发布动态</span></div>'
+            + '<div class="chat-plus-menu-item" onclick="closeChatMenu();refreshMoments()"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg><span>刷新动态</span></div>';
+    } else if (_chatCurrentTab === 'contacts') {
     }
 
     m.classList.toggle('show');
@@ -1277,7 +1277,7 @@ function openConversation(rid) {
     // 相册 — 真实选图
     h += '<div class="chat-conv-tool" onclick="chatPickAlbum()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>相册</span></div>';
     h += '<div class="chat-conv-tool" onclick="openTransferPanel()"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>转账</span></div>';
-    h += '<div class="chat-conv-tool" onclick="openGiftShop()"><svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg><span>礼物</span></div>';
+    h += '<div class="chat-conv-tool" onclick="openVideoCall()"><svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg><span>视频</span></div>';
     h += '<div class="chat-conv-tool" onclick="openLocationPanel()"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>定位</span></div>';
     h += '</div>';
 
@@ -1346,10 +1346,11 @@ function renderBubbleRow(m, idx, myAv, roleAv) {
     if (m.voice) return renderVoiceBubbleRow(m, idx, myAv, roleAv);
     if (m.image) return renderImageBubbleRow(m, idx, myAv, roleAv);
     if (m.sticker) return renderStickerBubbleRow(m, idx, myAv, roleAv);
+    if (m.shareCard) return renderShareCardBubbleRow(m, idx, myAv, roleAv);
     if (m.transfer) return renderTransferBubbleRow(m, idx, myAv, roleAv);
     if (m.novelCard) return renderNovelCardBubbleRow(m, idx, myAv, roleAv);
     if (m.location) return renderLocationBubbleRow(m, idx, myAv, roleAv);
-    if (m.giftCard) return renderGiftCardBubbleRow(m, idx, myAv, roleAv);
+    if (m.videoCall) return renderVideoCallBubbleRow(m, idx, myAv, roleAv);
 
     var h = '';
     h += '<div class="chat-bubble-row ' + (m.from === 'self' ? 'self' : '') + '" data-msg-idx="' + idx + '" onclick="showBubbleMenu(event,' + idx + ')">';
@@ -1372,6 +1373,44 @@ function renderBubbleRow(m, idx, myAv, roleAv) {
     if (m._translating) {
         h += '<div class="chat-bubble-translating">翻译中...</div>';
     }
+    h += '<div class="chat-bubble-ts">' + (m.time || '') + '</div>';
+    h += '</div></div>';
+    return h;
+}
+
+/* ---------- 分享卡片气泡 ---------- */
+function renderShareCardBubbleRow(m, idx, myAv, roleAv) {
+    var isSelf = m.from === 'self';
+    var av = isSelf ? myAv : roleAv;
+    var sc = m.shareCard;
+    var posterAvatar = sc.posterAvatar || '';
+    var posterName = esc(sc.posterName || '未知');
+    var postText = sc.postText || '';
+    var preview = esc(postText.length > 50 ? postText.substring(0, 50) + '...' : postText);
+    if (!preview) preview = '[图片动态]';
+
+    var h = '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-msg-idx="' + idx + '" onclick="showBubbleMenu(event,' + idx + ')">';
+    h += '<div class="chat-bubble-avatar">';
+    if (av) h += '<img src="' + av + '" alt="">';
+    else h += SVG_USER;
+    h += '</div>';
+    h += '<div class="chat-bubble-content-wrap">';
+
+    // 卡片本体
+    h += '<div class="chat-bubble chat-bubble-share-card">';
+    h += '<div class="chat-sc-header">';
+    h += '<div class="chat-sc-avatar">';
+    if (posterAvatar) h += '<img src="' + posterAvatar + '" alt="">';
+    else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+    h += '</div>';
+    h += '<div class="chat-sc-info">';
+    h += '<div class="chat-sc-tag"><svg viewBox="0 0 24 24" width="10" height="10"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>动态分享</div>';
+    h += '<div class="chat-sc-name">' + posterName + '</div>';
+    h += '</div></div>';
+    h += '<div class="chat-sc-body">' + preview + '</div>';
+    h += '<div class="chat-sc-footer"></div>';
+    h += '</div>';
+
     h += '<div class="chat-bubble-ts">' + (m.time || '') + '</div>';
     h += '</div></div>';
     return h;
@@ -2913,7 +2952,9 @@ function buildChatMessages(role) {
 
     for (var i = startIdx; i < history.length; i++) {
         var m = history[i];
-        if (m.recalled) continue;
+        if (m.recalled || m.videoCall || m.hidden || m.shareCard) continue;
+        if (m.videoCall) continue;
+        if (m.hidden) continue;
 
         // ★ 人设变更消息 — 注入为系统级提示，让char认知到user身份变化
         if (m.personaChange) {
@@ -4230,105 +4271,675 @@ function deleteStickerGroup(idx) {
     document.head.appendChild(style);
 })();
 
-/* ========== 礼物卡片气泡渲染 ========== */
-function renderGiftCardBubbleRow(m, idx, myAv, roleAv) {
-    var isSelf = m.from === 'self';
-    var av = isSelf ? myAv : roleAv;
+/* ================================================================
+   视频通话系统 v5 — 修复速度和回复问题
+   ================================================================ */
+var _vcActive = false;
+var _vcRoleId = null;
+var _vcTimer = null;
+var _vcSeconds = 0;
+var _vcRecognition = null;
+var _vcListening = false;
+var _vcTextMode = false;
+var _vcBgImage = '';
+var _vcPipImage = '';
+var _vcCallingTimer = null;
+var _vcIncomingTimer = null;
+var _vcPendingText = '';
+var _vcCallLog = [];
+
+/* ==========================================================
+   阶段1：呼叫页（白色）— AI本地随机决定，不调API
+   ========================================================== */
+function openVideoCall() {
+    var role = findRole(_chatCurrentConv);
+    if (!role) { showToast('请先选择联系人'); return; }
+    var apiConfig = getActiveApiConfig();
+    if (!apiConfig || !apiConfig.url || !apiConfig.key || !apiConfig.model) {
+        showToast('请先配置API'); return;
+    }
+    if (_vcActive) { showToast('通话中'); return; }
+    _vcRoleId = _chatCurrentConv;
+    _vcCallLog = [];
+    _showCallingScreen(role);
+}
+
+function _showCallingScreen(role) {
+    var av = role.avatar || '';
+    var name = role.nickname || role.name || '未知';
+
+    var ov = document.getElementById('vcOverlay');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'vcOverlay';
+        document.querySelector('.phone-frame').appendChild(ov);
+    }
+    ov.style.cssText = 'position:absolute;inset:0;z-index:1100;border-radius:44px;overflow:hidden;background:#fff;';
+
     var h = '';
-    h += '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-msg-idx="' + idx + '" onclick="showBubbleMenu(event,' + idx + ')">';
-    h += '<div class="chat-bubble-avatar">';
-    if (av) h += '<img src="' + av + '" alt="">';
-    else h += SVG_USER;
+    h += '<style>';
+    h += '@keyframes vcRipple{0%{transform:scale(1);opacity:0.25}100%{transform:scale(1.7);opacity:0}}';
+    h += '@keyframes vcDot{0%,100%{opacity:0.15}50%{opacity:0.8}}';
+    h += '@keyframes vcFadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}';
+    h += '@keyframes vcWave{0%,100%{transform:scaleY(0.4);opacity:0.3}50%{transform:scaleY(1.3);opacity:0.9}}';
+    h += '@keyframes vcPulse{0%,100%{box-shadow:0 0 0 0 rgba(80,200,120,0.3)}50%{box-shadow:0 0 0 10px rgba(80,200,120,0)}}';
+    h += '</style>';
+
+    h += '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;animation:vcFadeIn 0.35s;">';
+    h += '<div style="position:relative;width:96px;height:96px;">';
+    h += '<div style="position:absolute;inset:-12px;border-radius:50%;border:1.5px solid rgba(200,185,215,0.2);animation:vcRipple 2.2s ease-out infinite;"></div>';
+    h += '<div style="position:absolute;inset:-24px;border-radius:50%;border:1px solid rgba(200,185,215,0.12);animation:vcRipple 2.2s ease-out infinite 0.6s;"></div>';
+    h += '<div style="width:96px;height:96px;border-radius:50%;overflow:hidden;border:2px solid rgba(210,195,225,0.25);box-shadow:0 4px 24px rgba(0,0,0,0.06);">';
+    if (av) h += '<img src="' + av + '" style="width:100%;height:100%;object-fit:cover;">';
+    else h += '<div style="width:100%;height:100%;background:rgba(245,240,250,1);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="rgba(190,175,210,0.5)" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
+    h += '</div></div>';
+    h += '<div style="font-size:18px;font-weight:700;color:rgba(50,40,60,0.88);">' + esc(name) + '</div>';
+    h += '<div id="vcCallingStatus" style="font-size:13px;color:rgba(160,150,170,0.7);display:flex;align-items:center;gap:1px;">';
+    h += '<span>正在呼叫</span>';
+    h += '<span style="animation:vcDot 1.4s infinite 0s;">.</span>';
+    h += '<span style="animation:vcDot 1.4s infinite 0.2s;">.</span>';
+    h += '<span style="animation:vcDot 1.4s infinite 0.4s;">.</span>';
     h += '</div>';
-    h += '<div class="chat-bubble-content-wrap">';
-    h += '<div class="chat-bubble" style="background:transparent;padding:0;border:none;box-shadow:none;max-width:240px;">';
-
-    // 礼物盒卡片
-    var gd = m.giftData || {};
-    var imgPart = gd.img
-        ? '<img src="' + gd.img + '" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:10px;">'
-        : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,220,230,0.3);border-radius:10px;"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="rgba(255,160,180,0.5)" stroke-width="1.5"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8V21"/><path d="M3 12h18"/><path d="M12 8c-1-3-5-4-5-1s4 1 5 1"/><path d="M12 8c1-3 5-4 5-1s-4 1-5 1"/></svg></div>';
-
-    var titleText = m.giftCardType === 'request' ? '请帮我付款' : '快来拆封我送你的礼物吧';
-    if (m.giftCardType === 'charGift') titleText = '送你一份礼物';
-
-    h += '<div style="width:220px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:16px;border:1px solid rgba(255,255,255,0.7);box-shadow:0 4px 24px rgba(0,0,0,0.06);overflow:hidden;cursor:pointer;" onclick="event.stopPropagation();showGiftCardDetail(\'' + (gd.orderNo || '') + '\')">';
-    h += '<div style="padding:12px 14px 8px;font-size:13px;font-weight:700;color:rgba(50,40,55,0.8);text-align:center;">' + esc(titleText) + '</div>';
-    h += '<div style="width:100%;height:110px;padding:0 14px;box-sizing:border-box;"><div style="width:100%;height:100%;border-radius:10px;overflow:hidden;background:rgba(248,242,250,0.5);">' + imgPart + '</div></div>';
-    h += '<div style="padding:8px 14px 10px;text-align:center;">';
-    h += '<div style="font-size:12px;font-weight:600;color:rgba(50,40,55,0.7);margin-bottom:2px;">' + esc(gd.name || '') + '</div>';
-    h += '<div style="font-size:14px;font-weight:800;color:rgba(255,110,140,0.9);">' + esc(gd.price || '0.00') + '</div>';
+    h += '<div style="display:flex;align-items:center;gap:5px;color:rgba(170,160,180,0.5);font-size:11px;margin-top:2px;">';
+    h += '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>';
+    h += '<span>视频通话</span></div>';
     h += '</div>';
 
-    // 底部按钮区
-    if (m.giftCardType === 'request' && !isSelf) {
-        h += '<div style="display:flex;border-top:1px solid rgba(0,0,0,0.04);">';
-        h += '<div style="flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:rgba(255,130,160,0.9);cursor:pointer;" onclick="event.stopPropagation();charConfirmPay(\'' + esc(gd.orderNo || '') + '\')">帮TA付款</div>';
-        h += '</div>';
-    } else if (m.giftCardType === 'charGift' && isSelf === false) {
-        h += '<div style="display:flex;border-top:1px solid rgba(0,0,0,0.04);">';
-        h += '<div style="flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:rgba(80,160,100,0.85);cursor:pointer;border-right:1px solid rgba(0,0,0,0.04);" onclick="event.stopPropagation();acceptCharGift(\'' + esc(gd.orderNo || '') + '\')">收下</div>';
-        h += '<div style="flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:rgba(255,130,160,0.9);cursor:pointer;" onclick="event.stopPropagation();userPayForCharGift(\'' + esc(gd.orderNo || '') + '\')">我来付</div>';
-        h += '</div>';
+    h += '<div style="position:absolute;bottom:60px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:10;">';
+    h += '<div onclick="vcCancelCalling()" style="width:56px;height:56px;border-radius:50%;background:rgba(230,70,70,0.88);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(230,70,70,0.2);">';
+    h += '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 4 .64 2 2 0 0 1 2 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 5.33 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L9.31 9.91"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+    h += '</div>';
+    h += '<div style="font-size:11px;color:rgba(170,160,180,0.5);">取消</div>';
+    h += '</div>';
+
+    ov.innerHTML = h;
+
+    // 1.5秒后本地判断是否接听（不调API，秒出结果）
+    _vcCallingTimer = setTimeout(function () {
+        _vcDecidePickUp(role);
+    }, 1500);
+}
+
+/* ---------- 本地判断接听（基于聊天记录分析，不调API） ---------- */
+function _vcDecidePickUp(role) {
+    // 分析最近聊天状态来决定
+    var msgs = role.msgs || [];
+    var recentMsgs = msgs.slice(-10);
+    var lastCharMsg = '';
+    var hasRecentChat = false;
+
+    for (var i = recentMsgs.length - 1; i >= 0; i--) {
+        var m = recentMsgs[i];
+        if (m.recalled || m.videoCall || m.hidden) continue;
+        if (m.from !== 'self' && m.text) {
+            lastCharMsg = m.text.toLowerCase();
+            break;
+        }
     }
 
-    h += '</div>';  // card end
-    h += '</div>';  // bubble end
-    h += '</div>';  // content-wrap end
-    h += '</div>';  // row end
+    // 检查最后一条消息是否是最近5分钟内的
+    if (msgs.length > 0) {
+        var lastTs = msgs[msgs.length - 1].ts || 0;
+        if (Date.now() - lastTs < 5 * 60 * 1000) hasRecentChat = true;
+    }
+
+    // 判断逻辑：大部分情况接听（90%），仅在明确生气/拒绝时可能不接
+    var willReject = false;
+    var angryWords = ['别烦我', '不想说', '滚', '讨厌', '离我远点', '不接', '别打', '烦死', '不理你'];
+    for (var k = 0; k < angryWords.length; k++) {
+        if (lastCharMsg.indexOf(angryWords[k]) !== -1) {
+            willReject = Math.random() < 0.6; // 60%概率不接
+            break;
+        }
+    }
+
+    var statusEl = document.getElementById('vcCallingStatus');
+    if (!willReject) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:rgba(80,180,120,0.9);">已接通</span>';
+        setTimeout(function () { _startVideoCall(role); }, 500);
+    } else {
+        if (statusEl) statusEl.innerHTML = '<span style="color:rgba(210,100,100,0.85);">对方已挂断</span>';
+        role.msgs.push({ from: 'self', videoCall: true, vcStatus: 'rejected', vcDuration: 0, ts: Date.now() });
+        role.lastMsg = '视频通话 - 未接听';
+        role.lastTime = Date.now();
+        saveChatRoles();
+        setTimeout(function () {
+            _vcRoleId = null;
+            var ov = document.getElementById('vcOverlay');
+            if (ov) ov.remove();
+            _refreshConvBody();
+        }, 1200);
+    }
+}
+
+/* ---------- 取消呼叫 ---------- */
+function vcCancelCalling() {
+    if (_vcCallingTimer) { clearTimeout(_vcCallingTimer); _vcCallingTimer = null; }
+    var role = findRole(_vcRoleId);
+    if (role) {
+        role.msgs.push({ from: 'self', videoCall: true, vcStatus: 'cancelled', vcDuration: 0, ts: Date.now() });
+        role.lastMsg = '视频通话 - 已取消';
+        role.lastTime = Date.now();
+        saveChatRoles();
+        _refreshConvBody();
+    }
+    _vcRoleId = null;
+    var ov = document.getElementById('vcOverlay');
+    if (ov) ov.remove();
+}
+
+/* ==========================================================
+   阶段2：通话界面（白色 + 续写按钮）
+   ========================================================== */
+function _startVideoCall(role) {
+    _vcActive = true;
+    _vcSeconds = 0;
+    _vcTextMode = false;
+    _vcPendingText = '';
+    _vcCallLog = [];
+
+    var av = role.avatar || '';
+    var name = role.nickname || role.name || '未知';
+    var bgStyle = _vcBgImage
+        ? 'background-image:url(' + _vcBgImage + ');background-size:cover;background-position:center;'
+        : 'background:#fff;';
+    var pipImg = _vcPipImage
+        ? '<img src="' + _vcPipImage + '" style="width:100%;height:100%;object-fit:cover;">'
+        : '<div style="width:100%;height:100%;background:rgba(245,240,250,1);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="rgba(190,175,210,0.45)" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
+
+    var cText = 'rgba(50,40,60,0.88)';
+    var cSub = 'rgba(140,130,155,0.7)';
+    var cBtnBg = 'rgba(240,235,248,1)';
+    var cBtnIcon = 'rgba(120,100,140,0.75)';
+    var isDark = !!_vcBgImage;
+    if (isDark) {
+        cText = 'rgba(255,255,255,0.95)';
+        cSub = 'rgba(255,255,255,0.6)';
+        cBtnBg = 'rgba(255,255,255,0.2)';
+        cBtnIcon = 'rgba(255,255,255,0.85)';
+    }
+
+    var ov = document.getElementById('vcOverlay');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'vcOverlay';
+        document.querySelector('.phone-frame').appendChild(ov);
+    }
+    ov.style.cssText = 'position:absolute;inset:0;z-index:1100;border-radius:44px;overflow:hidden;' + bgStyle;
+
+    var h = '';
+    // 顶部栏
+    h += '<div style="position:absolute;top:0;left:0;right:0;padding:54px 20px 12px;display:flex;align-items:center;justify-content:space-between;z-index:10;">';
+    h += '<div style="display:flex;align-items:center;gap:10px;">';
+    h += '<div style="width:38px;height:38px;border-radius:50%;overflow:hidden;border:2px solid ' + (isDark ? 'rgba(255,255,255,0.3)' : 'rgba(210,195,225,0.25)') + ';flex-shrink:0;">';
+    if (av) h += '<img src="' + av + '" style="width:100%;height:100%;object-fit:cover;">';
+    else h += '<div style="width:100%;height:100%;background:rgba(245,240,250,1);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="rgba(190,175,210,0.5)" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
+    h += '</div><div>';
+    h += '<div style="font-size:14px;font-weight:700;color:' + cText + ';">' + esc(name) + '</div>';
+    h += '<div id="vcTimerText" style="font-size:11px;color:' + cSub + ';margin-top:1px;">00:00</div>';
+    h += '</div></div>';
+    h += '<div onclick="vcChangeBg()" style="width:30px;height:30px;border-radius:50%;background:' + cBtnBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="' + cBtnIcon + '" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+    h += '</div>';
+
+    // PiP
+    h += '<div id="vcPipWindow" onclick="vcChangePip()" style="position:absolute;top:108px;right:16px;width:90px;height:126px;border-radius:12px;overflow:hidden;border:1.5px solid ' + (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(210,195,225,0.2)') + ';box-shadow:0 3px 16px rgba(0,0,0,0.06);cursor:pointer;z-index:10;">';
+    h += pipImg;
+    h += '</div>';
+
+    // 字幕区
+    h += '<div id="vcSubtitleArea" style="position:absolute;left:16px;right:16px;bottom:210px;z-index:10;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:6px;"></div>';
+
+    // 待发送条
+    h += '<div id="vcPendingBar" style="position:absolute;left:16px;right:16px;bottom:178px;z-index:10;display:none;">';
+    h += '<div style="display:flex;align-items:center;gap:8px;background:' + (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(245,240,250,0.95)') + ';border:1px solid ' + (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(210,195,225,0.2)') + ';border-radius:16px;padding:6px 12px;">';
+    h += '<div id="vcPendingText" style="flex:1;font-size:12px;color:' + cText + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>';
+    h += '<div onclick="vcClearPending()" style="color:' + cSub + ';font-size:11px;cursor:pointer;flex-shrink:0;">清除</div>';
+    h += '</div></div>';
+
+    // 波纹
+    h += '<div id="vcWaveIndicator" style="position:absolute;bottom:178px;left:50%;transform:translateX(-50%);z-index:10;display:none;align-items:center;gap:3px;">';
+    for (var i = 0; i < 5; i++) {
+        h += '<div style="width:3px;height:' + (8 + Math.random() * 12) + 'px;background:' + (isDark ? 'rgba(255,255,255,0.6)' : 'rgba(160,140,190,0.5)') + ';border-radius:2px;animation:vcWave 0.6s ease-in-out infinite;animation-delay:' + (i * 0.1) + 's;"></div>';
+    }
+    h += '</div>';
+
+    // 文字输入
+    h += '<div id="vcTextInputArea" style="position:absolute;left:16px;right:16px;bottom:128px;z-index:10;display:none;">';
+    h += '<div style="display:flex;gap:8px;align-items:center;">';
+    h += '<input id="vcTextInput" type="text" placeholder="输入想说的话..." style="flex:1;height:38px;border-radius:19px;border:1px solid ' + (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(210,195,225,0.3)') + ';background:' + (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(248,244,252,1)') + ';color:' + cText + ';padding:0 16px;font-size:13px;outline:none;" onkeydown="if(event.key===\'Enter\'){vcSetPendingFromText();event.preventDefault();}">';
+    h += '<div onclick="vcSetPendingFromText()" style="width:38px;height:38px;border-radius:50%;background:' + cBtnBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="' + cBtnIcon + '" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
+    h += '</div></div>';
+
+    // 底部栏
+    h += '<div style="position:absolute;bottom:0;left:0;right:0;padding:16px 0 42px;z-index:10;display:flex;justify-content:center;align-items:center;gap:20px;">';
+    h += '<div id="vcMicBtn" onclick="vcToggleMic()" style="width:48px;height:48px;border-radius:50%;background:' + cBtnBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;">';
+    h += '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="' + cBtnIcon + '" stroke-width="1.8"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+    h += '</div>';
+    h += '<div id="vcContinueBtn" onclick="vcContinueReply()" style="width:48px;height:48px;border-radius:50%;background:rgba(220,240,228,1);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;border:1.5px solid rgba(160,210,175,0.3);" title="续写">';
+    h += '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="rgba(80,160,110,0.8)" stroke-width="2"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>';
+    h += '</div>';
+    h += '<div onclick="vcHangup()" style="width:54px;height:54px;border-radius:50%;background:rgba(230,70,70,0.88);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(230,70,70,0.2);">';
+    h += '<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#fff" stroke-width="2"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 4 .64 2 2 0 0 1 2 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 5.33 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L9.31 9.91"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+    h += '</div>';
+    h += '<div id="vcTypeBtn" onclick="vcToggleTextMode()" style="width:48px;height:48px;border-radius:50%;background:' + cBtnBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;">';
+    h += '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="' + cBtnIcon + '" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+    h += '</div>';
+    h += '</div>';
+
+    h += '<input type="file" id="vcBgFileInput" style="display:none" accept="image/*" onchange="vcHandleBgFile(event)">';
+    h += '<input type="file" id="vcPipFileInput" style="display:none" accept="image/*" onchange="vcHandlePipFile(event)">';
+
+    ov.innerHTML = h;
+
+    _vcTimer = setInterval(function () {
+        _vcSeconds++;
+        var mm = Math.floor(_vcSeconds / 60);
+        var ss = _vcSeconds % 60;
+        var el = document.getElementById('vcTimerText');
+        if (el) el.textContent = (mm < 10 ? '0' : '') + mm + ':' + (ss < 10 ? '0' : '') + ss;
+    }, 1000);
+}
+
+/* ---------- 换背景 ---------- */
+function vcChangeBg() { var inp = document.getElementById('vcBgFileInput'); if (inp) inp.click(); }
+function vcHandleBgFile(e) {
+    var f = e.target.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function (ev) {
+        _vcBgImage = ev.target.result;
+        var role = findRole(_vcRoleId);
+        if (role) _startVideoCall(role); // 重建界面切换主题
+    };
+    r.readAsDataURL(f); e.target.value = '';
+}
+function vcChangePip() { var inp = document.getElementById('vcPipFileInput'); if (inp) inp.click(); }
+function vcHandlePipFile(e) {
+    var f = e.target.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function (ev) {
+        _vcPipImage = ev.target.result;
+        var pip = document.getElementById('vcPipWindow');
+        if (pip) pip.innerHTML = '<img src="' + _vcPipImage + '" style="width:100%;height:100%;object-fit:cover;">';
+    };
+    r.readAsDataURL(f); e.target.value = '';
+}
+
+/* ---------- 麦克风 ---------- */
+function vcToggleMic() {
+    if (_vcListening) vcStopListening(); else vcStartListening();
+}
+function vcStartListening() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { showToast('浏览器不支持语音识别，请使用打字模式'); return; }
+    _vcRecognition = new SR();
+    _vcRecognition.lang = 'zh-CN';
+    _vcRecognition.interimResults = false;
+    _vcRecognition.continuous = false;
+    _vcRecognition.onresult = function (ev) {
+        var txt = '';
+        for (var i = ev.resultIndex; i < ev.results.length; i++) txt += ev.results[i][0].transcript;
+        if (txt.trim()) vcSetPending(txt.trim());
+        vcStopListening();
+    };
+    _vcRecognition.onerror = function (ev) {
+        if (ev.error !== 'no-speech') showToast('语音识别出错');
+        vcStopListening();
+    };
+    _vcRecognition.onend = function () {
+        if (_vcActive && _vcListening) { try { _vcRecognition.start(); } catch (e) { vcStopListening(); } }
+    };
+    try {
+        _vcRecognition.start();
+        _vcListening = true;
+        var btn = document.getElementById('vcMicBtn');
+        if (btn) { btn.style.background = 'rgba(220,240,228,1)'; btn.style.animation = 'vcPulse 1.5s infinite'; }
+        var wave = document.getElementById('vcWaveIndicator');
+        if (wave) wave.style.display = 'flex';
+    } catch (e) { showToast('无法启动麦克风'); }
+}
+function vcStopListening() {
+    _vcListening = false;
+    if (_vcRecognition) { try { _vcRecognition.stop(); } catch (e) { } _vcRecognition = null; }
+    var btn = document.getElementById('vcMicBtn');
+    if (btn) { btn.style.background = ''; btn.style.animation = 'none'; }
+    var wave = document.getElementById('vcWaveIndicator');
+    if (wave) wave.style.display = 'none';
+}
+
+/* ---------- 打字模式 ---------- */
+function vcToggleTextMode() {
+    _vcTextMode = !_vcTextMode;
+    var area = document.getElementById('vcTextInputArea');
+    var btn = document.getElementById('vcTypeBtn');
+    if (_vcTextMode) {
+        if (area) area.style.display = 'block';
+        if (btn) btn.style.background = 'rgba(215,225,248,1)';
+        var inp = document.getElementById('vcTextInput');
+        if (inp) setTimeout(function () { inp.focus(); }, 100);
+        if (_vcListening) vcStopListening();
+    } else {
+        if (area) area.style.display = 'none';
+        if (btn) btn.style.background = '';
+    }
+}
+function vcSetPendingFromText() {
+    var inp = document.getElementById('vcTextInput');
+    if (!inp) return;
+    var txt = inp.value.trim();
+    if (!txt) return;
+    inp.value = '';
+    vcSetPending(txt);
+}
+
+/* ---------- 待发送管理 ---------- */
+function vcSetPending(text) {
+    _vcPendingText = text;
+    vcShowSubtitle('user', text);
+    var bar = document.getElementById('vcPendingBar');
+    var ptEl = document.getElementById('vcPendingText');
+    if (bar) bar.style.display = 'block';
+    if (ptEl) ptEl.textContent = text;
+    var cb = document.getElementById('vcContinueBtn');
+    if (cb) { cb.style.background = 'rgba(180,230,195,1)'; cb.style.transform = 'scale(1.06)'; }
+}
+function vcClearPending() {
+    _vcPendingText = '';
+    var bar = document.getElementById('vcPendingBar');
+    if (bar) bar.style.display = 'none';
+    var cb = document.getElementById('vcContinueBtn');
+    if (cb) { cb.style.background = 'rgba(220,240,228,1)'; cb.style.transform = 'scale(1)'; }
+}
+
+/* ---------- 续写 ---------- */
+function vcContinueReply() {
+    var text = _vcPendingText;
+    vcClearPending();
+    vcSendToAI(text || '');
+}
+
+/* ---------- 字幕 ---------- */
+function vcShowSubtitle(who, text) {
+    var area = document.getElementById('vcSubtitleArea');
+    if (!area) return;
+    var isUser = who === 'user';
+    var isDark = !!_vcBgImage;
+    var div = document.createElement('div');
+    div.style.cssText = 'max-width:85%;padding:8px 14px;border-radius:12px;font-size:13px;line-height:1.55;animation:vcFadeIn 0.3s;word-break:break-word;'
+        + (isUser
+            ? 'background:' + (isDark ? 'rgba(100,160,255,0.25)' : 'rgba(215,225,248,0.8)') + ';color:' + (isDark ? 'rgba(255,255,255,0.95)' : 'rgba(50,40,60,0.88)') + ';align-self:flex-end;text-align:right;'
+            : 'background:' + (isDark ? 'rgba(255,255,255,0.18)' : 'rgba(245,240,250,0.9)') + ';color:' + (isDark ? 'rgba(255,255,255,0.92)' : 'rgba(50,40,60,0.85)') + ';align-self:flex-start;text-align:left;');
+    div.textContent = text;
+    area.appendChild(div);
+    while (area.children.length > 4) area.removeChild(area.firstChild);
+    setTimeout(function () {
+        div.style.transition = 'opacity 0.5s'; div.style.opacity = '0';
+        setTimeout(function () { if (div.parentNode) div.parentNode.removeChild(div); }, 500);
+    }, 10000);
+}
+
+/* ---------- 发给AI（精简消息，只用通话记忆） ---------- */
+function vcSendToAI(userText) {
+    var role = findRole(_vcRoleId);
+    if (!role) return;
+    var apiConfig = getActiveApiConfig();
+    if (!apiConfig) return;
+
+    // 记录到通话独立记忆
+    if (userText) {
+        _vcCallLog.push({ role: 'user', content: userText });
+    }
+
+    // 构建精简消息：只要 system prompt + 最近5条聊天 + 通话记忆
+    var messages = [];
+
+    // 1. system prompt
+    var sysPrompt = '';
+    var persona = getActivePersona(_vcRoleId);
+    if (role.prompt) sysPrompt += role.prompt;
+    if (persona && persona.prompt) sysPrompt += '\n[用户人设]\n' + persona.prompt;
+
+    sysPrompt += '\n[当前场景：你和对方正在视频通话中。'
+        + '对方通过视频看着你,你也看着对方。'
+        + '请像真实视频通话一样自然地回应。'
+        + '在回复中包含你当前的面部表情和身体动作,用圆括号()包裹。'
+        + '请直接说话,不要加引号,不要使用任何emoji或颜文字。'
+        + '语气要口语化、自然,像真的在打视频电话。'
+        + '必须给出完整的回复,不要中途截断。]';
+
+    if (!userText && _vcCallLog.length <= 1) {
+        sysPrompt += '\n[视频通话刚接通,你先打个招呼,至少说2-3句话。]';
+    } else if (!userText) {
+        sysPrompt += '\n[对方没说话,你可以主动说点什么、做个动作、换个表情。]';
+    }
+
+    messages.push({ role: 'system', content: sysPrompt });
+
+    // 2. 最近5条聊天记录（提供上下文，但不要太多）
+    var recentChat = [];
+    var chatMsgs = role.msgs || [];
+    for (var i = chatMsgs.length - 1; i >= 0 && recentChat.length < 5; i--) {
+        var m = chatMsgs[i];
+        if (m.recalled || m.videoCall || m.hidden || !m.text) continue;
+        if (m.from === 'self') recentChat.unshift({ role: 'user', content: m.text });
+        else recentChat.unshift({ role: 'assistant', content: m.text });
+    }
+    for (var j = 0; j < recentChat.length; j++) {
+        messages.push(recentChat[j]);
+    }
+
+    // 3. 通话记忆（最近15条）
+    if (_vcCallLog.length > 0) {
+        var logSlice = _vcCallLog.slice(-15);
+        for (var k = 0; k < logSlice.length; k++) {
+            messages.push(logSlice[k]);
+        }
+    }
+
+    // 4. 如果没有用户消息，追加一个占位
+    if (!userText && _vcCallLog.length === 0) {
+        messages.push({ role: 'user', content: '[视频通话已接通]' });
+    }
+
+    var cb = document.getElementById('vcContinueBtn');
+    if (cb) { cb.style.opacity = '0.5'; cb.style.pointerEvents = 'none'; }
+
+    var url = apiConfig.url.replace(/\/+$/, '') + '/chat/completions';
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiConfig.key },
+        body: JSON.stringify({ model: apiConfig.model, messages: messages, temperature: 0.85, max_tokens: 600 })
+    }).then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (!_vcActive) return;
+            var reply = '';
+            if (data.choices && data.choices.length > 0) {
+                reply = (data.choices[0].message && data.choices[0].message.content) || '';
+            }
+            reply = reply.trim();
+            if (!reply) reply = '(歪了歪头，看着你)';
+
+            _vcCallLog.push({ role: 'assistant', content: reply });
+            vcShowSubtitle('char', reply);
+        })
+        .catch(function () {
+            if (_vcActive) vcShowSubtitle('char', '(信号不太好...)');
+        })
+        .finally(function () {
+            var cb2 = document.getElementById('vcContinueBtn');
+            if (cb2) { cb2.style.opacity = '1'; cb2.style.pointerEvents = 'auto'; }
+        });
+}
+
+/* ---------- 挂断 ---------- */
+function vcHangup() {
+    _vcActive = false;
+    if (_vcTimer) { clearInterval(_vcTimer); _vcTimer = null; }
+    vcStopListening();
+
+    var role = findRole(_vcRoleId);
+    if (role) {
+        role.msgs.push({
+            from: 'self', videoCall: true, vcStatus: 'ended',
+            vcDuration: _vcSeconds, ts: Date.now()
+        });
+
+        // 通话记忆存为 system 消息（hidden，不显示但AI能读到）
+        if (_vcCallLog.length > 0) {
+            var summary = '[视频通话记忆] 刚才视频通话的内容：\n';
+            for (var i = 0; i < _vcCallLog.length; i++) {
+                var e = _vcCallLog[i];
+                summary += (e.role === 'user' ? '对方：' : '你：') + e.content + '\n';
+            }
+            role.msgs.push({ from: 'self', text: summary, ts: Date.now(), hidden: true });
+        }
+
+        var mm = Math.floor(_vcSeconds / 60);
+        var ss = _vcSeconds % 60;
+        role.lastMsg = '视频通话 ' + (mm < 10 ? '0' : '') + mm + ':' + (ss < 10 ? '0' : '') + ss;
+        role.lastTime = Date.now();
+        saveChatRoles();
+    }
+
+    _vcRoleId = null;
+    _vcSeconds = 0;
+    _vcCallLog = [];
+    var ov = document.getElementById('vcOverlay');
+    if (ov) ov.remove();
+    _refreshConvBody();
+}
+
+/* ---------- 刷新对话区 ---------- */
+function _refreshConvBody() {
+    if (_chatCurrentConv) {
+        var role = findRole(_chatCurrentConv);
+        if (role) {
+            var body = document.getElementById('chatConvBody');
+            if (body) {
+                var ap = getActivePersona(_chatCurrentConv);
+                var myAv = ap ? ap.avatar : '';
+                var roleAv = role.avatar || '';
+                var h = '';
+                for (var i = 0; i < role.msgs.length; i++) {
+                    var msg = role.msgs[i];
+                    if (msg.hidden) continue;
+                    if (msg.recalled) {
+                        h += '<div class="chat-bubble-recalled">' + (msg.from === 'self' ? '你' : esc(role.nickname || role.name)) + ' 撤回了一条消息</div>';
+                        continue;
+                    }
+                    h += renderBubbleRow(msg, i, myAv, roleAv);
+                }
+                body.innerHTML = h;
+                body.scrollTop = body.scrollHeight;
+            }
+        }
+    }
+}
+
+/* ==========================================================
+   视频通话气泡（仿微信/QQ）
+   ========================================================== */
+function renderVideoCallBubbleRow(m, idx, myAv, roleAv) {
+    if (m.hidden) return '';
+    var isSelf = m.from === 'self';
+    var dur = m.vcDuration || 0;
+    var status = m.vcStatus || 'ended';
+
+    var durMin = Math.floor(dur / 60);
+    var durSec = dur % 60;
+    var durText = (durMin < 10 ? '0' : '') + durMin + ':' + (durSec < 10 ? '0' : '') + durSec;
+
+    var statusText = '';
+    if (status === 'ended') statusText = '通话时长 ' + durText;
+    else if (status === 'cancelled') statusText = '已取消';
+    else if (status === 'rejected') statusText = '对方未接听';
+    else if (status === 'missed') statusText = '未接听';
+    else statusText = '通话时长 ' + durText;
+
+    var isGood = status === 'ended';
+    var iconColor = isGood ? 'rgba(80,170,115,0.8)' : 'rgba(200,105,105,0.7)';
+    var iconBg = isGood ? 'rgba(220,245,230,1)' : 'rgba(252,235,235,1)';
+
+    var h = '';
+    h += '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-msg-idx="' + idx + '">';
+    h += '<div class="chat-bubble-avatar">';
+    if (isSelf) h += myAv ? '<img src="' + myAv + '" alt="">' : SVG_USER_SM;
+    else h += roleAv ? '<img src="' + roleAv + '" alt="">' : SVG_USER_SM;
+    h += '</div>';
+    h += '<div class="chat-bubble-content-wrap">';
+    h += '<div style="display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;background:rgba(255,255,255,0.95);border:1px solid rgba(230,225,238,0.6);box-shadow:0 1px 4px rgba(0,0,0,0.04);max-width:220px;">';
+    h += '<div style="width:36px;height:36px;border-radius:50%;background:' + iconBg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">';
+    h += '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="' + iconColor + '" stroke-width="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>';
+    h += '</div>';
+    h += '<div style="min-width:0;">';
+    h += '<div style="font-size:13px;font-weight:600;color:rgba(50,40,60,0.85);white-space:nowrap;">视频通话</div>';
+    h += '<div style="font-size:11px;color:rgba(140,130,155,0.7);margin-top:2px;white-space:nowrap;">' + esc(statusText) + '</div>';
+    h += '</div></div>';
+    h += '</div></div>';
     return h;
 }
 
-/* ========== 礼物卡片详情弹窗 ========== */
-function showGiftCardDetail(orderNo) {
-    if (typeof initGiftData === 'function') initGiftData();
-    var order = null;
-    for (var i = 0; i < giftOrders.length; i++) {
-        if (giftOrders[i].orderNo === orderNo) { order = giftOrders[i]; break; }
-    }
-    if (!order) { if (typeof showToast === 'function') showToast('订单未找到'); return; }
+/* ==========================================================
+   角色来电
+   ========================================================== */
+function triggerIncomingCall(roleId) {
+    var role = findRole(roleId);
+    if (!role || _vcActive || document.getElementById('vcIncomingOverlay')) return;
 
-    var ov = document.getElementById('giftCardDetailPopup');
-    if (!ov) {
-        ov = document.createElement('div');
-        ov.id = 'giftCardDetailPopup';
-        document.querySelector('.phone-frame').appendChild(ov);
-    }
+    _vcRoleId = roleId;
+    _vcCallLog = [];
+    var av = role.avatar || '';
+    var name = role.nickname || role.name || '未知';
 
-    var imgPart = order.giftImg
-        ? '<img src="' + order.giftImg + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
-        : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(150,140,155,0.5);">无图</div>';
+    var ov = document.createElement('div');
+    ov.id = 'vcIncomingOverlay';
+    ov.style.cssText = 'position:absolute;top:60px;left:50%;transform:translateX(-50%);z-index:1200;width:calc(100% - 32px);max-width:340px;border-radius:18px;overflow:hidden;'
+        + 'background:rgba(255,255,255,0.96);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);'
+        + 'border:1px solid rgba(220,215,230,0.5);box-shadow:0 10px 40px rgba(0,0,0,0.1);'
+        + 'animation:vcSlideIn 0.3s;';
 
-    var statusColor = order.status === '已发货' ? 'rgba(80,160,100,0.85)' : (order.status === '待代付' ? 'rgba(255,160,80,0.85)' : 'rgba(50,40,55,0.5)');
+    var h = '<style>@keyframes vcSlideIn{from{opacity:0;transform:translateX(-50%) translateY(-14px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}</style>';
+    h += '<div style="padding:22px 20px 14px;display:flex;align-items:center;gap:14px;">';
+    h += '<div style="width:50px;height:50px;border-radius:50%;overflow:hidden;border:2px solid rgba(210,195,225,0.25);flex-shrink:0;">';
+    if (av) h += '<img src="' + av + '" style="width:100%;height:100%;object-fit:cover;">';
+    else h += '<div style="width:100%;height:100%;background:rgba(245,240,250,1);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="rgba(190,175,210,0.5)" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
+    h += '</div><div style="flex:1;min-width:0;">';
+    h += '<div style="font-size:15px;font-weight:700;color:rgba(50,40,60,0.9);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(name) + '</div>';
+    h += '<div style="font-size:12px;color:rgba(150,140,165,0.65);margin-top:2px;">视频通话邀请</div>';
+    h += '</div></div>';
+    h += '<div style="padding:4px 20px 20px;display:flex;justify-content:center;gap:40px;">';
+    h += '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;">';
+    h += '<div onclick="vcRejectIncoming()" style="width:50px;height:50px;border-radius:50%;background:rgba(230,65,65,0.88);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(230,65,65,0.18);">';
+    h += '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 4 .64 2 2 0 0 1 2 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 5.33 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L9.31 9.91"/><line x1="1" y1="1" x2="23" y2="23"/></svg></div>';
+    h += '<div style="font-size:10px;color:rgba(155,145,170,0.55);">挂断</div></div>';
+    h += '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;">';
+    h += '<div onclick="vcAcceptIncoming()" style="width:50px;height:50px;border-radius:50%;background:rgba(60,175,90,0.88);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(60,175,90,0.18);">';
+    h += '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
+    h += '<div style="font-size:10px;color:rgba(155,145,170,0.55);">接听</div></div></div>';
 
-    ov.style.cssText = 'position:absolute;inset:0;z-index:999;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;border-radius:44px;animation:fadeIn 0.2s;';
-    ov.innerHTML = '<div style="width:280px;background:rgba(255,255,255,0.92);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border-radius:20px;border:1px solid rgba(255,255,255,0.7);box-shadow:0 8px 40px rgba(0,0,0,0.1);overflow:hidden;" onclick="event.stopPropagation()">'
-        + '<div style="width:100%;height:160px;overflow:hidden;background:rgba(248,242,250,0.5);">' + imgPart + '</div>'
-        + '<div style="padding:14px 18px;">'
-        + '<div style="font-size:16px;font-weight:700;color:rgba(50,40,55,0.85);margin-bottom:4px;">' + escGift(order.giftName) + '</div>'
-        + '<div style="font-size:12px;color:rgba(50,40,55,0.35);margin-bottom:8px;">' + escGift(order.giftDesc || '') + '</div>'
-        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
-        + '<span style="font-size:18px;font-weight:800;color:rgba(255,110,140,0.9);">' + order.price + '</span>'
-        + '<span style="font-size:11px;font-weight:600;color:' + statusColor + ';padding:2px 8px;border-radius:8px;background:rgba(0,0,0,0.03);">' + escGift(order.status) + '</span>'
-        + '</div>'
-        + '<div style="font-size:11px;color:rgba(50,40,55,0.3);line-height:1.8;">'
-        + '订单号: ' + order.orderNo + '<br>'
-        + '时间: ' + formatOrderDate(order.createdAt) + '<br>'
-        + '付款: ' + escGift(order.payType || '')
-        + (order.address ? '<br>地址: ' + escGift(order.address) : '')
-        + '</div>'
-        + '</div>'
-        + '<div style="padding:10px 18px 14px;border-top:1px solid rgba(0,0,0,0.04);text-align:center;">'
-        + '<div style="display:inline-block;padding:8px 28px;border-radius:20px;background:rgba(255,140,170,0.15);color:rgba(255,100,140,0.85);font-size:13px;font-weight:600;cursor:pointer;" onclick="closeGiftCardDetail()">关闭</div>'
-        + '</div>'
-        + '</div>';
-
-    ov.onclick = function (e) { if (e.target === ov) closeGiftCardDetail(); };
+    ov.innerHTML = h;
+    document.querySelector('.phone-frame').appendChild(ov);
+    _vcIncomingTimer = setTimeout(function () { vcRejectIncoming(); }, 30000);
 }
 
-function closeGiftCardDetail() {
-    var ov = document.getElementById('giftCardDetailPopup');
+function vcRejectIncoming() {
+    if (_vcIncomingTimer) { clearTimeout(_vcIncomingTimer); _vcIncomingTimer = null; }
+    var ov = document.getElementById('vcIncomingOverlay');
     if (ov) ov.remove();
+    var role = findRole(_vcRoleId);
+    if (role && !_vcActive) {
+        role.msgs.push({ from: 'other', videoCall: true, vcStatus: 'missed', vcDuration: 0, ts: Date.now() });
+        role.lastMsg = '未接来电'; role.lastTime = Date.now();
+        saveChatRoles(); _refreshConvBody();
+    }
+    if (!_vcActive) _vcRoleId = null;
+}
+
+function vcAcceptIncoming() {
+    if (_vcIncomingTimer) { clearTimeout(_vcIncomingTimer); _vcIncomingTimer = null; }
+    var ov = document.getElementById('vcIncomingOverlay');
+    if (ov) ov.remove();
+    var role = findRole(_vcRoleId);
+    if (role) _startVideoCall(role);
 }
 
 /* ================================================================
