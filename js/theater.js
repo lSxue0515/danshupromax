@@ -1,356 +1,366 @@
 /* ============================================
    theater.js — 线下剧场 Offline Theater
-   Galgame 风格 · 视觉小说演出模式
+   橙光/Galgame 式演出
    ============================================ */
 
-/* ===== 状态 ===== */
-var _theaterView = 'list';       // list | char-detail | stage
-var _theaterRole = null;         // 当前选中的角色
-var _theaterBg = '';             // 背景图URL
-var _theaterHistory = [];        // 对话历史 [{from, text}]
-var _theaterSegments = [];       // AI生成的段落列表
-var _theaterSegIdx = 0;          // 当前段落索引
-var _theaterPhase = 'input';     // input | generating | reading | waiting
-var _theaterInputText = '';
-var _theaterPersona = null;      // 用户人设
+var _thView = 'list';
+var _thRole = null;
+var _thBg = '';
+var _thHistory = [];
+var _thSegments = [];
+var _thSegIdx = 0;
+var _thPhase = 'input';
+var _thInputText = '';
+var _thPersona = null;
 
-/* 持久化背景 */
-try {
-    _theaterBg = localStorage.getItem('_theaterBg') || '';
-} catch (e) { }
+try { _thBg = localStorage.getItem('_thBg') || ''; } catch (e) { }
 
-/* ===== 打开 / 关闭 ===== */
 function openTheaterApp() {
-    var el = document.getElementById('theaterOverlay');
-    if (!el) return;
+    var el = document.getElementById('theaterOverlay'); if (!el) return;
     if (typeof loadChatRoles === 'function') loadChatRoles();
-    _theaterView = 'list';
-    _theaterRole = null;
+    _thView = 'list'; _thRole = null;
     el.classList.add('show');
-    _theaterRenderList();
+    _thRenderList();
 }
-
 function closeTheaterApp() {
     var el = document.getElementById('theaterOverlay');
     if (el) el.classList.remove('show');
-    _theaterRole = null;
-    _theaterSegments = [];
+    _thRole = null; _thSegments = [];
 }
 
-/* ===== 角色列表页 ===== */
-function _theaterRenderList() {
-    var el = document.getElementById('theaterOverlay');
-    if (!el) return;
+function _thGetApi() {
+    var url = '', key = '', model = '';
 
+    /* 优先从 localStorage 读（设置页保存时会写入） */
+    try {
+        url = localStorage.getItem('apiUrl') || '';
+        key = localStorage.getItem('apiKey') || '';
+        model = localStorage.getItem('selectedModel') || '';
+    } catch (e) { }
+
+    /* fallback：从 DOM 读 */
+    if (!url) try { var el = document.getElementById('apiUrl'); if (el) url = el.value.trim(); } catch (e) { }
+    if (!key) try { var el = document.getElementById('apiKey'); if (el) key = el.value.trim(); } catch (e) { }
+    if (!model) try { var el = document.getElementById('apiModelSelect'); if (el) model = el.value.trim(); } catch (e) { }
+
+    /* 再试其他常见的 localStorage key */
+    if (!url) try { url = localStorage.getItem('api_url') || localStorage.getItem('apiBaseUrl') || ''; } catch (e) { }
+    if (!key) try { key = localStorage.getItem('api_key') || localStorage.getItem('apiSecretKey') || ''; } catch (e) { }
+    if (!model) try { model = localStorage.getItem('apiModel') || localStorage.getItem('model') || ''; } catch (e) { }
+
+    if (!model) model = 'gpt-3.5-turbo';
+    return { url: url.trim(), key: key.trim(), model: model.trim() };
+}
+
+function _thBuildEndpoint(baseUrl) {
+    var u = baseUrl.replace(/\/+$/, '');
+    if (u.indexOf('/chat/completions') >= 0) return u;
+    if (u.indexOf('/v1') >= 0) return u + '/chat/completions';
+    return u + '/v1/chat/completions';
+}
+
+function _thEsc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function _thFmt(text) {
+    var s = _thEsc(text);
+    s = s.replace(/「([^」]*)」/g, '<span class="thtr-quote">「$1」</span>');
+    s = s.replace(/\*([^*]+)\*/g, '<em class="thtr-action">$1</em>');
+    return s;
+}
+
+/* ===== 角色列表 ===== */
+function _thRenderList() {
+    var el = document.getElementById('theaterOverlay'); if (!el) return;
     var roles = (typeof _chatRoles !== 'undefined' && _chatRoles) ? _chatRoles : [];
+
+    var h = '';
+    h += '<div class="thtr-header">';
+    h += '<div class="thtr-hdr-btn" onclick="closeTheaterApp()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>';
+    h += '<div class="thtr-hdr-title">OFFLINE THEATER</div>';
+    h += '<div class="thtr-hdr-btn" onclick="_thPickBg()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+    h += '</div>';
+
+    h += '<div class="thtr-list-body">';
+    h += '<div class="thtr-list-top">';
+    h += '<div class="thtr-list-title">Offline Theater 线下剧场</div>';
+    h += '<div class="thtr-list-sub">Choose a character 选择角色开始演出</div>';
+    h += '</div>';
+
+    h += '<div class="thtr-grid">';
+    if (roles.length === 0) {
+        h += '<div class="thtr-empty">No characters yet 暂无角色</div>';
+    }
+    for (var i = 0; i < roles.length; i++) {
+        var r = roles[i];
+        h += '<div class="thtr-card" onclick="_thSelectRole(\'' + _thEsc(r.id || '') + '\')">';
+        h += '<div class="thtr-card-av">';
+        if (r.avatar) h += '<img src="' + _thEsc(r.avatar) + '">';
+        else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+        h += '</div>';
+        h += '<div class="thtr-card-name">' + _thEsc(r.name || 'unnamed') + '</div>';
+        h += '</div>';
+    }
+    h += '</div></div>';
+
+    el.innerHTML = h;
+}
+
+/* ===== 角色详情 + 人设选择 ===== */
+function _thSelectRole(roleId) {
+    var roles = (typeof _chatRoles !== 'undefined' && _chatRoles) ? _chatRoles : [];
+    _thRole = null;
+    for (var i = 0; i < roles.length; i++) {
+        if (roles[i].id === roleId) { _thRole = roles[i]; break; }
+    }
+    if (!_thRole) return;
+    _thView = 'detail';
+    _thHistory = []; _thSegments = []; _thSegIdx = 0;
+    _thPhase = 'input'; _thPersona = null;
+    _thRenderDetail();
+}
+
+function _thRenderDetail() {
+    var el = document.getElementById('theaterOverlay'); if (!el || !_thRole) return;
+    var r = _thRole;
     var personas = (typeof _chatPersonas !== 'undefined' && _chatPersonas) ? _chatPersonas : [];
 
     var h = '';
-    /* 头部 */
-    h += '<div class="thtr-header">';
-    h += '<div class="thtr-header-back" onclick="closeTheaterApp()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>';
-    h += '<div class="thtr-header-title">OFFLINE THEATER</div>';
-    h += '<div class="thtr-header-actions">';
-    h += '<div class="thtr-bg-btn" onclick="_theaterPickBg()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+    h += '<div class="thtr-detail-page">';
+
+    h += '<div class="thtr-detail-card">';
+    h += '<div class="thtr-detail-top">';
+    h += '<div class="thtr-dtag">OFFLINE</div>';
+    h += '<div class="thtr-detail-actions">';
+    h += '<div class="thtr-detail-act" onclick="_thPickBg()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+    h += '<div class="thtr-detail-act" onclick="_thView=\'list\';_thRenderList()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>';
+    h += '<div class="thtr-detail-act" onclick="closeTheaterApp()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>';
     h += '</div></div>';
 
-    /* 欢迎区 */
-    h += '<div class="thtr-welcome">';
-    h += '<div class="thtr-welcome-title">线下剧场</div>';
-    h += '<div class="thtr-welcome-sub">选择角色，开启沉浸式线下演出</div>';
+    h += '<div class="thtr-detail-welcome">';
+    h += '<div class="thtr-detail-big">WELCOME, ' + _thEsc(r.name || '').toUpperCase() + '</div>';
+    if (r.detail) {
+        h += '<div class="thtr-detail-desc">' + _thEsc((r.detail || '').substring(0, 80)) + '</div>';
+    }
+    h += '</div>';
+
+    h += '<div class="thtr-detail-avatar">';
+    if (r.avatar) h += '<img src="' + _thEsc(r.avatar) + '">';
+    else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+    h += '</div>';
+    h += '<div class="thtr-detail-name">' + _thEsc(r.name || 'unnamed') + '</div>';
+
     h += '</div>';
 
     /* 人设选择 */
     if (personas.length > 0) {
         h += '<div class="thtr-persona-sec">';
-        h += '<div class="thtr-sec-label">我的人设 Your Persona</div>';
-        h += '<div class="thtr-persona-row">';
+        h += '<div class="thtr-persona-label">YOUR PERSONA 选择人设</div>';
+        h += '<div class="thtr-persona-list">';
         for (var pi = 0; pi < personas.length; pi++) {
             var p = personas[pi];
-            var isA = (_theaterPersona && _theaterPersona.id === p.id);
-            h += '<div class="thtr-persona-chip' + (isA ? ' active' : '') + '" onclick="_theaterPickPersona(\'' + _thEsc(p.id || '') + '\')">';
-            h += '<div class="thtr-persona-chip-av">';
+            var isA = (_thPersona && _thPersona.id === p.id);
+            h += '<div class="thtr-persona-item' + (isA ? ' active' : '') + '" onclick="_thPickPersona(\'' + _thEsc(p.id || '') + '\')">';
+            h += '<div class="thtr-persona-av">';
             if (p.avatar) h += '<img src="' + _thEsc(p.avatar) + '">';
-            else h += '👤';
+            else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
             h += '</div>';
-            h += '<span>' + _thEsc(p.name || '未命名') + '</span>';
+            h += '<span>' + _thEsc(p.name || 'unnamed') + '</span>';
             h += '</div>';
         }
         h += '</div></div>';
     }
 
-    /* 角色网格 */
-    h += '<div class="thtr-grid">';
-    if (roles.length === 0) {
-        h += '<div class="thtr-empty">暂无角色，请先在聊天App中创建</div>';
-    }
-    for (var i = 0; i < roles.length; i++) {
-        var r = roles[i];
-        h += '<div class="thtr-card" onclick="_theaterSelectRole(\'' + _thEsc(r.id || '') + '\')">';
-        h += '<div class="thtr-card-av">';
-        if (r.avatar) h += '<img src="' + _thEsc(r.avatar) + '">';
-        else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-        h += '</div>';
-        h += '<div class="thtr-card-name">' + _thEsc(r.name || '未命名') + '</div>';
-        h += '</div>';
-    }
-    h += '</div>';
+    h += '<div class="thtr-start-btn" onclick="_thEnterStage()">START 开始演出</div>';
 
+    h += '</div>';
     el.innerHTML = h;
 }
 
-/* ===== 角色详情页 (P1风格) ===== */
-function _theaterSelectRole(roleId) {
-    var roles = (typeof _chatRoles !== 'undefined' && _chatRoles) ? _chatRoles : [];
-    _theaterRole = null;
-    for (var i = 0; i < roles.length; i++) {
-        if (roles[i].id === roleId) { _theaterRole = roles[i]; break; }
+function _thPickPersona(pid) {
+    var personas = (typeof _chatPersonas !== 'undefined' && _chatPersonas) ? _chatPersonas : [];
+    _thPersona = null;
+    for (var i = 0; i < personas.length; i++) {
+        if (personas[i].id === pid) { _thPersona = personas[i]; break; }
     }
-    if (!_theaterRole) return;
-
-    _theaterView = 'char-detail';
-    _theaterHistory = [];
-    _theaterSegments = [];
-    _theaterSegIdx = 0;
-    _theaterPhase = 'input';
-    _theaterRenderDetail();
+    _thRenderDetail();
 }
 
-function _theaterRenderDetail() {
-    var el = document.getElementById('theaterOverlay');
-    if (!el || !_theaterRole) return;
-    var r = _theaterRole;
+/* ===== 舞台 ===== */
+function _thEnterStage() {
+    _thView = 'stage'; _thPhase = 'input';
+    _thHistory = []; _thSegments = []; _thSegIdx = 0;
+    _thRenderStage();
+}
+
+function _thRenderStage() {
+    var el = document.getElementById('theaterOverlay'); if (!el || !_thRole) return;
+    var r = _thRole;
+
+    var bgCss = _thBg
+        ? 'background-image:url(' + _thBg + ');background-size:cover;background-position:center;'
+        : 'background:linear-gradient(180deg,#d5d7d6 0%,#c5c7c6 100%);';
 
     var h = '';
-    h += '<div class="thtr-detail">';
-
-    /* 毛玻璃卡片 */
-    h += '<div class="thtr-detail-card">';
-    /* 左上角标签 + 右上角按钮 */
-    h += '<div class="thtr-detail-top">';
-    h += '<div class="thtr-detail-tag">OFFLINE</div>';
-    h += '<div class="thtr-detail-btns">';
-    h += '<div class="thtr-detail-btn" onclick="_theaterPickBg()">⬇</div>';
-    h += '<div class="thtr-detail-btn" onclick="_theaterView=\'list\';_theaterRenderList()">↩</div>';
-    h += '<div class="thtr-detail-btn" onclick="closeTheaterApp()">✕</div>';
-    h += '</div></div>';
-
-    /* WELCOME 文字 */
-    h += '<div class="thtr-detail-welcome">';
-    h += '<div class="thtr-detail-welcome-big">WELCOME，' + _thEsc(r.name || '').toUpperCase() + '</div>';
-    if (r.detail) {
-        var shortDetail = (r.detail || '').substring(0, 60);
-        h += '<div class="thtr-detail-welcome-sub">' + _thEsc(shortDetail) + '</div>';
-    }
-    h += '</div>';
-
-    /* 大头像 */
-    h += '<div class="thtr-detail-avatar">';
-    if (r.avatar) h += '<img src="' + _thEsc(r.avatar) + '">';
-    else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-    h += '</div>';
-    h += '<div class="thtr-detail-name">' + _thEsc(r.name || '未命名') + '</div>';
-
-    h += '</div>'; /* /card */
-
-    /* 开始按钮 */
-    h += '<div class="thtr-start-btn" onclick="_theaterEnterStage()">🎭 开始演出</div>';
-
-    h += '</div>'; /* /detail */
-
-    el.innerHTML = h;
-}
-
-/* ===== 进入舞台 ===== */
-function _theaterEnterStage() {
-    _theaterView = 'stage';
-    _theaterPhase = 'input';
-    _theaterHistory = [];
-    _theaterSegments = [];
-    _theaterSegIdx = 0;
-    _theaterRenderStage();
-}
-
-/* ===== 舞台页 (Galgame风格) ===== */
-function _theaterRenderStage() {
-    var el = document.getElementById('theaterOverlay');
-    if (!el || !_theaterRole) return;
-    var r = _theaterRole;
-
-    var bgStyle = '';
-    if (_theaterBg) {
-        bgStyle = 'background-image:url(' + _theaterBg + ');background-size:cover;background-position:center;';
-    } else {
-        bgStyle = 'background:linear-gradient(180deg,#f0ece8 0%,#ddd8d2 100%);';
-    }
-
-    var h = '';
-    h += '<div class="thtr-stage" style="' + bgStyle + '">';
-
-    /* 角色立绘区 */
-    h += '<div class="thtr-stage-chara">';
-    if (r.avatar) h += '<img src="' + _thEsc(r.avatar) + '">';
-    h += '</div>';
+    h += '<div class="thtr-stage" style="' + bgCss + '">';
 
     /* 顶栏 */
-    h += '<div class="thtr-stage-topbar">';
-    h += '<div class="thtr-stage-topbar-name">' + _thEsc(r.name) + '</div>';
-    h += '<div class="thtr-stage-topbar-btns">';
-    h += '<div class="thtr-stage-tbtn" onclick="_theaterPickBg()">🖼</div>';
-    h += '<div class="thtr-stage-tbtn" onclick="_theaterBackToDetail()">↩</div>';
-    h += '<div class="thtr-stage-tbtn" onclick="closeTheaterApp()">✕</div>';
+    h += '<div class="thtr-stage-top">';
+    h += '<div class="thtr-stage-name">' + _thEsc(r.name) + '</div>';
+    h += '<div class="thtr-stage-btns">';
+    h += '<div class="thtr-stage-btn" onclick="_thPickBg()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+    h += '<div class="thtr-stage-btn" onclick="_thBackDetail()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>';
+    h += '<div class="thtr-stage-btn" onclick="closeTheaterApp()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>';
     h += '</div></div>';
 
-    /* 对话框区 — Galgame 风格 */
-    h += '<div class="thtr-stage-dialog-area">';
+    /* 对话区域 — 橙光/Galgame 式 */
+    h += '<div class="thtr-stage-dialog">';
 
-    if (_theaterPhase === 'generating') {
-        /* 生成中 */
-        h += '<div class="thtr-dialog-box">';
-        h += '<div class="thtr-dialog-speaker">【' + _thEsc(r.name) + '】</div>';
-        h += '<div class="thtr-dialog-text"><span class="thtr-typing">正在思考中</span></div>';
+    if (_thPhase === 'generating') {
+        h += '<div class="thtr-dlg-box">';
+        h += '<div class="thtr-dlg-speaker">' + _thEsc(r.name) + '</div>';
+        h += '<div class="thtr-dlg-text"><span class="thtr-typing-anim">Thinking 思考中</span></div>';
         h += '</div>';
-    } else if (_theaterPhase === 'reading' && _theaterSegments.length > 0) {
-        /* 正在阅读段落 */
-        var seg = _theaterSegments[_theaterSegIdx] || '';
-        h += '<div class="thtr-dialog-box">';
-        h += '<div class="thtr-dialog-speaker">【' + _thEsc(r.name) + '】</div>';
-        h += '<div class="thtr-dialog-text">' + _thFormatText(seg) + '</div>';
 
-        /* 底部控制 */
-        h += '<div class="thtr-dialog-nav">';
-        if (_theaterSegIdx < _theaterSegments.length - 1) {
-            h += '<div class="thtr-dialog-next" onclick="_theaterNextSeg()">▶ 点击继续</div>';
+    } else if (_thPhase === 'reading' && _thSegments.length > 0) {
+        var seg = _thSegments[_thSegIdx] || '';
+        var isLast = (_thSegIdx >= _thSegments.length - 1);
+
+        /* 整个对话框可点击 */
+        h += '<div class="thtr-dlg-box clickable" onclick="_thTapDialog()">';
+        h += '<div class="thtr-dlg-speaker">' + _thEsc(r.name) + '</div>';
+        h += '<div class="thtr-dlg-text">' + _thFmt(seg) + '</div>';
+
+        /* 底部提示 */
+        h += '<div class="thtr-dlg-hint">';
+        if (!isLast) {
+            h += '<span class="thtr-hint-arrow"></span>';
         } else {
-            h += '<div class="thtr-dialog-next done" onclick="_theaterFinishRead()">✦ 这段结束了，请输入下一句</div>';
+            h += '<span class="thtr-hint-end">- Scene End 本段结束 -</span>';
         }
         h += '</div>';
         h += '</div>';
-    } else if (_theaterPhase === 'waiting') {
-        /* 等待用户输入下一句 */
-        h += '<div class="thtr-dialog-box">';
-        h += '<div class="thtr-dialog-speaker">【系统】</div>';
-        h += '<div class="thtr-dialog-text">这段演出已结束，请输入你的下一句台词或动作 ✍️</div>';
+
+    } else if (_thPhase === 'waiting') {
+        h += '<div class="thtr-dlg-box">';
+        h += '<div class="thtr-dlg-speaker">SYSTEM 系统</div>';
+        h += '<div class="thtr-dlg-text">Scene complete. Enter your next line below.<br>本段演出结束，请在下方输入你的下一句台词。</div>';
+        h += '</div>';
+
+    } else {
+        /* input 空闲态 — 显示等待提示 */
+        h += '<div class="thtr-dlg-box idle">';
+        h += '<div class="thtr-dlg-text idle-text">Enter your line below and tap WRITE to continue.<br>在下方输入台词，点击续写开始演出。</div>';
         h += '</div>';
     }
 
-    h += '</div>'; /* /dialog-area */
-
-    /* 底部控制栏 */
-    h += '<div class="thtr-stage-bottom">';
-
-    /* 历史回顾按钮 */
-    if (_theaterHistory.length > 0) {
-        h += '<div class="thtr-history-toggle" onclick="_theaterShowHistory()">SAVE | LOAD | LOG</div>';
-    }
-
-    /* 输入栏 */
-    h += '<div class="thtr-stage-input-bar">';
-    h += '<input type="text" class="thtr-stage-input" id="theaterInput" placeholder="输入你的台词或动作..." value="' + _thEsc(_theaterInputText) + '" ' + (_theaterPhase === 'generating' ? 'disabled' : '') + ' onkeydown="if(event.key===\'Enter\')_theaterSend()">';
-    h += '<div class="thtr-stage-send" onclick="_theaterSend()">发送</div>';
-    h += '<div class="thtr-stage-gen" onclick="_theaterGenerate()">续写</div>';
     h += '</div>';
 
-    h += '</div>'; /* /bottom */
+    /* 底部输入 */
+    h += '<div class="thtr-stage-bottom">';
+    if (_thHistory.length > 0) {
+        h += '<div class="thtr-log-toggle" onclick="_thShowLog()">SAVE | LOAD | LOG 存档 | 读档 | 记录</div>';
+    }
+    h += '<div class="thtr-stage-bar">';
+    h += '<input type="text" class="thtr-stage-inp" id="thtrInput" placeholder="Your line 你的台词..." value="' + _thEsc(_thInputText) + '" ' + (_thPhase === 'generating' ? 'disabled' : '') + ' onkeydown="if(event.key===\'Enter\')_thSend()">';
+    h += '<div class="thtr-bar-btn" onclick="_thSend()">SEND 发送</div>';
+    h += '<div class="thtr-bar-btn alt" onclick="_thGenerate()">WRITE 续写</div>';
+    h += '</div>';
+    h += '</div>';
 
-    h += '</div>'; /* /stage */
-
+    h += '</div>';
     el.innerHTML = h;
 
-    // 自动聚焦
-    if (_theaterPhase !== 'generating') {
-        var inp = document.getElementById('theaterInput');
+    if (_thPhase !== 'generating') {
+        var inp = document.getElementById('thtrInput');
         if (inp) setTimeout(function () { inp.focus(); }, 100);
     }
 }
 
+/* ===== 点击对话框 — 橙光式翻页 ===== */
+function _thTapDialog() {
+    if (_thPhase !== 'reading') return;
+    if (_thSegIdx < _thSegments.length - 1) {
+        _thSegIdx++;
+        _thRenderStage();
+    } else {
+        /* 最后一段 → 切到等待输入 */
+        _thPhase = 'waiting';
+        _thRenderStage();
+    }
+}
+
 /* ===== 操作 ===== */
-function _theaterSend() {
-    var inp = document.getElementById('theaterInput');
+function _thSend() {
+    var inp = document.getElementById('thtrInput');
     var txt = inp ? inp.value.trim() : '';
     if (!txt) return;
-    _theaterInputText = '';
-    _theaterHistory.push({ from: 'user', text: txt });
-    _theaterPhase = 'input';
-    _theaterRenderStage();
-    if (typeof showToast === 'function') showToast('已发送，点击"续写"让角色回应');
+    _thInputText = '';
+    _thHistory.push({ from: 'user', text: txt });
+    _thPhase = 'input';
+    _thRenderStage();
+    if (typeof showToast === 'function') showToast('Sent 已发送，点击 WRITE 续写 继续');
 }
 
-function _theaterGenerate() {
-    if (_theaterPhase === 'generating') return;
-
-    // 需要有至少一条用户消息
-    var lastUserMsg = '';
-    for (var i = _theaterHistory.length - 1; i >= 0; i--) {
-        if (_theaterHistory[i].from === 'user') { lastUserMsg = _theaterHistory[i].text; break; }
+function _thGenerate() {
+    if (_thPhase === 'generating') return;
+    var lastUser = '';
+    for (var i = _thHistory.length - 1; i >= 0; i--) {
+        if (_thHistory[i].from === 'user') { lastUser = _thHistory[i].text; break; }
     }
-    if (!lastUserMsg) {
-        if (typeof showToast === 'function') showToast('请先输入你的台词');
+    if (!lastUser) {
+        if (typeof showToast === 'function') showToast('Enter your line first 请先输入台词');
         return;
     }
-
-    _theaterPhase = 'generating';
-    _theaterSegments = [];
-    _theaterSegIdx = 0;
-    _theaterRenderStage();
-
-    _theaterCallAI();
+    _thPhase = 'generating'; _thSegments = []; _thSegIdx = 0;
+    _thRenderStage();
+    _thCallAI();
 }
 
-/* ===== AI 调用 ===== */
-function _theaterCallAI() {
-    var r = _theaterRole;
-    if (!r) return;
+/* ===== AI ===== */
+function _thCallAI() {
+    var r = _thRole; if (!r) return;
+    var api = _thGetApi();
 
-    var api = _theaterGetApi();
     if (!api.url || !api.key) {
-        if (typeof showToast === 'function') showToast('请先在API设置中配置接口');
-        _theaterPhase = 'input';
-        _theaterRenderStage();
+        if (typeof showToast === 'function') showToast('Please configure API first 请先配置API');
+        _thPhase = 'input'; _thRenderStage();
         return;
     }
 
-    /* 构建 system prompt */
-    var sysPrompt = '你是一个线下剧场的角色扮演者。你正在进行一场沉浸式的线下面对面互动演出。\n\n';
-    sysPrompt += '你扮演的角色：\n';
-    sysPrompt += '名字：' + (r.name || '未知') + '\n';
-    if (r.detail) sysPrompt += '角色设定：' + r.detail.substring(0, 1500) + '\n';
-    sysPrompt += '\n';
+    var sys = '';
+    sys += '你是「' + (r.name || '未知') + '」，正在和对方进行一场线下面对面的互动。\n';
+    if (r.detail) sys += '你的设定：' + r.detail.substring(0, 2000) + '\n\n';
 
-    if (_theaterPersona) {
-        sysPrompt += '对方（用户）的人设：\n';
-        sysPrompt += '名字：' + (_theaterPersona.name || '对方') + '\n';
-        if (_theaterPersona.detail) sysPrompt += '设定：' + _theaterPersona.detail.substring(0, 500) + '\n';
-        sysPrompt += '\n';
+    if (_thPersona) {
+        sys += '对方：' + (_thPersona.name || '对方') + '\n';
+        if (_thPersona.detail) sys += '对方设定：' + _thPersona.detail.substring(0, 500) + '\n\n';
     }
 
-    sysPrompt += '要求：\n';
-    sysPrompt += '1. 这是线下面对面的场景，请以第三人称视角详细描写角色的动作、表情、语气、心理活动和对话\n';
-    sysPrompt += '2. 请写出丰富的动作描写（例如：微微侧过头、手指不自觉地搅动衣角、嘴角上扬了一个极细微的弧度）\n';
-    sysPrompt += '3. 请写出详细的表情描写（例如：眉眼间流露出一丝不易察觉的温柔、瞳孔微微放大）\n';
-    sysPrompt += '4. 对话用「」包裹，动作和心理用普通文字\n';
-    sysPrompt += '5. 字数要求：不少于1000字，请写得尽量详细、细腻、富有画面感\n';
-    sysPrompt += '6. 风格：文学性强，像一部视觉小说/galgame的剧本，充满氛围感\n';
-    sysPrompt += '7. 不要写用户（对方）的动作和对话，只写你扮演的角色的内容\n';
+    sys += '【输出要求】\n';
+    sys += '以白描手法写作，像小说正文一样自然叙事。\n';
+    sys += '不要堆砌形容词，不要过度描写外貌和穿着，不要反复描写五官和瞳孔。\n';
+    sys += '动作一笔带过，重点放在对话内容、语气、态度、互动节奏上。\n';
+    sys += '对话用「」，叙述用白描，干净利落，像余华、东野圭吾、村上春树的笔法。\n';
+    sys += '角色说话要有性格，不要客套废话，要有真实感和生活气息。\n';
+    sys += '心理活动可以写但要克制，一两句点到为止，不要大段独白。\n';
+    sys += '只写你扮演的角色，不写对方的动作和对话。\n';
+    sys += '每段之间空一行，每段50-120字左右。\n';
+    sys += '总字数不少于800字。\n';
 
-    /* 构建消息历史 */
-    var msgs = [{ role: 'system', content: sysPrompt }];
-    for (var i = 0; i < _theaterHistory.length; i++) {
-        var hm = _theaterHistory[i];
-        if (hm.from === 'user') {
-            msgs.push({ role: 'user', content: '（对方的动作/台词）' + hm.text });
-        } else {
-            msgs.push({ role: 'assistant', content: hm.text });
-        }
+    var msgs = [{ role: 'system', content: sys }];
+    for (var i = 0; i < _thHistory.length; i++) {
+        var hm = _thHistory[i];
+        msgs.push({
+            role: hm.from === 'user' ? 'user' : 'assistant',
+            content: hm.from === 'user' ? '（对方）' + hm.text : hm.text
+        });
     }
 
-    var apiUrl = api.url.replace(/\/+$/, '');
-    if (apiUrl.indexOf('/chat/completions') < 0) {
-        if (apiUrl.indexOf('/v1') >= 0) apiUrl += '/chat/completions';
-        else apiUrl += '/v1/chat/completions';
-    }
+    var endpoint = _thBuildEndpoint(api.url);
 
-    fetch(apiUrl, {
+    fetch(endpoint, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -359,179 +369,116 @@ function _theaterCallAI() {
         body: JSON.stringify({
             model: api.model,
             messages: msgs,
-            temperature: 0.85,
-            max_tokens: 4000
+            temperature: 0.78,
+            max_tokens: 4096
         })
-    }).then(function (resp) { return resp.json(); })
+    })
+        .then(function (resp) {
+            if (!resp.ok) {
+                return resp.text().then(function (t) { throw new Error('HTTP ' + resp.status + ': ' + t.substring(0, 200)); });
+            }
+            return resp.json();
+        })
         .then(function (data) {
-            if (!_theaterRole) return;
+            if (!_thRole) return;
             var text = '';
             try { text = data.choices[0].message.content.trim(); } catch (e) { }
             if (!text) {
-                if (typeof showToast === 'function') showToast('生成失败，请重试');
-                _theaterPhase = 'input';
-                _theaterRenderStage();
+                if (typeof showToast === 'function') showToast('Empty response 生成为空，请重试');
+                _thPhase = 'input'; _thRenderStage();
                 return;
             }
-
-            /* 保存到历史 */
-            _theaterHistory.push({ from: 'char', text: text });
-
-            /* 分段 — 按段落分割（双换行、或每个「」对话为一段） */
-            _theaterSegments = _theaterSplitSegments(text);
-            _theaterSegIdx = 0;
-            _theaterPhase = 'reading';
-            _theaterRenderStage();
-        }).catch(function (err) {
-            console.error('Theater AI error', err);
-            if (typeof showToast === 'function') showToast('网络错误，请重试');
-            _theaterPhase = 'input';
-            _theaterRenderStage();
+            _thHistory.push({ from: 'char', text: text });
+            _thSegments = _thSplitSegs(text);
+            _thSegIdx = 0;
+            _thPhase = 'reading';
+            _thRenderStage();
+        })
+        .catch(function (err) {
+            console.error('Theater AI error:', err);
+            if (typeof showToast === 'function') showToast('Error 错误: ' + (err.message || 'network fail').substring(0, 80));
+            _thPhase = 'input'; _thRenderStage();
         });
 }
 
-/* 智能分段 */
-function _theaterSplitSegments(text) {
-    /* 先按双换行分 */
+/* 智能分段 — 每段控制在 50-150字，更接近橙光/gal的节奏 */
+function _thSplitSegs(text) {
+    /* 先按双换行拆 */
     var rawSegs = text.split(/\n\s*\n/);
     var segs = [];
     for (var i = 0; i < rawSegs.length; i++) {
         var s = rawSegs[i].trim();
         if (!s) continue;
-        /* 如果单段太长（>200字），再按句号/感叹号/问号分割 */
-        if (s.length > 200) {
-            var subSegs = s.split(/(?<=[。！？…」])\s*/);
+        if (s.length <= 120) {
+            segs.push(s);
+        } else {
+            /* 按句末标点再拆，目标每段60-120字 */
+            var parts = s.split(/(?<=[。！？…」\n])/);
             var buf = '';
-            for (var j = 0; j < subSegs.length; j++) {
-                buf += subSegs[j];
-                if (buf.length >= 80) {
+            for (var j = 0; j < parts.length; j++) {
+                buf += parts[j];
+                if (buf.length >= 60) {
                     segs.push(buf.trim());
                     buf = '';
                 }
             }
             if (buf.trim()) segs.push(buf.trim());
-        } else {
-            segs.push(s);
         }
     }
     if (segs.length === 0 && text.trim()) segs.push(text.trim());
     return segs;
 }
 
-/* 下一段 */
-function _theaterNextSeg() {
-    if (_theaterSegIdx < _theaterSegments.length - 1) {
-        _theaterSegIdx++;
-        _theaterRenderStage();
-    }
+function _thNextSeg() {
+    if (_thSegIdx < _thSegments.length - 1) { _thSegIdx++; _thRenderStage(); }
 }
+function _thFinishRead() { _thPhase = 'waiting'; _thRenderStage(); }
+function _thBackDetail() { _thView = 'detail'; _thRenderDetail(); }
 
-/* 本轮读完 */
-function _theaterFinishRead() {
-    _theaterPhase = 'waiting';
-    _theaterRenderStage();
-}
-
-/* 返回详情页 */
-function _theaterBackToDetail() {
-    _theaterView = 'char-detail';
-    _theaterRenderDetail();
-}
-
-/* 选择人设 */
-function _theaterPickPersona(pid) {
-    var personas = (typeof _chatPersonas !== 'undefined' && _chatPersonas) ? _chatPersonas : [];
-    _theaterPersona = null;
-    for (var i = 0; i < personas.length; i++) {
-        if (personas[i].id === pid) { _theaterPersona = personas[i]; break; }
-    }
-    _theaterRenderList();
-}
-
-/* 选择背景图 */
-function _theaterPickBg() {
+/* 背景图 */
+function _thPickBg() {
     var inp = document.createElement('input');
-    inp.type = 'file';
-    inp.accept = 'image/*';
+    inp.type = 'file'; inp.accept = 'image/*';
     inp.onchange = function () {
         if (!inp.files || !inp.files[0]) return;
         var reader = new FileReader();
         reader.onload = function (e) {
-            _theaterBg = e.target.result;
-            try { localStorage.setItem('_theaterBg', _theaterBg); } catch (ex) { }
-            if (_theaterView === 'stage') _theaterRenderStage();
-            else if (_theaterView === 'list') _theaterRenderList();
-            else _theaterRenderDetail();
-            if (typeof showToast === 'function') showToast('背景已更新');
+            _thBg = e.target.result;
+            try { localStorage.setItem('_thBg', _thBg); } catch (ex) { }
+            if (_thView === 'stage') _thRenderStage();
+            if (typeof showToast === 'function') showToast('Background updated 背景已更新');
         };
         reader.readAsDataURL(inp.files[0]);
     };
     inp.click();
 }
 
-/* 查看历史 */
-function _theaterShowHistory() {
-    var el = document.getElementById('theaterOverlay');
-    if (!el) return;
-
-    var h = '<div class="thtr-history-overlay">';
-    h += '<div class="thtr-history-header">';
-    h += '<div class="thtr-history-title">📜 演出记录 LOG</div>';
-    h += '<div class="thtr-history-close" onclick="_theaterCloseHistory()">✕</div>';
+/* 历史LOG */
+function _thShowLog() {
+    var el = document.getElementById('theaterOverlay'); if (!el) return;
+    var h = '<div class="thtr-log-overlay">';
+    h += '<div class="thtr-log-header">';
+    h += '<div class="thtr-log-title">LOG 演出记录</div>';
+    h += '<div class="thtr-log-close" onclick="_thCloseLog()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>';
     h += '</div>';
-    h += '<div class="thtr-history-list">';
-    for (var i = 0; i < _theaterHistory.length; i++) {
-        var hm = _theaterHistory[i];
-        var isUser = hm.from === 'user';
-        h += '<div class="thtr-history-item ' + (isUser ? 'user' : 'char') + '">';
-        h += '<div class="thtr-history-speaker">' + (isUser ? '你' : _thEsc(_theaterRole ? _theaterRole.name : '角色')) + '</div>';
-        h += '<div class="thtr-history-text">' + _thEsc(hm.text).substring(0, 300) + (hm.text.length > 300 ? '...' : '') + '</div>';
+    h += '<div class="thtr-log-list">';
+    for (var i = 0; i < _thHistory.length; i++) {
+        var hm = _thHistory[i];
+        var isU = hm.from === 'user';
+        h += '<div class="thtr-log-item ' + (isU ? 'user' : 'char') + '">';
+        h += '<div class="thtr-log-who">' + (isU ? 'YOU 你' : _thEsc(_thRole ? _thRole.name : '?').toUpperCase()) + '</div>';
+        h += '<div class="thtr-log-txt">' + _thEsc(hm.text).substring(0, 500) + (hm.text.length > 500 ? '...' : '') + '</div>';
         h += '</div>';
     }
-    if (_theaterHistory.length === 0) {
-        h += '<div class="thtr-history-empty">暂无记录</div>';
-    }
+    if (_thHistory.length === 0) h += '<div class="thtr-log-empty">No history 暂无记录</div>';
     h += '</div></div>';
-
-    /* 在舞台上叠加历史面板 */
-    var histDiv = document.createElement('div');
-    histDiv.id = 'theaterHistoryPanel';
-    histDiv.innerHTML = h;
-    histDiv.style.cssText = 'position:absolute;inset:0;z-index:100;';
-    el.appendChild(histDiv);
+    var panel = document.createElement('div');
+    panel.id = 'thtrLogPanel';
+    panel.style.cssText = 'position:absolute;inset:0;z-index:100;';
+    panel.innerHTML = h;
+    el.appendChild(panel);
 }
-
-function _theaterCloseHistory() {
-    var panel = document.getElementById('theaterHistoryPanel');
-    if (panel) panel.remove();
-}
-
-/* ===== 工具函数 ===== */
-function _thEsc(s) {
-    if (!s) return '';
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function _thFormatText(text) {
-    /* 「」对话高亮、*动作*斜体 */
-    var s = _thEsc(text);
-    s = s.replace(/「([^」]*)」/g, '<span class="thtr-dialog-quote">「$1」</span>');
-    s = s.replace(/\*([^*]+)\*/g, '<em class="thtr-dialog-action">$1</em>');
-    return s;
-}
-
-function _theaterGetApi() {
-    var url = '', key = '', model = '';
-    try {
-        var elUrl = document.getElementById('apiUrl');
-        var elKey = document.getElementById('apiKey');
-        var elModel = document.getElementById('apiModel');
-        if (elUrl) url = elUrl.value.trim();
-        if (elKey) key = elKey.value.trim();
-        if (elModel) model = elModel.value.trim();
-    } catch (e) { }
-    if (!url) try { url = localStorage.getItem('apiUrl') || ''; } catch (e) { }
-    if (!key) try { key = localStorage.getItem('apiKey') || ''; } catch (e) { }
-    if (!model) try { model = localStorage.getItem('apiModel') || 'gpt-3.5-turbo'; } catch (e) { }
-    return { url: url, key: key, model: model };
+function _thCloseLog() {
+    var p = document.getElementById('thtrLogPanel');
+    if (p) p.remove();
 }
