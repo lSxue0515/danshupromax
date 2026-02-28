@@ -84,15 +84,10 @@ body {
 /* 壁纸 */
 .wallpaper {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url('https://s3.bmp.ovh/2026/02/18/VDKdIve6.webp');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    inset: 0;
     z-index: 0;
+    background: url('https://s3.bmp.ovh/2026/02/28/vcEShdWI.jpg') center/cover no-repeat;
+    border-radius: 44px;
 }
 
 .wallpaper::after {

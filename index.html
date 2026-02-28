@@ -29,6 +29,7 @@
     <link rel="stylesheet" href="css/novel.css">
     <link rel="stylesheet" href="css/boot.css">
     <link rel="stylesheet" href="css/moments.css">
+    <link rel="stylesheet" href="css/theater.css">
 
 
 
@@ -385,7 +386,7 @@
 
                             <!-- 左：2×2 应用图标 -->
                             <div class="p2-apps-grid">
-                                <div class="app-cell" data-icon-id="icon_theater">
+                                <div class="app-cell" data-icon-id="icon_theater" onclick="openTheaterApp()">
                                     <div class="app-icon glass-icon" id="icon_theater">
                                         <svg viewBox="0 0 24 24">
                                             <path d="M2 3h20v14H2z" />
@@ -1833,6 +1834,7 @@
         <div class="game-overlay" id="gameOverlay"></div>
         <div class="music-overlay" id="musicOverlay"></div>
         <div class="novel-overlay" id="novelOverlay"></div>
+        <div class="theater-overlay" id="theaterOverlay"></div>
         <div id="muFloatLyric" class="mu-float-widget"></div>
 
     </div> <!-- /phone-frame -->
@@ -1861,6 +1863,7 @@
     <script src="js/music.js"></script>
     <script src="js/novel.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/theater.js"></script>
     <script src="js/moments.js"></script>
     <script src="js/page2widget.js"></script>
     <script src="js/page3widget.js"></script>

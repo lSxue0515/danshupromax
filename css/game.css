@@ -3886,3 +3886,774 @@
     stroke-width: 2;
     fill: none;
 }
+
+/* ==========================================
+   海龟汤 TURTLE SOUP
+   ========================================== */
+.game-card.turtle {
+    background: linear-gradient(135deg, #7db5a0 0%, #a5d4c0 100%);
+}
+
+.game-card.turtle .game-card-icon svg {
+    stroke: #fff;
+    fill: none;
+}
+
+.game-card.ludo {
+    background: linear-gradient(135deg, #c9a068 0%, #dfc090 100%);
+}
+
+.game-card.ludo .game-card-icon svg {
+    stroke: #fff;
+    fill: none;
+}
+
+/* 海龟汤主体 */
+.turtle-game {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+}
+
+.turtle-host {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(245, 240, 235, .6);
+    border-bottom: 1px solid rgba(160, 140, 150, .08);
+    flex-shrink: 0;
+}
+
+.turtle-host-av {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(160, 140, 150, .08);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.turtle-host-av img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.turtle-host-av svg {
+    width: 18px;
+    height: 18px;
+    stroke: #a0909a;
+    stroke-width: 1.8;
+    fill: none;
+}
+
+.turtle-host-info {
+    flex: 1;
+}
+
+.turtle-host-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #5a4d3e;
+}
+
+.turtle-host-tag {
+    font-size: 9px;
+    color: rgba(120, 100, 112, .4);
+    margin-top: 1px;
+}
+
+.turtle-loading {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.turtle-loading-icon {
+    font-size: 48px;
+    animation: turtleBob 1.5s ease-in-out infinite;
+}
+
+.turtle-loading-text {
+    font-size: 12px;
+    color: rgba(120, 100, 112, .4);
+}
+
+@keyframes turtleBob {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+.turtle-surface {
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(125, 181, 160, .08), rgba(165, 212, 192, .06));
+    border-bottom: 1px solid rgba(160, 140, 150, .06);
+    flex-shrink: 0;
+}
+
+.turtle-surface-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #7db5a0;
+    margin-bottom: 6px;
+}
+
+.turtle-surface-text {
+    font-size: 13px;
+    color: #4a3a42;
+    line-height: 1.7;
+}
+
+.turtle-bottom {
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(212, 117, 106, .06), rgba(212, 117, 106, .03));
+    border-bottom: 1px solid rgba(160, 140, 150, .06);
+    flex-shrink: 0;
+}
+
+.turtle-bottom-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #d4756a;
+    margin-bottom: 6px;
+}
+
+.turtle-bottom-text {
+    font-size: 12px;
+    color: #6a5560;
+    line-height: 1.7;
+}
+
+.turtle-bottom-hide {
+    font-size: 9px;
+    color: rgba(120, 100, 112, .3);
+    margin-top: 6px;
+    cursor: pointer;
+    text-align: right;
+}
+
+.turtle-chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.turtle-chat::-webkit-scrollbar {
+    width: 0;
+}
+
+.turtle-hint {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(120, 100, 112, .25);
+    padding: 30px 0;
+}
+
+.turtle-msg {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.turtle-msg.player {
+    justify-content: flex-end;
+}
+
+.turtle-msg-av {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(125, 181, 160, .12);
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.turtle-msg-av img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.turtle-msg-bubble {
+    max-width: 75%;
+    padding: 8px 12px;
+    border-radius: 14px;
+    font-size: 12px;
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+.turtle-msg-bubble.player {
+    background: linear-gradient(135deg, rgba(212, 180, 160, .18), rgba(200, 170, 150, .12));
+    color: #5a4d3e;
+    border-bottom-right-radius: 4px;
+}
+
+.turtle-msg-bubble.host {
+    background: rgba(245, 240, 235, .8);
+    color: #5a4d3e;
+    border-bottom-left-radius: 4px;
+}
+
+.turtle-msg-bubble.host.yes {
+    background: rgba(125, 181, 160, .15);
+    color: #3a7a5a;
+}
+
+.turtle-msg-bubble.host.no {
+    background: rgba(212, 117, 106, .1);
+    color: #a04a3a;
+}
+
+.turtle-msg-bubble.host.close {
+    background: rgba(212, 184, 106, .15);
+    color: #8a7030;
+}
+
+.turtle-msg-bubble.host.correct {
+    background: rgba(125, 181, 160, .25);
+    color: #2a6a4a;
+    font-weight: 700;
+}
+
+.turtle-msg-bubble.host.irrelevant {
+    background: rgba(160, 140, 150, .08);
+    color: rgba(120, 100, 112, .5);
+}
+
+.turtle-msg-bubble.host.pending {
+    background: rgba(160, 140, 150, .06);
+    color: rgba(120, 100, 112, .3);
+    font-style: italic;
+}
+
+.turtle-input-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(250, 247, 248, .9);
+    border-top: 1px solid rgba(160, 140, 150, .08);
+    flex-shrink: 0;
+}
+
+.turtle-input {
+    flex: 1;
+    border: 1px solid rgba(160, 140, 150, .12);
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 12px;
+    background: rgba(255, 255, 255, .6);
+    outline: none;
+    color: #4a3a42;
+}
+
+.turtle-input:focus {
+    border-color: rgba(125, 181, 160, .4);
+}
+
+.turtle-send-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7db5a0, #5da588);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.turtle-send-btn:active {
+    transform: scale(.92);
+}
+
+.turtle-actions {
+    display: flex;
+    gap: 8px;
+    padding: 8px 14px 14px;
+    flex-shrink: 0;
+    justify-content: center;
+}
+
+.turtle-action-btn {
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 10px;
+    color: rgba(120, 100, 112, .5);
+    background: rgba(160, 140, 150, .06);
+    cursor: pointer;
+}
+
+.turtle-action-btn:active {
+    background: rgba(160, 140, 150, .12);
+}
+
+/* ==========================================
+   飞行棋 LUDO
+   ========================================== */
+.ludo-game {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px 24px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ludo-game::-webkit-scrollbar {
+    width: 0;
+}
+
+/* 玩家状态栏 */
+.ludo-players {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.ludo-player-card {
+    flex: 1;
+    border-radius: 12px;
+    padding: 8px 6px;
+    text-align: center;
+    background: rgba(160, 140, 150, .05);
+    border: 2px solid transparent;
+    transition: all .2s;
+}
+
+.ludo-player-card.active {
+    border-color: currentColor;
+    transform: scale(1.03);
+}
+
+.ludo-player-card.red {
+    color: #d4756a;
+}
+
+.ludo-player-card.yellow {
+    color: #d4b86a;
+}
+
+.ludo-player-card.blue {
+    color: #6a9fd4;
+}
+
+.ludo-player-card.green {
+    color: #6abd8a;
+}
+
+.ludo-player-card.active.red {
+    background: rgba(212, 117, 106, .08);
+}
+
+.ludo-player-card.active.yellow {
+    background: rgba(212, 184, 106, .08);
+}
+
+.ludo-player-card.active.blue {
+    background: rgba(106, 159, 212, .08);
+}
+
+.ludo-player-card.active.green {
+    background: rgba(106, 189, 138, .08);
+}
+
+.ludo-player-av {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin: 0 auto 4px;
+    background: rgba(160, 140, 150, .06);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ludo-player-av img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ludo-player-av svg {
+    width: 16px;
+    height: 16px;
+    stroke: #a0909a;
+    stroke-width: 1.8;
+    fill: none;
+}
+
+.ludo-player-name {
+    font-size: 9px;
+    font-weight: 600;
+    color: #5a4d3e;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 飞机状态点 */
+.ludo-plane-dots {
+    display: flex;
+    justify-content: center;
+    gap: 3px;
+    margin-top: 4px;
+}
+
+.ludo-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    background: transparent;
+}
+
+.ludo-dot.dot-track {
+    background: currentColor;
+}
+
+.ludo-dot.dot-home {
+    background: currentColor;
+    box-shadow: 0 0 4px currentColor;
+}
+
+.ludo-dot.dot-done {
+    background: currentColor;
+    border-color: transparent;
+    box-shadow: 0 0 6px currentColor;
+}
+
+/* 骰子区域 */
+.ludo-dice-area {
+    background: rgba(245, 240, 235, .5);
+    border-radius: 16px;
+    padding: 18px 16px;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.ludo-turn-info {
+    font-size: 11px;
+    color: rgba(120, 100, 112, .5);
+    margin-bottom: 12px;
+}
+
+.ludo-dice {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.ludo-dice.rolled {
+    animation: ludoDiceRoll .4s ease-out;
+}
+
+@keyframes ludoDiceRoll {
+    0% {
+        transform: rotate(0deg) scale(.7);
+    }
+
+    50% {
+        transform: rotate(180deg) scale(1.2);
+    }
+
+    100% {
+        transform: rotate(360deg) scale(1);
+    }
+}
+
+.ludo-dice-face {
+    display: grid;
+    grid-template-columns: repeat(3, 16px);
+    grid-template-rows: repeat(3, 16px);
+    gap: 2px;
+    background: #faf7f4;
+    border: 2px solid rgba(160, 140, 150, .15);
+    border-radius: 8px;
+    padding: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+}
+
+.dice-cell {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+}
+
+.dice-cell.dot {
+    background: #5a4d3e;
+}
+
+.ludo-dice-placeholder {
+    width: 60px;
+    height: 60px;
+    border: 2px dashed rgba(160, 140, 150, .15);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(160, 140, 150, .2);
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.ludo-btn {
+    display: inline-block;
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    background: rgba(160, 140, 150, .08);
+    color: #6a5560;
+    margin: 4px;
+}
+
+.ludo-btn:active {
+    transform: scale(.95);
+}
+
+.ludo-btn.primary {
+    background: linear-gradient(135deg, rgba(201, 160, 104, .6), rgba(223, 192, 144, .5));
+    color: #fff;
+}
+
+.ludo-waiting {
+    font-size: 11px;
+    color: rgba(120, 100, 112, .3);
+    font-style: italic;
+    animation: turtleBob 1.5s ease-in-out infinite;
+}
+
+/* 选飞机 */
+.ludo-pick-hint {
+    font-size: 11px;
+    color: rgba(120, 100, 112, .4);
+    margin: 8px 0 6px;
+}
+
+.ludo-pick-planes {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.ludo-pick-btn {
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    border: 2px solid currentColor;
+    background: rgba(255, 255, 255, .6);
+    color: inherit;
+}
+
+.ludo-pick-btn.red {
+    color: #d4756a;
+}
+
+.ludo-pick-btn.yellow {
+    color: #d4b86a;
+}
+
+.ludo-pick-btn.blue {
+    color: #6a9fd4;
+}
+
+.ludo-pick-btn.green {
+    color: #6abd8a;
+}
+
+.ludo-pick-btn:active {
+    transform: scale(.92);
+}
+
+/* 棋盘状态 */
+.ludo-board {
+    background: rgba(245, 240, 235, .4);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+}
+
+.ludo-board-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(120, 100, 112, .35);
+    margin-bottom: 8px;
+}
+
+.ludo-board-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.ludo-board-label {
+    width: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.ludo-board-planes {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+}
+
+.ludo-board-plane {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1.5px solid rgba(160, 140, 150, .12);
+    background: rgba(255, 255, 255, .6);
+    color: #8a7580;
+}
+
+.ludo-board-plane.red {
+    border-color: rgba(212, 117, 106, .2);
+}
+
+.ludo-board-plane.yellow {
+    border-color: rgba(212, 184, 106, .2);
+}
+
+.ludo-board-plane.blue {
+    border-color: rgba(106, 159, 212, .2);
+}
+
+.ludo-board-plane.green {
+    border-color: rgba(106, 189, 138, .2);
+}
+
+.ludo-board-plane.on-track {
+    color: #4a3a42;
+}
+
+.ludo-board-plane.in-home {
+    color: #4a3a42;
+    font-style: italic;
+}
+
+.ludo-board-plane.finished {
+    background: rgba(125, 181, 160, .15);
+    color: #3a7a5a;
+}
+
+.ludo-board-plane.on-track.red {
+    background: rgba(212, 117, 106, .1);
+}
+
+.ludo-board-plane.on-track.yellow {
+    background: rgba(212, 184, 106, .1);
+}
+
+.ludo-board-plane.on-track.blue {
+    background: rgba(106, 159, 212, .1);
+}
+
+.ludo-board-plane.on-track.green {
+    background: rgba(106, 189, 138, .1);
+}
+
+.ludo-board-plane.pickable {
+    cursor: pointer;
+    animation: ludoPlanePulse 1s ease-in-out infinite;
+    box-shadow: 0 0 0 2px currentColor;
+}
+
+@keyframes ludoPlanePulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.08);
+    }
+}
+
+/* 结果 */
+.ludo-result {
+    text-align: center;
+    padding: 12px 0;
+}
+
+.ludo-result-icon {
+    font-size: 42px;
+    margin-bottom: 8px;
+}
+
+.ludo-result-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #4a3a42;
+    margin-bottom: 4px;
+}
+
+.ludo-result-sub {
+    font-size: 10px;
+    color: rgba(120, 100, 112, .4);
+    margin-bottom: 14px;
+}
+
+.ludo-result-btns {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+/* 日志 */
+.ludo-log {
+    background: rgba(245, 240, 235, .3);
+    border-radius: 10px;
+    padding: 8px 12px;
+    max-height: 100px;
+    overflow-y: auto;
+}
+
+.ludo-log::-webkit-scrollbar {
+    width: 0;
+}
+
+.ludo-log-item {
+    font-size: 9px;
+    color: rgba(120, 100, 112, .35);
+    line-height: 1.6;
+    border-bottom: 1px solid rgba(160, 140, 150, .04);
+    padding: 2px 0;
+}

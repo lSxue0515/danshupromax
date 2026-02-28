@@ -4,6 +4,8 @@
 var _gameView = 'lobby', _gameType = '', _gameSelectedPersona = '', _gameSelectedChars = [];
 var _unoState = null, _mjState = null;
 var _mjRegion = 'northeast', _mjRounds = 4;
+var _turtleState = null;
+var _ludoState = null;
 
 function openGameApp() {
     var el = document.getElementById('gameOverlay'); if (!el) return;
@@ -14,6 +16,7 @@ function closeGameApp() {
     var el = document.getElementById('gameOverlay');
     if (el) el.classList.remove('show');
     _unoState = null; _mjState = null; _ddzState = null; _sheepState = null;
+    _turtleState = null; _ludoState = null;
 }
 
 /* ===== 大厅 ===== */
@@ -27,6 +30,8 @@ function gameBuildLobby() {
     h += '<div class="game-card sheep" onclick="gamePickType(\'sheep\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><path d="M12 2C9 2 7 4 7 6c-2 0-4 2-4 4s2 4 4 4h1v4a2 2 0 002 2h4a2 2 0 002-2v-4h1c2 0 4-2 4-4s-2-4-4-4c0-2-2-4-5-4z"/></svg></div><div class="game-card-name">Sheep 羊了个羊</div><div class="game-card-desc">三消闯关 Tile Match</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>单人</div></div>';
     h += '<div class="game-card crush" onclick="gamePickType(\'crush\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div><div class="game-card-name">Crush 消消乐</div><div class="game-card-desc">开发中 Coming Soon</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>单人</div></div>';
     h += '<div class="game-card link" onclick="gamePickType(\'link\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></div><div class="game-card-name">Link 连连看</div><div class="game-card-desc">开发中 Coming Soon</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>单人</div></div>';
+    h += '<div class="game-card turtle" onclick="gamePickType(\'turtle\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg></div><div class="game-card-name">Turtle Soup 海龟汤</div><div class="game-card-desc">情境推理 Lateral Thinking</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>2人</div></div>';
+    h += '<div class="game-card ludo" onclick="gamePickType(\'ludo\')"><div class="game-card-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div><div class="game-card-name">Ludo 飞行棋</div><div class="game-card-desc">经典棋盘 Classic Board</div><div class="game-card-players"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>2-4人</div></div>';
 
     h += '</div></div>';
 
@@ -35,6 +40,8 @@ function gameBuildLobby() {
 
 function gamePickType(type) {
     if (type === 'sheep') { _gameType = 'sheep'; _gameView = 'sheep'; sheepStart(); return; }
+    if (type === 'turtle') { _gameType = 'turtle'; _gameSelectedPersona = ''; _gameSelectedChars = []; _gameView = 'setup'; var el = document.getElementById('gameOverlay'); if (el) el.innerHTML = _gameBuildSetup(); return; }
+    if (type === 'ludo') { _gameType = 'ludo'; _gameSelectedPersona = ''; _gameSelectedChars = []; _gameView = 'setup'; var el = document.getElementById('gameOverlay'); if (el) el.innerHTML = _gameBuildSetup(); return; }
     if (type !== 'uno' && type !== 'mahjong' && type !== 'landlord') { if (typeof showToast === 'function') showToast('开发中，敬请期待'); return; }
     _gameType = type; _gameSelectedPersona = ''; _gameSelectedChars = []; _gameView = 'setup';
     var el = document.getElementById('gameOverlay'); if (el) el.innerHTML = _gameBuildSetup();
@@ -46,7 +53,9 @@ function _gameBuildSetup() {
     if (_gameType === 'mahjong') { minP = 3; maxP = 3; }
     if (_gameType === 'landlord') { minP = 2; maxP = 2; }
     if (_gameType === 'guess') { minP = 2; maxP = 9; }
-    var tl = { uno: 'UNO', mahjong: 'Mahjong 麻将', landlord: 'Landlord 斗地主', guess: 'Charades 你说我猜' };
+    if (_gameType === 'turtle') { minP = 1; maxP = 1; }
+    if (_gameType === 'ludo') { minP = 1; maxP = 3; }
+    var tl = { uno: 'UNO', mahjong: 'Mahjong 麻将', landlord: 'Landlord 斗地主', guess: 'Charades 你说我猜', turtle: 'Turtle Soup 海龟汤', ludo: 'Ludo 飞行棋' };
     var h = '<div class="game-header"><div class="game-back" onclick="gameBackToLobby()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="game-header-title">' + (tl[_gameType] || '') + '</div><div class="game-header-spacer"></div></div>';
     h += '<div class="game-setup show"><div class="game-setup-title">Room Setup 组建房间</div><div class="game-setup-sub">选择你的人设和对手角色</div>';
 
@@ -137,18 +146,27 @@ document.addEventListener('click', function (e) {
     // 斗地主选牌
     var dc = e.target.closest('[data-ddz-card]');
     if (dc) { _ddzToggleCard(parseInt(dc.getAttribute('data-ddz-card'))); return; }
+    // 海龟汤操作
+    var ta = e.target.closest('[data-turtle-action]');
+    if (ta) { _turtleAction(ta.getAttribute('data-turtle-action')); return; }
+    // 飞行棋操作
+    var la = e.target.closest('[data-ludo-action]');
+    if (la) { _ludoAction(la.getAttribute('data-ludo-action')); return; }
+    // 飞行棋选飞机
+    var lp = e.target.closest('[data-ludo-plane]');
+    if (lp) { _ludoPickPlane(parseInt(lp.getAttribute('data-ludo-plane'))); return; }
 });
 
 function gameBackToLobby() { _gameView = 'lobby'; var el = document.getElementById('gameOverlay'); if (el) el.innerHTML = gameBuildLobby(); }
 function _gameRefreshSetup() { var el = document.getElementById('gameOverlay'); if (el) el.innerHTML = _gameBuildSetup(); }
 function _gameToggleChar(id) {
-    var maxP = (_gameType === 'mahjong') ? 3 : (_gameType === 'landlord') ? 2 : (_gameType === 'guess') ? 9 : 10;
+    var maxP = (_gameType === 'mahjong') ? 3 : (_gameType === 'landlord') ? 2 : (_gameType === 'guess') ? 9 : (_gameType === 'turtle') ? 1 : (_gameType === 'ludo') ? 3 : 10;
     var idx = _gameSelectedChars.indexOf(id);
     if (idx !== -1) _gameSelectedChars.splice(idx, 1);
     else { if (_gameSelectedChars.length >= maxP) { if (typeof showToast === 'function') showToast('最多选择' + maxP + '个角色'); return; } _gameSelectedChars.push(id); }
     _gameRefreshSetup();
 }
-function gameStart() { if (_gameType === 'uno') unoStart(); if (_gameType === 'mahjong') mjStart(); if (_gameType === 'landlord') ddzStart(); }
+function gameStart() { if (_gameType === 'uno') unoStart(); if (_gameType === 'mahjong') mjStart(); if (_gameType === 'landlord') ddzStart(); if (_gameType === 'turtle') turtleStart(); if (_gameType === 'ludo') ludoStart(); }
 
 /* ==========================================
    麻将引擎 MAHJONG ENGINE
@@ -1690,6 +1708,767 @@ function _sheepRender() {
     }
 
     el.innerHTML = h;
+}
+
+/* ==========================================
+   海龟汤 TURTLE SOUP ENGINE
+   ========================================== */
+
+function turtleStart() {
+    var persona = (typeof findPersona === 'function') ? findPersona(_gameSelectedPersona) : null;
+    var r = (typeof findRole === 'function' && _gameSelectedChars[0]) ? findRole(_gameSelectedChars[0]) : null;
+    if (!r) { if (typeof showToast === 'function') showToast('请选择一个角色作为出题人'); return; }
+
+    _turtleState = {
+        host: { name: r.name || '出题人', avatar: r.avatar || '', detail: r.detail || '', id: r.id },
+        player: { name: (persona && persona.name) || '我', avatar: (persona && persona.avatar) || '' },
+        phase: 'loading', // loading → playing → reveal
+        surface: '',      // 汤面（谜题）
+        bottom: '',       // 汤底（答案）
+        qas: [],          // [{q, a, type}]  type: yes/no/irrelevant
+        inputText: '',
+        generating: false,
+        revealed: false
+    };
+    _turtleRender();
+    _turtleGenPuzzle();
+}
+
+function _turtleGenPuzzle() {
+    var s = _turtleState; if (!s) return;
+    s.phase = 'loading'; s.generating = true; _turtleRender();
+
+    var sysPrompt = '你是一个海龟汤出题人。海龟汤是一种情景推理游戏：你给出一个看似荒诞的简短故事（汤面），玩家通过提问是非题来还原真相（汤底）。\n\n请生成一道海龟汤题目。要求：\n1. 汤面要简短（2-4句话），情景怪异但有逻辑\n2. 汤底要合理，能解释汤面的所有怪异之处\n3. 难度适中，需要5-15个问题才能猜到\n\n请严格按以下JSON格式回复，不要添加任何其他内容：\n{"surface":"汤面内容","bottom":"汤底内容"}';
+
+    if (s.host.detail) {
+        sysPrompt += '\n\n你的角色设定：' + s.host.detail.substring(0, 500);
+    }
+
+    var apiUrl = '', apiKey = '', model = '';
+    try {
+        apiUrl = localStorage.getItem('ds_api_url') || '';
+        apiKey = localStorage.getItem('ds_api_key') || '';
+        model = localStorage.getItem('ds_api_model') || 'gpt-3.5-turbo';
+    } catch (e) { }
+
+    if (!apiUrl || !apiKey) {
+        s.surface = '一个男人走进餐厅，点了一碗海龟汤，喝了一口后突然哭了起来，然后走出餐厅，第二天他被发现死在了家中。为什么？';
+        s.bottom = '这个男人曾经和朋友在海上遇难漂流，朋友告诉他这是海龟汤让他喝下去活命。但来到餐厅喝到真正的海龟汤后，他发现味道完全不同，这才明白当年喝的是朋友用自己的肉做的汤。他无法承受真相，选择了自杀。';
+        s.phase = 'playing'; s.generating = false; _turtleRender();
+        return;
+    }
+
+    var body = {
+        model: model,
+        messages: [
+            { role: 'system', content: sysPrompt },
+            { role: 'user', content: '请出一道海龟汤题目。' }
+        ],
+        temperature: 0.9,
+        max_tokens: 800
+    };
+
+    fetch(apiUrl + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (data) {
+        if (!_turtleState) return;
+        var text = '';
+        try { text = data.choices[0].message.content.trim(); } catch (e) { }
+        try {
+            var jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                var obj = JSON.parse(jsonMatch[0]);
+                s.surface = obj.surface || '解析失败';
+                s.bottom = obj.bottom || '未知答案';
+            } else {
+                s.surface = text || '生成失败，请重试';
+                s.bottom = '（AI未能按格式生成）';
+            }
+        } catch (e) {
+            s.surface = text || '生成失败';
+            s.bottom = '（解析错误）';
+        }
+        s.phase = 'playing'; s.generating = false; _turtleRender();
+    }).catch(function (e) {
+        if (!_turtleState) return;
+        s.surface = '一个女孩在生日那天收到了一双红色的鞋子，她非常开心。但第二天，她把鞋子扔到了河里。为什么？';
+        s.bottom = '那双鞋是她失踪的妈妈最喜欢的款式。她收到后以为妈妈回来了，到处找却找不到人。后来她发现鞋是爸爸的新女友买的，只是碰巧款式一样。她愤怒又失望，把鞋扔进了河里。';
+        s.phase = 'playing'; s.generating = false; _turtleRender();
+    });
+}
+
+function _turtleAsk(question) {
+    var s = _turtleState; if (!s || s.phase !== 'playing' || s.generating) return;
+    if (!question.trim()) return;
+
+    s.generating = true;
+    s.qas.push({ q: question, a: '思考中...', type: 'pending' });
+    s.inputText = '';
+    _turtleRender();
+
+    var sysPrompt = '你是海龟汤的出题人。\n汤面：' + s.surface + '\n汤底：' + s.bottom +
+        '\n\n玩家在通过提问来猜测真相。你只能回答以下几种：\n- "是" — 如果问题与汤底相符\n- "不是" — 如果问题与汤底不符\n- "不相关" — 如果问题与汤底没有关系\n- "是，但不完全是" — 如果部分正确\n- "接近了！" — 如果非常接近真相\n\n只回复上述关键词之一，最多加一句简短的引导提示（不要透露答案）。如果玩家基本猜对了全部真相，回复"恭喜你猜对了！🎉"并简短确认。';
+
+    if (s.host.detail) sysPrompt += '\n\n你的性格设定（融入到回复语气中）：' + s.host.detail.substring(0, 300);
+
+    var msgs = [{ role: 'system', content: sysPrompt }];
+    for (var i = 0; i < s.qas.length - 1; i++) {
+        msgs.push({ role: 'user', content: s.qas[i].q });
+        msgs.push({ role: 'assistant', content: s.qas[i].a });
+    }
+    msgs.push({ role: 'user', content: question });
+
+    var apiUrl = '', apiKey = '', model = '';
+    try {
+        apiUrl = localStorage.getItem('ds_api_url') || '';
+        apiKey = localStorage.getItem('ds_api_key') || '';
+        model = localStorage.getItem('ds_api_model') || 'gpt-3.5-turbo';
+    } catch (e) { }
+
+    if (!apiUrl || !apiKey) {
+        var lastQA = s.qas[s.qas.length - 1];
+        var answers = ['是', '不是', '不相关', '是，但不完全是'];
+        lastQA.a = answers[Math.floor(Math.random() * answers.length)];
+        lastQA.type = lastQA.a.indexOf('是') === 0 ? 'yes' : (lastQA.a === '不是' ? 'no' : 'irrelevant');
+        s.generating = false; _turtleRender(); return;
+    }
+
+    fetch(apiUrl + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({ model: model, messages: msgs, temperature: 0.3, max_tokens: 150 })
+    }).then(function (r) { return r.json(); }).then(function (data) {
+        if (!_turtleState) return;
+        var answer = '';
+        try { answer = data.choices[0].message.content.trim(); } catch (e) { answer = '（回复失败）'; }
+        var lastQA = s.qas[s.qas.length - 1];
+        lastQA.a = answer;
+        if (answer.indexOf('恭喜') >= 0 || answer.indexOf('猜对') >= 0) lastQA.type = 'correct';
+        else if (answer.indexOf('是') === 0 || answer.indexOf('对') === 0) lastQA.type = 'yes';
+        else if (answer.indexOf('不是') >= 0 || answer.indexOf('不对') >= 0) lastQA.type = 'no';
+        else if (answer.indexOf('接近') >= 0) lastQA.type = 'close';
+        else lastQA.type = 'irrelevant';
+        s.generating = false; _turtleRender();
+        // 自动滚到底
+        var chatEl = document.getElementById('turtleChatArea');
+        if (chatEl) setTimeout(function () { chatEl.scrollTop = chatEl.scrollHeight; }, 50);
+    }).catch(function () {
+        if (!_turtleState) return;
+        var lastQA = s.qas[s.qas.length - 1];
+        lastQA.a = '（网络错误）'; lastQA.type = 'irrelevant';
+        s.generating = false; _turtleRender();
+    });
+}
+
+function _turtleAction(act) {
+    var s = _turtleState; if (!s) return;
+    if (act === 'send') {
+        var inp = document.getElementById('turtleInput');
+        var txt = inp ? inp.value.trim() : '';
+        if (txt) _turtleAsk(txt);
+    }
+    if (act === 'reveal') { s.revealed = true; _turtleRender(); }
+    if (act === 'hide') { s.revealed = false; _turtleRender(); }
+    if (act === 'newgame') { turtleStart(); }
+    if (act === 'back') { gameBackToLobby(); }
+}
+
+function _turtleRender() {
+    var s = _turtleState; if (!s) return;
+    var el = document.getElementById('gameOverlay'); if (!el) return;
+    var h = '<div class="game-header"><div class="game-back" onclick="gameBackToLobby()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="game-header-title">TURTLE SOUP 海龟汤</div><div class="game-header-spacer"></div></div>';
+
+    h += '<div class="turtle-game">';
+
+    /* 出题人信息 */
+    h += '<div class="turtle-host">';
+    h += '<div class="turtle-host-av">';
+    if (s.host.avatar) h += '<img src="' + _gEsc(s.host.avatar) + '">';
+    else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+    h += '</div>';
+    h += '<div class="turtle-host-info"><div class="turtle-host-name">出题人 · ' + _gEsc(s.host.name) + '</div><div class="turtle-host-tag">🐢 海龟汤 Lateral Thinking Puzzle</div></div>';
+    h += '</div>';
+
+    if (s.phase === 'loading') {
+        h += '<div class="turtle-loading"><div class="turtle-loading-icon">🐢</div><div class="turtle-loading-text">正在生成谜题...</div></div>';
+    } else {
+        /* 汤面 */
+        h += '<div class="turtle-surface"><div class="turtle-surface-label">🍜 汤面 Surface</div><div class="turtle-surface-text">' + _gEsc(s.surface) + '</div></div>';
+
+        /* 汤底 */
+        if (s.revealed) {
+            h += '<div class="turtle-bottom"><div class="turtle-bottom-label">🥣 汤底 Truth</div><div class="turtle-bottom-text">' + _gEsc(s.bottom) + '</div>';
+            h += '<div class="turtle-bottom-hide" data-turtle-action="hide">收起汤底</div></div>';
+        }
+
+        /* 问答区 */
+        h += '<div class="turtle-chat" id="turtleChatArea">';
+        for (var i = 0; i < s.qas.length; i++) {
+            var qa = s.qas[i];
+            // 玩家问
+            h += '<div class="turtle-msg player">';
+            h += '<div class="turtle-msg-bubble player">Q' + (i + 1) + ': ' + _gEsc(qa.q) + '</div>';
+            h += '</div>';
+            // 出题人答
+            var typeClass = qa.type || 'pending';
+            h += '<div class="turtle-msg host">';
+            h += '<div class="turtle-msg-av">';
+            if (s.host.avatar) h += '<img src="' + _gEsc(s.host.avatar) + '">';
+            else h += '🐢';
+            h += '</div>';
+            h += '<div class="turtle-msg-bubble host ' + typeClass + '">' + _gEsc(qa.a) + '</div>';
+            h += '</div>';
+        }
+        if (s.qas.length === 0) {
+            h += '<div class="turtle-hint">开始提问吧！只能问是/否的问题 🐢</div>';
+        }
+        h += '</div>';
+
+        /* 输入 + 按钮 */
+        h += '<div class="turtle-input-bar">';
+        h += '<input type="text" class="turtle-input" id="turtleInput" placeholder="提一个是/否问题..." value="' + _gEsc(s.inputText) + '" ' + (s.generating ? 'disabled' : '') + ' onkeydown="if(event.key===\'Enter\'){_turtleAction(\'send\')}">';
+        h += '<div class="turtle-send-btn" data-turtle-action="send">' + (s.generating ? '⏳' : '➤') + '</div>';
+        h += '</div>';
+
+        h += '<div class="turtle-actions">';
+        if (!s.revealed) h += '<div class="turtle-action-btn" data-turtle-action="reveal">👁 查看汤底</div>';
+        h += '<div class="turtle-action-btn" data-turtle-action="newgame">🔄 新题目</div>';
+        h += '<div class="turtle-action-btn" data-turtle-action="back">🚪 返回大厅</div>';
+        h += '</div>';
+    }
+
+    h += '</div>';
+    el.innerHTML = h;
+
+    // 自动聚焦
+    var inp = document.getElementById('turtleInput');
+    if (inp && !s.generating) setTimeout(function () { inp.focus(); }, 100);
+
+    // 自动滚底
+    var chatEl = document.getElementById('turtleChatArea');
+    if (chatEl) setTimeout(function () { chatEl.scrollTop = chatEl.scrollHeight; }, 50);
+}
+
+/* ==========================================
+   飞行棋 LUDO ENGINE
+   ========================================== */
+var LUDO_COLORS = ['red', 'yellow', 'blue', 'green'];
+var LUDO_COLOR_CN = { red: '红', yellow: '黄', blue: '蓝', green: '绿' };
+var LUDO_COLOR_HEX = { red: '#d4756a', yellow: '#d4b86a', blue: '#6a9fd4', green: '#6abd8a' };
+var LUDO_TRACK_LEN = 52; // 主跑道总格
+var LUDO_HOME_LEN = 6;   // 终点走廊长度（含终点）
+
+/* 每个颜色的起飞点在主跑道上的位置 */
+var LUDO_START = { red: 0, yellow: 13, blue: 26, green: 39 };
+
+function ludoStart() {
+    var persona = (typeof findPersona === 'function') ? findPersona(_gameSelectedPersona) : null;
+    var numOpponents = _gameSelectedChars.length;
+    if (numOpponents < 1) { if (typeof showToast === 'function') showToast('至少选择1个对手'); return; }
+
+    var numPlayers = numOpponents + 1;
+    var colorAssign = LUDO_COLORS.slice(0, numPlayers);
+
+    var players = [];
+    // 玩家
+    players.push({
+        id: 'user', name: (persona && persona.name) || '我', avatar: (persona && persona.avatar) || '',
+        color: colorAssign[0], isUser: true,
+        planes: [
+            { pos: -1, home: false, homePos: -1, finished: false },
+            { pos: -1, home: false, homePos: -1, finished: false },
+            { pos: -1, home: false, homePos: -1, finished: false },
+            { pos: -1, home: false, homePos: -1, finished: false }
+        ]
+    });
+    // 对手
+    for (var i = 0; i < numOpponents; i++) {
+        var r = (typeof findRole === 'function') ? findRole(_gameSelectedChars[i]) : null;
+        players.push({
+            id: r ? r.id : ('ai' + i), name: r ? (r.name || '角色') : ('角色' + (i + 1)), avatar: r ? (r.avatar || '') : '',
+            color: colorAssign[i + 1], isUser: false,
+            planes: [
+                { pos: -1, home: false, homePos: -1, finished: false },
+                { pos: -1, home: false, homePos: -1, finished: false },
+                { pos: -1, home: false, homePos: -1, finished: false },
+                { pos: -1, home: false, homePos: -1, finished: false }
+            ]
+        });
+    }
+
+    _ludoState = {
+        players: players,
+        currentPlayer: 0,
+        dice: 0,
+        phase: 'roll',      // roll → pick → animating → done
+        logs: [],
+        consecutiveSixes: 0,
+        winner: -1,
+        needPick: false,
+        movablePlanes: []
+    };
+
+    _ludoLog(players[0].name + '(' + LUDO_COLOR_CN[players[0].color] + ') 先手');
+    _ludoRender();
+}
+
+/* 掷骰子 */
+function _ludoRollDice(playerIdx) {
+    var s = _ludoState; if (!s || s.phase !== 'roll') return;
+    var dice = Math.floor(Math.random() * 6) + 1;
+    s.dice = dice;
+    var pl = s.players[playerIdx];
+    _ludoLog(pl.name + ' 掷出了 ' + dice + ' 点');
+
+    // 检查连续三次6
+    if (dice === 6) {
+        s.consecutiveSixes++;
+        if (s.consecutiveSixes >= 3) {
+            _ludoLog(pl.name + ' 连续3次6点！所有在跑道上的飞机返回基地 ✈️→🏠');
+            for (var i = 0; i < 4; i++) {
+                if (!pl.planes[i].finished && pl.planes[i].pos >= 0) {
+                    pl.planes[i].pos = -1;
+                    pl.planes[i].home = false;
+                    pl.planes[i].homePos = -1;
+                }
+            }
+            s.consecutiveSixes = 0;
+            _ludoNextTurn();
+            return;
+        }
+    } else {
+        s.consecutiveSixes = 0;
+    }
+
+    // 找可移动的飞机
+    var movable = _ludoGetMovable(playerIdx, dice);
+
+    if (movable.length === 0) {
+        _ludoLog(pl.name + ' 无法移动');
+        if (dice === 6) {
+            s.phase = 'roll'; _ludoRender();
+            if (!pl.isUser) setTimeout(function () { if (_ludoState) _ludoAiTurn(); }, 1000);
+        } else {
+            _ludoNextTurn();
+        }
+        return;
+    }
+
+    s.movablePlanes = movable;
+    if (movable.length === 1) {
+        // 只有一架可动，自动选
+        _ludoMovePlane(playerIdx, movable[0], dice);
+    } else {
+        // 需要玩家选择
+        s.needPick = true;
+        s.phase = 'pick';
+        _ludoRender();
+        if (!pl.isUser) {
+            setTimeout(function () { if (_ludoState) _ludoAiPick(); }, 800);
+        }
+    }
+}
+
+function _ludoGetMovable(playerIdx, dice) {
+    var s = _ludoState, pl = s.players[playerIdx];
+    var start = LUDO_START[pl.color];
+    var movable = [];
+
+    for (var i = 0; i < 4; i++) {
+        var p = pl.planes[i];
+        if (p.finished) continue;
+
+        if (p.pos === -1) {
+            // 在基地，需要6点起飞
+            if (dice === 6) movable.push(i);
+        } else if (p.home) {
+            // 在终点走廊
+            var newHP = p.homePos + dice;
+            if (newHP < LUDO_HOME_LEN) movable.push(i); // 可以前进
+            else if (newHP === LUDO_HOME_LEN - 1) movable.push(i); // 精确到终点
+            // 超过就不能走（反弹也可以）
+            else movable.push(i); // 允许反弹
+        } else {
+            // 在主跑道
+            var steps = _ludoStepsFromStart(pl.color, p.pos);
+            if (steps + dice >= LUDO_TRACK_LEN) {
+                // 要进终点走廊
+                var homeSteps = steps + dice - LUDO_TRACK_LEN;
+                movable.push(i); // 允许尝试
+            } else {
+                movable.push(i);
+            }
+        }
+    }
+    return movable;
+}
+
+function _ludoStepsFromStart(color, absPos) {
+    var start = LUDO_START[color];
+    return (absPos - start + LUDO_TRACK_LEN) % LUDO_TRACK_LEN;
+}
+
+function _ludoMovePlane(playerIdx, planeIdx, dice) {
+    var s = _ludoState, pl = s.players[playerIdx];
+    var p = pl.planes[planeIdx];
+    var start = LUDO_START[pl.color];
+
+    s.needPick = false;
+    s.phase = 'animating';
+
+    if (p.pos === -1) {
+        // 起飞
+        p.pos = start;
+        _ludoLog(pl.name + ' 的' + (planeIdx + 1) + '号机起飞 ✈️');
+        _ludoCheckCapture(playerIdx, planeIdx);
+        _ludoAfterMove(playerIdx, dice);
+        return;
+    }
+
+    if (p.home) {
+        // 终点走廊内移动
+        var newHP = p.homePos + dice;
+        if (newHP >= LUDO_HOME_LEN - 1) {
+            if (newHP === LUDO_HOME_LEN - 1) {
+                p.homePos = LUDO_HOME_LEN - 1;
+                p.finished = true;
+                _ludoLog(pl.name + ' 的' + (planeIdx + 1) + '号机到达终点 🎉');
+            } else {
+                // 反弹
+                var over = newHP - (LUDO_HOME_LEN - 1);
+                p.homePos = (LUDO_HOME_LEN - 1) - over;
+                _ludoLog(pl.name + ' 的' + (planeIdx + 1) + '号机反弹了');
+            }
+        } else {
+            p.homePos = newHP;
+            _ludoLog(pl.name + ' 的' + (planeIdx + 1) + '号机在走廊前进 ' + dice + ' 步');
+        }
+        _ludoAfterMove(playerIdx, dice);
+        return;
+    }
+
+    // 主跑道移动
+    var steps = _ludoStepsFromStart(pl.color, p.pos);
+    var newSteps = steps + dice;
+
+    if (newSteps >= LUDO_TRACK_LEN) {
+        // 进入终点走廊
+        var homeSteps = newSteps - LUDO_TRACK_LEN;
+        if (homeSteps >= LUDO_HOME_LEN) {
+            // 反弹
+            var over2 = homeSteps - (LUDO_HOME_LEN - 1);
+            p.home = true;
+            p.homePos = (LUDO_HOME_LEN - 1) - over2;
+            if (p.homePos < 0) p.homePos = 0;
+            p.pos = -2; // 标记不在主跑道
+            _ludoLog(pl.name + ' 的' + (planeIdx + 1) + '号机进入走廊（反弹）');
+        } else if (homeSteps === LUDO_HOME_LEN - 1) {
+            p.home = true;
+            p.homePos = LUDO_HOME_LEN - 1;
+            p.pos = -2;
+            p.finished = true;
+            _ludoLog(pl.name + ' 的' + (planeIdx + 1) + '号机直接飞入终点 🎉');
+        } else {
+            p.home = true;
+            p.homePos = homeSteps;
+            p.pos = -2;
+            _ludoLog(pl.name + ' 的' + (planeIdx + 1) + '号机进入终点走廊');
+        }
+    } else {
+        var newPos = (start + newSteps) % LUDO_TRACK_LEN;
+        p.pos = newPos;
+        _ludoLog(pl.name + ' 的' + (planeIdx + 1) + '号机前进 ' + dice + ' 步');
+
+        // 同色跳格
+        if (_ludoIsSameColor(pl.color, newPos)) {
+            var jumpTo = _ludoNextSameColor(pl.color, newPos);
+            if (jumpTo >= 0 && jumpTo !== newPos) {
+                p.pos = jumpTo;
+                _ludoLog(pl.name + ' 的' + (planeIdx + 1) + '号机跳到同色格 ⭐');
+            }
+        }
+
+        _ludoCheckCapture(playerIdx, planeIdx);
+    }
+
+    _ludoAfterMove(playerIdx, dice);
+}
+
+/* 同色格检测 — 每色有固定的同色格 */
+function _ludoIsSameColor(color, pos) {
+    var offset = LUDO_START[color];
+    var relPos = (pos - offset + LUDO_TRACK_LEN) % LUDO_TRACK_LEN;
+    // 每隔4格设一个同色格（4, 8, 12, ...）
+    return relPos > 0 && relPos < LUDO_TRACK_LEN && relPos % 4 === 0;
+}
+
+function _ludoNextSameColor(color, pos) {
+    for (var step = 1; step <= 4; step++) {
+        var next = (pos + step) % LUDO_TRACK_LEN;
+        if (_ludoIsSameColor(color, next)) return next;
+    }
+    return -1;
+}
+
+/* 撞机检测 */
+function _ludoCheckCapture(playerIdx, planeIdx) {
+    var s = _ludoState, pl = s.players[playerIdx];
+    var myPlane = pl.planes[planeIdx];
+    if (myPlane.pos < 0 || myPlane.home || myPlane.finished) return;
+
+    for (var pi = 0; pi < s.players.length; pi++) {
+        if (pi === playerIdx) continue;
+        var enemy = s.players[pi];
+        for (var ei = 0; ei < 4; ei++) {
+            var ep = enemy.planes[ei];
+            if (ep.pos === myPlane.pos && !ep.home && !ep.finished && ep.pos >= 0) {
+                // 检查对方是否有叠子
+                var stackCount = 0;
+                for (var si = 0; si < 4; si++) {
+                    if (enemy.planes[si].pos === ep.pos && !enemy.planes[si].home && !enemy.planes[si].finished) stackCount++;
+                }
+                // 撞回基地
+                for (var ri = 0; ri < 4; ri++) {
+                    if (enemy.planes[ri].pos === myPlane.pos && !enemy.planes[ri].home && !enemy.planes[ri].finished) {
+                        enemy.planes[ri].pos = -1;
+                        enemy.planes[ri].home = false;
+                        enemy.planes[ri].homePos = -1;
+                    }
+                }
+                _ludoLog(pl.name + ' 撞了 ' + enemy.name + ' 的飞机！💥');
+            }
+        }
+    }
+}
+
+function _ludoAfterMove(playerIdx, dice) {
+    var s = _ludoState, pl = s.players[playerIdx];
+
+    // 检查是否胜利
+    var allDone = true;
+    for (var i = 0; i < 4; i++) { if (!pl.planes[i].finished) { allDone = false; break; } }
+    if (allDone) {
+        s.winner = playerIdx;
+        s.phase = 'done';
+        _ludoLog('🏆 ' + pl.name + ' 获得胜利！');
+        _ludoRender();
+        return;
+    }
+
+    // 掷出6，再投一次
+    if (dice === 6) {
+        s.phase = 'roll';
+        _ludoRender();
+        if (!pl.isUser) setTimeout(function () { if (_ludoState) _ludoAiTurn(); }, 1200);
+    } else {
+        _ludoNextTurn();
+    }
+}
+
+function _ludoNextTurn() {
+    var s = _ludoState; if (!s) return;
+    s.currentPlayer = (s.currentPlayer + 1) % s.players.length;
+    s.consecutiveSixes = 0;
+    s.dice = 0;
+    s.phase = 'roll';
+    _ludoRender();
+    var pl = s.players[s.currentPlayer];
+    if (!pl.isUser) setTimeout(function () { if (_ludoState) _ludoAiTurn(); }, 1000);
+}
+
+/* AI掷骰子和选飞机 */
+function _ludoAiTurn() {
+    var s = _ludoState; if (!s || s.phase !== 'roll') return;
+    _ludoRollDice(s.currentPlayer);
+}
+
+function _ludoAiPick() {
+    var s = _ludoState; if (!s || s.phase !== 'pick') return;
+    var pl = s.players[s.currentPlayer];
+    // AI策略：优先起飞，其次最靠近终点的
+    var best = s.movablePlanes[0];
+    var bestScore = -999;
+    for (var i = 0; i < s.movablePlanes.length; i++) {
+        var pi = s.movablePlanes[i];
+        var p = pl.planes[pi];
+        var score = 0;
+        if (p.pos === -1) score = 50; // 起飞优先
+        else if (p.home) score = 80 + p.homePos; // 终点走廊最优先
+        else score = _ludoStepsFromStart(pl.color, p.pos); // 离终点越近越好
+        if (score > bestScore) { bestScore = score; best = pi; }
+    }
+    _ludoMovePlane(s.currentPlayer, best, s.dice);
+}
+
+/* 玩家操作 */
+function _ludoAction(act) {
+    var s = _ludoState; if (!s) return;
+    if (act === 'roll') {
+        if (s.phase === 'roll' && s.players[s.currentPlayer].isUser) {
+            _ludoRollDice(s.currentPlayer);
+        }
+    }
+    if (act === 'again') { ludoStart(); }
+    if (act === 'back') { gameBackToLobby(); }
+}
+
+function _ludoPickPlane(planeIdx) {
+    var s = _ludoState; if (!s || s.phase !== 'pick') return;
+    var pl = s.players[s.currentPlayer];
+    if (!pl.isUser) return;
+    if (s.movablePlanes.indexOf(planeIdx) === -1) {
+        if (typeof showToast === 'function') showToast('这架飞机不能移动');
+        return;
+    }
+    _ludoMovePlane(s.currentPlayer, planeIdx, s.dice);
+}
+
+function _ludoLog(msg) { if (_ludoState) { _ludoState.logs.push(msg); if (_ludoState.logs.length > 30) _ludoState.logs.shift(); } }
+
+/* ===== 飞行棋渲染 ===== */
+function _ludoRender() {
+    var s = _ludoState; if (!s) return;
+    var el = document.getElementById('gameOverlay'); if (!el) return;
+    var h = '<div class="game-header"><div class="game-back" onclick="gameBackToLobby()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="game-header-title">LUDO 飞行棋</div><div class="game-header-spacer"></div></div>';
+
+    h += '<div class="ludo-game">';
+
+    /* 玩家状态栏 */
+    h += '<div class="ludo-players">';
+    for (var pi = 0; pi < s.players.length; pi++) {
+        var pl = s.players[pi];
+        var isCur = pi === s.currentPlayer;
+        h += '<div class="ludo-player-card ' + pl.color + (isCur ? ' active' : '') + '">';
+        h += '<div class="ludo-player-av">';
+        if (pl.avatar) h += '<img src="' + _gEsc(pl.avatar) + '">';
+        else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+        h += '</div>';
+        h += '<div class="ludo-player-name">' + _gEsc(pl.name) + '</div>';
+        /* 飞机状态点 */
+        h += '<div class="ludo-plane-dots">';
+        for (var fi = 0; fi < 4; fi++) {
+            var pp = pl.planes[fi];
+            var dotClass = 'dot-base';
+            if (pp.finished) dotClass = 'dot-done';
+            else if (pp.home) dotClass = 'dot-home';
+            else if (pp.pos >= 0) dotClass = 'dot-track';
+            h += '<div class="ludo-dot ' + dotClass + ' ' + pl.color + '"></div>';
+        }
+        h += '</div>';
+        h += '</div>';
+    }
+    h += '</div>';
+
+    /* 骰子区域 */
+    h += '<div class="ludo-dice-area">';
+    var curPl = s.players[s.currentPlayer];
+    if (s.phase === 'done') {
+        h += '<div class="ludo-result">';
+        h += '<div class="ludo-result-icon">🏆</div>';
+        h += '<div class="ludo-result-title">' + _gEsc(s.players[s.winner].name) + ' 获胜！</div>';
+        h += '<div class="ludo-result-sub">' + LUDO_COLOR_CN[s.players[s.winner].color] + '色全部飞机到达终点</div>';
+        h += '<div class="ludo-result-btns"><div class="ludo-btn" data-ludo-action="again">再来一局</div><div class="ludo-btn" data-ludo-action="back">返回大厅</div></div>';
+        h += '</div>';
+    } else {
+        h += '<div class="ludo-turn-info">当前回合: <span style="color:' + LUDO_COLOR_HEX[curPl.color] + ';font-weight:700">' + _gEsc(curPl.name) + '</span></div>';
+
+        /* 骰子 */
+        h += '<div class="ludo-dice ' + (s.dice > 0 ? 'rolled' : '') + '">';
+        if (s.dice > 0) {
+            h += _ludoDiceFace(s.dice);
+        } else {
+            h += '<div class="ludo-dice-placeholder">?</div>';
+        }
+        h += '</div>';
+
+        if (s.phase === 'roll' && curPl.isUser) {
+            h += '<div class="ludo-btn primary" data-ludo-action="roll">🎲 掷骰子</div>';
+        } else if (s.phase === 'roll' && !curPl.isUser) {
+            h += '<div class="ludo-waiting">' + _gEsc(curPl.name) + ' 正在掷骰...</div>';
+        }
+
+        /* 选飞机 */
+        if (s.phase === 'pick' && curPl.isUser) {
+            h += '<div class="ludo-pick-hint">选择要移动的飞机 ✈️</div>';
+            h += '<div class="ludo-pick-planes">';
+            for (var mi = 0; mi < s.movablePlanes.length; mi++) {
+                var mpi = s.movablePlanes[mi];
+                var mp = curPl.planes[mpi];
+                var label = '';
+                if (mp.pos === -1) label = '起飞';
+                else if (mp.home) label = '走廊' + (mp.homePos + 1);
+                else label = '跑道' + _ludoStepsFromStart(curPl.color, mp.pos);
+                h += '<div class="ludo-pick-btn ' + curPl.color + '" data-ludo-plane="' + mpi + '">' + (mpi + 1) + '号机<br><span style="font-size:8px;opacity:.6">' + label + '</span></div>';
+            }
+            h += '</div>';
+        }
+    }
+    h += '</div>';
+
+    /* 棋盘可视化 — 简化版跑道 */
+    h += '<div class="ludo-board">';
+    h += '<div class="ludo-board-title">✈️ 飞行状态</div>';
+    for (var bi = 0; bi < s.players.length; bi++) {
+        var bpl = s.players[bi];
+        h += '<div class="ludo-board-row">';
+        h += '<div class="ludo-board-label" style="color:' + LUDO_COLOR_HEX[bpl.color] + '">' + LUDO_COLOR_CN[bpl.color] + '</div>';
+        h += '<div class="ludo-board-planes">';
+        for (var bfi = 0; bfi < 4; bfi++) {
+            var bp = bpl.planes[bfi];
+            var statusText = '🏠';
+            var statusClass = 'in-base';
+            if (bp.finished) { statusText = '🏁'; statusClass = 'finished'; }
+            else if (bp.home) { statusText = '▶' + (bp.homePos + 1); statusClass = 'in-home'; }
+            else if (bp.pos >= 0) {
+                var stps = _ludoStepsFromStart(bpl.color, bp.pos);
+                statusText = stps + '';
+                statusClass = 'on-track';
+            }
+            var clickable = (s.phase === 'pick' && bi === s.currentPlayer && bpl.isUser && s.movablePlanes.indexOf(bfi) !== -1);
+            h += '<div class="ludo-board-plane ' + bpl.color + ' ' + statusClass + (clickable ? ' pickable' : '') + '"' + (clickable ? ' data-ludo-plane="' + bfi + '"' : '') + '>' + statusText + '</div>';
+        }
+        h += '</div></div>';
+    }
+    h += '</div>';
+
+    /* 日志 */
+    h += '<div class="ludo-log" id="ludoLogArea">';
+    var logStart = Math.max(0, s.logs.length - 8);
+    for (var li = logStart; li < s.logs.length; li++) {
+        h += '<div class="ludo-log-item">' + _gEsc(s.logs[li]) + '</div>';
+    }
+    h += '</div>';
+
+    h += '</div>';
+    el.innerHTML = h;
+
+    // 滚日志
+    var logEl = document.getElementById('ludoLogArea');
+    if (logEl) logEl.scrollTop = logEl.scrollHeight;
+}
+
+function _ludoDiceFace(n) {
+    var dots = {
+        1: [[1, 1]],
+        2: [[0, 0], [2, 2]],
+        3: [[0, 0], [1, 1], [2, 2]],
+        4: [[0, 0], [0, 2], [2, 0], [2, 2]],
+        5: [[0, 0], [0, 2], [1, 1], [2, 0], [2, 2]],
+        6: [[0, 0], [0, 2], [1, 0], [1, 2], [2, 0], [2, 2]]
+    };
+    var h = '<div class="ludo-dice-face">';
+    var grid = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    var d = dots[n] || [];
+    for (var i = 0; i < d.length; i++) grid[d[i][0]][d[i][1]] = 1;
+    for (var r = 0; r < 3; r++) {
+        for (var c = 0; c < 3; c++) {
+            h += '<div class="dice-cell' + (grid[r][c] ? ' dot' : '') + '"></div>';
+        }
+    }
+    h += '</div>';
+    return h;
 }
 
 // 事件委托已在上方统一处理，sheep使用onclick直接绑定
