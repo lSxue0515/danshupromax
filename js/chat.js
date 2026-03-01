@@ -1141,7 +1141,7 @@ function openConversation(rid) {
     // 输入行 — 续写在左，发送在右
     h += '<div class="chat-conv-input-row" id="chatInputRow">';
     h += '<div class="chat-conv-action-btn" onclick="toggleStickerPanel()" title="表情包"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>';
-    h += '<input class="chat-conv-input" id="chatConvInput" type="text" inputmode="text" enterkeyhint="send" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" placeholder="说点什么..." onkeydown="if(event.key===\'Enter\'){sendChatMessage();event.preventDefault();}" onfocus="window._chatInputFocus&&window._chatInputFocus()" onblur="window._chatInputBlur&&window._chatInputBlur()">';
+    h += '<input class="chat-conv-input" id="chatConvInput" type="text" placeholder="说点什么..." onkeydown="if(event.key===\'Enter\'){sendChatMessage();event.preventDefault();}">';
     // 续写键
     h += '<div class="chat-conv-action-btn send-btn" onclick="continueChat()" title="续写"><svg viewBox="0 0 24 24"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg></div>';
     // 发送键
