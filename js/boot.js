@@ -8,6 +8,10 @@
     var BOOT_IMG = 'https://s3.bmp.ovh/2026/03/01/nn1m2Yea.png';
     var BOOT_DURATION = 3800;
 
+    /* 预加载图片 */
+    var preImg = new Image();
+    preImg.src = BOOT_IMG;
+
     function buildBootScreen() {
         var el = document.createElement('div');
         el.className = 'boot-screen';
@@ -29,37 +33,46 @@
         return el;
     }
 
+    function removePlaceholder() {
+        var placeholder = document.getElementById('bootPlaceholder');
+        if (placeholder && placeholder.parentNode) {
+            placeholder.parentNode.removeChild(placeholder);
+        }
+        var bs = document.getElementById('bootBlockStyle');
+        if (bs && bs.parentNode) {
+            bs.parentNode.removeChild(bs);
+        }
+    }
+
     function injectBoot() {
         var phone = document.querySelector('.phone-frame') || document.getElementById('phoneFrame');
-        if (!phone) return;
+        if (!phone) {
+            removePlaceholder();
+            return;
+        }
 
-        var placeholder = document.getElementById('bootPlaceholder');
         var screen = buildBootScreen();
 
-        /* 插入为第一个子元素 */
+        /* 插入为 phone-frame 的第一个子元素 */
         phone.insertBefore(screen, phone.firstChild);
 
-        /* 等开机图片加载完成后再移除黑色占位 */
+        /* 等开机图片加载完成后，移除全屏黑色占位 */
         var img = screen.querySelector('.boot-fullimg');
-        function removePlaceholder() {
-            if (placeholder && placeholder.parentNode) {
-                placeholder.parentNode.removeChild(placeholder);
-            }
-            /* 移除head里的内联样式 */
-            var bs = document.getElementById('bootBlockStyle');
-            if (bs) bs.parentNode.removeChild(bs);
-        }
 
-        if (img.complete) {
+        function onReady() {
             removePlaceholder();
-        } else {
-            img.addEventListener('load', removePlaceholder);
-            img.addEventListener('error', removePlaceholder);
-            /* 兜底：最多1.5秒后强制移除 */
-            setTimeout(removePlaceholder, 1500);
         }
 
-        /* 到时间后淡出 */
+        if (img.complete && img.naturalWidth > 0) {
+            onReady();
+        } else {
+            img.addEventListener('load', onReady);
+            img.addEventListener('error', onReady);
+            /* 兜底 */
+            setTimeout(onReady, 2000);
+        }
+
+        /* 到时间后淡出开机画面 */
         setTimeout(function () {
             screen.classList.add('boot-fade-out');
             setTimeout(function () {

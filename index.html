@@ -6,19 +6,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>蛋薯机 DanShu Pro</title>
 
-    <!-- ★★★ 开机遮挡：必须在所有CSS之前，最高优先级 ★★★ -->
-    <style id="bootBlockStyle">
-        .phone-frame {
-            position: relative;
-        }
+    <!-- ★★★ PWA + iOS 全屏适配 ★★★ -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="蛋薯机">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#000000">
+    <link rel="manifest" href="manifest.json">
+    <!-- 如果有 icon 可以加：<link rel="apple-touch-icon" href="icon-180.png"> -->
 
+    <!-- ★★★ 开机遮挡：fixed定位，绝对挡住一切 ★★★ -->
+    <style id="bootBlockStyle">
         #bootPlaceholder {
-            position: absolute;
-            inset: 0;
-            z-index: 99999;
-            background: #000;
-            border-radius: inherit;
-            pointer-events: all;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 2147483647 !important;
+            background: #000 !important;
+            display: block !important;
+            pointer-events: all !important;
         }
     </style>
 
@@ -48,6 +56,7 @@
     <link rel="stylesheet" href="css/theater.css">
     <link rel="stylesheet" href="css/forum.css">
     <link rel="stylesheet" href="css/peek.css">
+    <link rel="stylesheet" href="css/phonesnoop.css">
 
 
 
@@ -55,14 +64,10 @@
 
 <body>
 
-    <div class="phone-frame" id="phoneFrame">
+    <!-- ★ 全屏开机遮挡层：fixed定位，独立于phone-frame ★ -->
+    <div id="bootPlaceholder"></div>
 
-        <!-- ★ 开机遮挡 -->
-        <div id="bootPlaceholder"></div>
-        <script>
-            // 预加载开机图片，确保boot.js执行时图片已在缓存
-            (new Image()).src = 'https://s3.bmp.ovh/2026/03/01/nn1m2Yea.png';
-        </script>
+    <div class="phone-frame" id="phoneFrame">
 
         <!-- 壁纸背景 -->
         <div class="wallpaper" id="wallpaper"></div>
@@ -1897,9 +1902,11 @@
     <script src="js/moments.js"></script>
     <script src="js/page2widget.js"></script>
     <script src="js/page3widget.js"></script>
+    <script src="js/phonesnoop.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
+    <script src="js/viewport-fix.js"></script>
 
-
+    
 
 </body>
 
