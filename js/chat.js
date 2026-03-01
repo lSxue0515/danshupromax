@@ -638,186 +638,6 @@ function handleRoleAvatarFile(e) {
     rd.readAsDataURL(f); e.target.value = '';
 }
 
-/* ========== 导入角色（JSON 角色卡） ========== */
-function triggerImportRole() {
-    closeChatMenu();
-    document.getElementById('importRoleFile').click();
-}
-
-function handleImportRoleFile(event) {
-    var file = event.target.files[0];
-    if (!file) return;
-    showToast('正在解析角色文件...');
-
-    var reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            var json = JSON.parse(e.target.result);
-            var parsed = parseCharacterCard(json);
-            if (!parsed.name) {
-                showToast('未能识别角色名，请检查文件格式');
-                return;
-            }
-            fillCreateRoleFromImport(parsed);
-            showToast('角色已导入，请检查并保存');
-        } catch (err) {
-            showToast('文件解析失败：' + err.message);
-        }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-}
-
-/* ---- 万能角色卡解析：兼容 SillyTavern V1/V2、TavernAI、CAI、Kobold 等 ---- */
-function parseCharacterCard(json) {
-    var result = { name: '', nickname: '', gender: '', detail: '', greeting: '', scenario: '', personality: '', avatar: '' };
-
-    // ★ SillyTavern V2 格式: { spec: "chara_card_v2", data: { ... } }
-    if (json.spec && json.data) {
-        json = json.data;
-    }
-
-    // ★ Character.AI 导出格式: { character: { ... } }
-    if (json.character && typeof json.character === 'object') {
-        json = json.character;
-    }
-
-    // ★ 包了一层 char 的格式
-    if (json.char && typeof json.char === 'object') {
-        json = json.char;
-    }
-
-    // ★ 某些导出会把角色放在数组里
-    if (Array.isArray(json) && json.length > 0) {
-        json = json[0];
-    }
-
-    // ★ 兼容 Backyard AI 等格式: { aiCharacter: { ... } }
-    if (json.aiCharacter && typeof json.aiCharacter === 'object') {
-        json = json.aiCharacter;
-    }
-
-    // ★ 兼容 Chub.ai 格式: { fullPath, ... node: { ... } }
-    if (json.node && typeof json.node === 'object' && json.node.definition) {
-        json = json.node;
-    }
-
-    // ---------- 提取字段 ----------
-
-    // 名字
-    result.name = json.name || json.char_name || json.character_name || '';
-
-    // 昵称（显示名）
-    result.nickname = json.nickname || json.display_name || '';
-
-    // 头像
-    result.avatar = json.avatar || '';
-    if (!result.avatar && json.image) {
-        // 有些格式用 image 字段（可能是 URL 或 base64）
-        result.avatar = json.image;
-    }
-
-    // 性格/人格
-    result.personality = json.personality || json.char_persona || '';
-
-    // 场景
-    result.scenario = json.scenario || '';
-
-    // 第一条消息（开场白）
-    result.greeting = json.first_mes || json.firstMes || json.first_message
-        || json.greeting || json.char_greeting || '';
-
-    // ★ 主描述/详细信息 — 这是最核心的字段，兼容多种命名
-    var desc = json.description || json.desc || json.char_description || '';
-    var definition = json.definition || json.definitions || '';
-    var mes_example = json.mes_example || json.example_dialogue
-        || json.mes_examples || json.sampleChat || '';
-    var system_prompt = json.system_prompt || json.systemPrompt || '';
-    var post_hist = json.post_history_instructions || '';
-    var creator_notes = json.creator_notes || json.creatorNotes || '';
-
-    // ★ V2 扩展字段
-    if (json.extensions && typeof json.extensions === 'object') {
-        // 有些 V2 卡把额外信息放在 extensions
-    }
-
-    // ★ 拼接为完整的详细信息
-    var detailParts = [];
-
-    if (desc) detailParts.push('【描述】\n' + desc);
-    if (result.personality) detailParts.push('【性格】\n' + result.personality);
-    if (result.scenario) detailParts.push('【场景】\n' + result.scenario);
-    if (definition) detailParts.push('【定义】\n' + definition);
-    if (system_prompt) detailParts.push('【系统提示】\n' + system_prompt);
-    if (post_hist) detailParts.push('【后续指令】\n' + post_hist);
-    if (mes_example) detailParts.push('【对话示例】\n' + mes_example);
-    if (result.greeting) detailParts.push('【开场白】\n' + result.greeting);
-    if (creator_notes) detailParts.push('【创作者备注】\n' + creator_notes);
-
-    // 如果只有一个字段（比如只有 description），就不加标签前缀
-    if (detailParts.length === 1) {
-        result.detail = (desc || definition || result.personality || result.greeting || '').trim();
-    } else {
-        result.detail = detailParts.join('\n\n');
-    }
-
-    // 如果完全没提取到 detail，试试看有没有 rawContent / content / bio 之类的兜底字段
-    if (!result.detail) {
-        result.detail = json.content || json.rawContent || json.bio || json.prompt || '';
-    }
-
-    // ★ 性别推断
-    result.gender = guessGender(json, result);
-
-    return result;
-}
-
-/* ---- 性别推断（尽量猜，猜不到默认 male） ---- */
-function guessGender(json, parsed) {
-    // 直接有 gender 字段
-    var g = json.gender || json.char_gender || '';
-    if (g) {
-        g = g.toLowerCase();
-        if (g.indexOf('female') !== -1 || g.indexOf('女') !== -1 || g === 'f') return 'female';
-        if (g.indexOf('male') !== -1 || g.indexOf('男') !== -1 || g === 'm') return 'male';
-        return 'other';
-    }
-    // 从描述中简单推断
-    var text = (parsed.detail + ' ' + parsed.name + ' ' + (parsed.personality || '')).toLowerCase();
-    if (text.indexOf('她') !== -1 || text.indexOf('女') !== -1 || text.indexOf(' she ') !== -1 || text.indexOf(' her ') !== -1) return 'female';
-    if (text.indexOf('他') !== -1 || text.indexOf('男') !== -1 || text.indexOf(' he ') !== -1 || text.indexOf(' him ') !== -1) return 'male';
-    return 'male';
-}
-
-/* ---- 将解析结果填入创建角色页面 ---- */
-function fillCreateRoleFromImport(parsed) {
-    // 打开创建角色页面（非编辑模式）
-    openCreateRole();
-
-    // 填入字段
-    var nameEl = document.getElementById('crName');
-    var nickEl = document.getElementById('crNickname');
-    var detailEl = document.getElementById('crDetail');
-
-    if (nameEl) nameEl.value = parsed.name || '';
-    if (nickEl) nickEl.value = parsed.nickname || parsed.name || '';
-    if (detailEl) detailEl.value = parsed.detail || '';
-
-    // 性别
-    selectRoleGender(parsed.gender || 'male');
-
-    // 头像（如果有 base64 或 URL）
-    if (parsed.avatar) {
-        var av = parsed.avatar;
-        // 如果是相对路径或不完整的 base64，忽略
-        if (av.startsWith('data:') || av.startsWith('http://') || av.startsWith('https://')) {
-            _crAvatarData = av;
-            var avEl = document.getElementById('crAvatarPreview');
-            if (avEl) avEl.innerHTML = '<img src="' + av + '" alt=""><div class="chat-cr-avatar-hint">更换头像</div>';
-        }
-    }
-}
-
 /* ========== 挂载 ========== */
 function updateMountDisplay(type, name) {
     var el = document.getElementById('crMount_' + type + '_val'); if (!el) return;
@@ -1321,7 +1141,7 @@ function openConversation(rid) {
     // 输入行 — 续写在左，发送在右
     h += '<div class="chat-conv-input-row" id="chatInputRow">';
     h += '<div class="chat-conv-action-btn" onclick="toggleStickerPanel()" title="表情包"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>';
-    h += '<input class="chat-conv-input" id="chatConvInput" type="text" placeholder="说点什么..." onkeydown="if(event.key===\'Enter\'){sendChatMessage();event.preventDefault();}">';
+    h += '<input class="chat-conv-input" id="chatConvInput" type="text" inputmode="text" enterkeyhint="send" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="说点什么..." onkeydown="if(event.key===\'Enter\'){sendChatMessage();event.preventDefault();}" onfocus="_onChatInputFocus(this)" onblur="_onChatInputBlur(this)">';
     // 续写键
     h += '<div class="chat-conv-action-btn send-btn" onclick="continueChat()" title="续写"><svg viewBox="0 0 24 24"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg></div>';
     // 发送键
@@ -5831,4 +5651,94 @@ function getMemoryAndTimePrompt(role) {
     }
 
     return parts.join('\n\n');
+}
+
+/* ===================================================
+   ★★★ iOS 键盘弹出修复 ★★★
+   阻止 iOS 在 position:fixed 容器内
+   focus input 时推动整个视图
+   =================================================== */
+
+function _onChatInputFocus(el) {
+    /* 标记键盘状态 */
+    document.documentElement.classList.add('chat-keyboard-open');
+
+    /* iOS Safari 在 fixed 容器内 focus input 时，
+       会把 scrollTop 设到很远导致黑屏。
+       解决方法：让 conversation 临时改用 absolute+固定高度，
+       并强制 window 回到顶部 */
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        /* 阻止 iOS 自动滚动 fixed 容器 */
+        setTimeout(function () {
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+
+            /* 确保 phone-frame 没有被推开 */
+            var frame = document.getElementById('phoneFrame');
+            if (frame) {
+                frame.scrollTop = 0;
+                frame.style.transform = 'none';
+            }
+
+            /* 保证 conversation 在视口内 */
+            var conv = document.getElementById('chatConversation');
+            if (conv) {
+                conv.scrollTop = conv.scrollTop; /* 保持消息位置 */
+            }
+
+            /* 滚动消息到底部让输入框可见 */
+            var body = document.getElementById('chatConvBody');
+            if (body) {
+                body.scrollTop = body.scrollHeight;
+            }
+        }, 100);
+
+        /* 再保险一次 */
+        setTimeout(function () {
+            window.scrollTo(0, 0);
+        }, 300);
+    }
+
+    /* Android (iQOO等)：键盘弹出时 visualViewport 缩小，
+       确保 conversation 高度跟随 */
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', _chatKeyboardResize);
+    }
+}
+
+function _onChatInputBlur(el) {
+    document.documentElement.classList.remove('chat-keyboard-open');
+
+    if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', _chatKeyboardResize);
+    }
+
+    /* 恢复 */
+    setTimeout(function () {
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+
+        var frame = document.getElementById('phoneFrame');
+        if (frame) frame.scrollTop = 0;
+    }, 100);
+}
+
+function _chatKeyboardResize() {
+    if (!window.visualViewport) return;
+
+    /* 强制窗口不偏移 */
+    window.scrollTo(0, 0);
+
+    var vh = window.visualViewport.height;
+    var conv = document.getElementById('chatConversation');
+    if (conv) {
+        conv.style.height = vh + 'px';
+    }
+
+    /* 滚动到底部 */
+    setTimeout(function () {
+        var body = document.getElementById('chatConvBody');
+        if (body) body.scrollTop = body.scrollHeight;
+    }, 50);
 }

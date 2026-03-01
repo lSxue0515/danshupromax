@@ -20,22 +20,33 @@
         if (!isMobile()) return;
 
         var vh;
-        // 优先使用 visualViewport（最准确，排除键盘）
         if (window.visualViewport) {
             vh = window.visualViewport.height;
         } else {
             vh = window.innerHeight;
         }
 
-        // 防抖：高度变化小于 1px 不更新
+        /* ★ Android 某些浏览器 (iQOO/vivo) visualViewport.height 
+           可能仍然包含系统导航栏，用 screen.availHeight 兜底 ★ */
+        if (/Android/i.test(navigator.userAgent)) {
+            var docH = document.documentElement.clientHeight;
+            if (docH > 0 && docH < vh) {
+                vh = docH;
+            }
+        }
+
         if (Math.abs(vh - _lastVh) < 1) return;
         _lastVh = vh;
 
         var root = document.documentElement;
-        // --vh: 1% of real viewport height
         root.style.setProperty('--vh', (vh * 0.01) + 'px');
-        // --app-height: full viewport height
         root.style.setProperty('--app-height', vh + 'px');
+
+        /* ★ 同步给 phone-frame 以防 CSS var 不生效 ★ */
+        var frame = document.getElementById('phoneFrame');
+        if (frame && window.innerWidth <= 768) {
+            frame.style.height = vh + 'px';
+        }
     }
 
     /* ===== 3. 绑定事件 ===== */
