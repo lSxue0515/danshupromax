@@ -1141,7 +1141,7 @@ function openConversation(rid) {
     // 输入行 — 续写在左，发送在右
     h += '<div class="chat-conv-input-row" id="chatInputRow">';
     h += '<div class="chat-conv-action-btn" onclick="toggleStickerPanel()" title="表情包"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>';
-    h += '<input class="chat-conv-input" id="chatConvInput" type="text" inputmode="text" enterkeyhint="send" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="说点什么..." onkeydown="if(event.key===\'Enter\'){sendChatMessage();event.preventDefault();}" onfocus="_onChatInputFocus(this)" onblur="_onChatInputBlur(this)">';
+    h += '<input class="chat-conv-input" id="chatConvInput" type="text" inputmode="text" enterkeyhint="send" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" placeholder="说点什么..." onkeydown="if(event.key===\'Enter\'){sendChatMessage();event.preventDefault();}" onfocus="window._chatInputFocus&&window._chatInputFocus()" onblur="window._chatInputBlur&&window._chatInputBlur()">';
     // 续写键
     h += '<div class="chat-conv-action-btn send-btn" onclick="continueChat()" title="续写"><svg viewBox="0 0 24 24"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg></div>';
     // 发送键
@@ -5651,94 +5651,4 @@ function getMemoryAndTimePrompt(role) {
     }
 
     return parts.join('\n\n');
-}
-
-/* ===================================================
-   ★★★ iOS 键盘弹出修复 ★★★
-   阻止 iOS 在 position:fixed 容器内
-   focus input 时推动整个视图
-   =================================================== */
-
-function _onChatInputFocus(el) {
-    /* 标记键盘状态 */
-    document.documentElement.classList.add('chat-keyboard-open');
-
-    /* iOS Safari 在 fixed 容器内 focus input 时，
-       会把 scrollTop 设到很远导致黑屏。
-       解决方法：让 conversation 临时改用 absolute+固定高度，
-       并强制 window 回到顶部 */
-    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        /* 阻止 iOS 自动滚动 fixed 容器 */
-        setTimeout(function () {
-            window.scrollTo(0, 0);
-            document.body.scrollTop = 0;
-            document.documentElement.scrollTop = 0;
-
-            /* 确保 phone-frame 没有被推开 */
-            var frame = document.getElementById('phoneFrame');
-            if (frame) {
-                frame.scrollTop = 0;
-                frame.style.transform = 'none';
-            }
-
-            /* 保证 conversation 在视口内 */
-            var conv = document.getElementById('chatConversation');
-            if (conv) {
-                conv.scrollTop = conv.scrollTop; /* 保持消息位置 */
-            }
-
-            /* 滚动消息到底部让输入框可见 */
-            var body = document.getElementById('chatConvBody');
-            if (body) {
-                body.scrollTop = body.scrollHeight;
-            }
-        }, 100);
-
-        /* 再保险一次 */
-        setTimeout(function () {
-            window.scrollTo(0, 0);
-        }, 300);
-    }
-
-    /* Android (iQOO等)：键盘弹出时 visualViewport 缩小，
-       确保 conversation 高度跟随 */
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', _chatKeyboardResize);
-    }
-}
-
-function _onChatInputBlur(el) {
-    document.documentElement.classList.remove('chat-keyboard-open');
-
-    if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', _chatKeyboardResize);
-    }
-
-    /* 恢复 */
-    setTimeout(function () {
-        window.scrollTo(0, 0);
-        document.body.scrollTop = 0;
-
-        var frame = document.getElementById('phoneFrame');
-        if (frame) frame.scrollTop = 0;
-    }, 100);
-}
-
-function _chatKeyboardResize() {
-    if (!window.visualViewport) return;
-
-    /* 强制窗口不偏移 */
-    window.scrollTo(0, 0);
-
-    var vh = window.visualViewport.height;
-    var conv = document.getElementById('chatConversation');
-    if (conv) {
-        conv.style.height = vh + 'px';
-    }
-
-    /* 滚动到底部 */
-    setTimeout(function () {
-        var body = document.getElementById('chatConvBody');
-        if (body) body.scrollTop = body.scrollHeight;
-    }, 50);
 }
