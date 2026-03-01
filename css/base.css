@@ -270,11 +270,13 @@ body {
     }
 
     html {
-        /* 锁死根元素，防止 iOS 弹性滚动 */
-        position: fixed;
-        width: 100%;
-        height: 100%;
         overflow: hidden;
+        height: 100%;
+        height: 100dvh;
+        /* ★ 不要 position:fixed — 部分 Android 浏览器
+           (iQOO/vivo) 在 html fixed 时无法正确计算视口 ★ */
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
     }
 
     body {
@@ -282,15 +284,13 @@ body {
         padding: 0;
         background: #000;
         overflow: hidden;
-        /* ★ 多层高度 fallback ★ */
         height: 100vh;
         height: 100dvh;
         height: var(--app-height);
         min-height: 0;
-        position: fixed;
-        top: 0;
-        left: 0;
         width: 100%;
+        /* ★ body 也不用 fixed，靠 phone-frame fixed 来定位 ★ */
+        overscroll-behavior: none;
     }
 
     .phone-frame {
@@ -468,5 +468,47 @@ body {
     .dock-container {
         padding-left: env(safe-area-inset-left, 0px) !important;
         padding-right: env(safe-area-inset-right, 0px) !important;
+    }
+
+    /* ★ iOS 键盘弹出时防止 fixed 容器偏移 ★ */
+    html.chat-keyboard-open,
+    html.chat-keyboard-open body {
+        /* 锁死不让滚 */
+        overflow: hidden !important;
+        height: 100% !important;
+        position: fixed !important;
+        width: 100% !important;
+    }
+
+    html.chat-keyboard-open .phone-frame {
+        /* 保证 phone-frame 不偏移 */
+        transform: none !important;
+        top: 0 !important;
+        left: 0 !important;
+    }
+
+    /* ★ iOS 键盘弹出时 conversation 用 visualViewport 高度 ★ */
+    html.chat-keyboard-open .chat-conversation {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        z-index: 10000 !important;
+    }
+
+    /* ★ 输入框禁止 iOS 自动填充样式 ★ */
+    .chat-conv-input {
+        /* 阻止 iOS contact autofill */
+        -webkit-text-fill-color: inherit;
+    }
+
+    /* 阻止 iOS 给 input 添加圆角阴影等默认样式 */
+    .chat-conv-input,
+    input[type="text"] {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
     }
 }
