@@ -6,6 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>蛋薯机 DanShu Pro</title>
 
+    <!-- ★★★ 开机遮挡：必须在所有CSS之前，最高优先级 ★★★ -->
+    <style id="bootBlockStyle">
+        .phone-frame {
+            position: relative;
+        }
+
+        #bootPlaceholder {
+            position: absolute;
+            inset: 0;
+            z-index: 99999;
+            background: #000;
+            border-radius: inherit;
+            pointer-events: all;
+        }
+    </style>
+
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/grid.css">
     <link rel="stylesheet" href="css/apps.css">
@@ -40,6 +56,13 @@
 <body>
 
     <div class="phone-frame" id="phoneFrame">
+
+        <!-- ★ 开机遮挡 -->
+        <div id="bootPlaceholder"></div>
+        <script>
+            // 预加载开机图片，确保boot.js执行时图片已在缓存
+            (new Image()).src = 'https://s3.bmp.ovh/2026/03/01/nn1m2Yea.png';
+        </script>
 
         <!-- 壁纸背景 -->
         <div class="wallpaper" id="wallpaper"></div>
@@ -1848,8 +1871,8 @@
     <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
 
     <!-- JS 文件 -->
-    <script src="js/storage.js"></script>
     <script src="js/boot.js"></script>
+    <script src="js/storage.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/pages.js"></script>
     <script src="js/card.js"></script>

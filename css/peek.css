@@ -22,18 +22,26 @@
     overflow: hidden;
 }
 
-.peek-overlay.show {
+#peekOverlay.show {
     opacity: 1;
     pointer-events: auto;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
 }
 
 /* ===== 选择角色页 ===== */
 .peek-select-header {
-    padding: 52px 18px 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-shrink: 0;
+    padding: 20px 20px 8px;
+}
+
+.peek-select-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: rgba(50, 40, 55, 0.8);
 }
 
 .peek-select-title {
@@ -44,38 +52,30 @@
 }
 
 .peek-close-btn {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(50, 40, 55, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all .2s;
-}
-
-.peek-close-btn:active {
-    transform: scale(0.9);
-    background: rgba(255, 255, 255, 0.2);
 }
 
 .peek-close-btn svg {
-    width: 16px;
-    height: 16px;
-    stroke: rgba(255, 255, 255, 0.7);
+    width: 14px;
+    height: 14px;
+    stroke: rgba(50, 40, 55, 0.4);
     stroke-width: 2;
     fill: none;
 }
 
 .peek-select-grid {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 18px 30px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-    align-content: start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 12px 20px 30px;
+    justify-content: flex-start;
 }
 
 .peek-char-card {
@@ -83,12 +83,22 @@
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    padding: 14px 6px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
     cursor: pointer;
-    transition: all .2s;
+    width: 64px;
+}
+
+.peek-char-card:active {
+    transform: scale(0.95);
+}
+
+.peek-char-name {
+    font-size: 11px;
+    color: rgba(50, 40, 55, 0.7);
+    text-align: center;
+    max-width: 64px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .peek-char-card:active {
@@ -606,8 +616,9 @@
 .peek-msg-row {
     display: flex;
     gap: 8px;
-    margin-bottom: 8px;
-    align-items: flex-end;
+    margin-bottom: 10px;
+    align-items: flex-start;
+    padding: 0 6px;
 }
 
 .peek-msg-row.self {
@@ -615,8 +626,8 @@
 }
 
 .peek-msg-av {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
@@ -629,40 +640,46 @@
     object-fit: cover;
 }
 
+.peek-msg-content {
+    max-width: 68%;
+    min-width: 0;
+}
+
 .peek-msg-bubble {
-    max-width: 70%;
-    padding: 8px 12px;
-    border-radius: 14px;
-    font-size: 12px;
-    line-height: 1.5;
+    padding: 9px 13px;
+    border-radius: 16px;
+    font-size: 12.5px;
+    line-height: 1.55;
     color: rgba(50, 40, 55, 0.85);
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.85);
     border: 1px solid rgba(0, 0, 0, 0.04);
     word-break: break-word;
+    white-space: pre-wrap;
+    border-top-left-radius: 4px;
 }
 
 .peek-msg-row.self .peek-msg-bubble {
     background: rgba(255, 180, 200, 0.25);
     border-color: rgba(255, 180, 200, 0.15);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 4px;
 }
 
 .peek-msg-time-divider {
     text-align: center;
     font-size: 10px;
     color: rgba(50, 40, 55, 0.2);
-    margin: 10px 0;
+    margin: 12px 0;
 }
 
-/* user代发标记 */
 .peek-msg-proxy-tag {
     font-size: 9px;
-    color: rgba(255, 120, 160, 0.5);
+    color: rgba(255, 120, 160, 0.45);
     margin-top: 2px;
-    text-align: right;
 }
 
-.peek-msg-row:not(.self) .peek-msg-proxy-tag {
-    text-align: left;
+.peek-msg-row.self .peek-msg-proxy-tag {
+    text-align: right;
 }
 
 /* ===== 备忘录 ===== */
@@ -1020,4 +1037,34 @@
     .peek-overlay {
         border-radius: 0 !important;
     }
+}
+
+/* ===== 刷新按钮 ===== */
+.peek-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.04);
+    color: rgba(50, 40, 55, 0.35);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all .15s;
+    margin-left: 6px;
+    flex-shrink: 0;
+}
+
+.peek-refresh-btn:active {
+    background: rgba(0, 0, 0, 0.08);
+    color: rgba(50, 40, 55, 0.6);
+    transform: scale(0.95);
+}
+
+.peek-refresh-btn svg {
+    width: 11px;
+    height: 11px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
 }

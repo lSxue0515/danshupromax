@@ -1,15 +1,15 @@
 /* ============================================
-   boot.css — 蛋薯机 DanShu Pro 开机动画
+   boot.css — 蛋薯机 DanShu Pro 开机动画 v3
+   直接用图片铺满，叠加动态效果
    ============================================ */
 
-/* 全屏开机遮罩 */
+/* ===== 全屏遮罩 ===== */
 .boot-screen {
     position: absolute;
     inset: 0;
     z-index: 99999;
-    background: #ffffff;
+    background: transparent;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     overflow: hidden;
@@ -26,49 +26,191 @@
     pointer-events: none;
 }
 
-/* ===== 背景暖光呼吸 ===== */
-.boot-screen::before {
-    content: '';
+/* ===== 全屏图片 ===== */
+.boot-fullimg {
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse 65% 55% at 50% 42%,
-            rgba(215, 225, 240, .18) 0%,
-            rgba(240, 230, 215, .12) 35%,
-            rgba(255, 255, 255, 0) 70%);
-    animation: bootGlow 3.5s ease-in-out infinite;
-    pointer-events: none;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    opacity: 0;
+    animation: imgFadeIn 1.2s .1s cubic-bezier(.4, 0, .2, 1) forwards;
 }
 
-@keyframes bootGlow {
+@keyframes imgFadeIn {
+    0% {
+        opacity: 0;
+        transform: scale(1.08);
+        filter: blur(6px) brightness(1.15);
+    }
+
+    60% {
+        opacity: 1;
+        filter: blur(0) brightness(1.05);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+        filter: blur(0) brightness(1);
+    }
+}
+
+/* 图片持续微呼吸 */
+.boot-fullimg {
+    animation: imgFadeIn 1.2s .1s cubic-bezier(.4, 0, .2, 1) forwards,
+        imgBreath 4s 1.3s ease-in-out infinite;
+}
+
+@keyframes imgBreath {
 
     0%,
     100% {
-        opacity: .3;
-        transform: scale(.95);
+        transform: scale(1);
+        filter: brightness(1);
     }
 
     50% {
-        opacity: 1;
-        transform: scale(1.1);
+        transform: scale(1.015);
+        filter: brightness(1.04);
     }
 }
 
-/* ===== 浮动爱心粒子 ===== */
+/* ===== 粒子层 ===== */
 .boot-particles {
     position: absolute;
     inset: 0;
+    z-index: 1;
     overflow: hidden;
     pointer-events: none;
 }
 
-.boot-particle {
+/* --- 微光光点 --- */
+.boot-spark {
     position: absolute;
-    animation: bootFloat linear infinite;
+    border-radius: 50%;
+    will-change: transform, opacity;
+    background: radial-gradient(circle, rgba(255, 255, 255, .7) 0%, rgba(255, 255, 255, 0) 70%);
+}
+
+.boot-spark.s-1 {
+    width: 5px;
+    height: 5px;
+    left: 15%;
+    top: 22%;
+    animation: sparkle1 4s 1s ease-in-out infinite;
+}
+
+.boot-spark.s-2 {
+    width: 3px;
+    height: 3px;
+    left: 72%;
+    top: 18%;
+    animation: sparkle2 3.5s 1.5s ease-in-out infinite;
+}
+
+.boot-spark.s-3 {
+    width: 4px;
+    height: 4px;
+    left: 80%;
+    top: 55%;
+    animation: sparkle1 5s 0.8s ease-in-out infinite;
+}
+
+.boot-spark.s-4 {
+    width: 3px;
+    height: 3px;
+    left: 25%;
+    top: 68%;
+    animation: sparkle2 4.5s 2s ease-in-out infinite;
+}
+
+.boot-spark.s-5 {
+    width: 4px;
+    height: 4px;
+    left: 55%;
+    top: 40%;
+    animation: sparkle3 3.8s 1.2s ease-in-out infinite;
+}
+
+@keyframes sparkle1 {
+
+    0%,
+    100% {
+        opacity: 0;
+        transform: scale(.3) translateY(0);
+    }
+
+    20% {
+        opacity: .9;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: .6;
+        transform: scale(.8) translateY(-12px);
+    }
+
+    80% {
+        opacity: .3;
+        transform: scale(.5) translateY(-20px);
+    }
+}
+
+@keyframes sparkle2 {
+
+    0%,
+    100% {
+        opacity: 0;
+        transform: scale(.4) translate(0, 0);
+    }
+
+    30% {
+        opacity: .8;
+        transform: scale(1.1) translate(5px, -8px);
+    }
+
+    70% {
+        opacity: .4;
+        transform: scale(.6) translate(-3px, -18px);
+    }
+}
+
+@keyframes sparkle3 {
+
+    0%,
+    100% {
+        opacity: 0;
+        transform: scale(.2);
+    }
+
+    15% {
+        opacity: 0;
+    }
+
+    35% {
+        opacity: 1;
+        transform: scale(1.3);
+    }
+
+    65% {
+        opacity: .5;
+        transform: scale(.7);
+    }
+
+    85% {
+        opacity: 0;
+    }
+}
+
+/* --- 漂浮爱心 --- */
+.boot-heart {
+    position: absolute;
     will-change: transform, opacity;
 }
 
-/* 爱心粒子（呼应图中头顶的小爱心） */
-.boot-particle.heart::before {
+.boot-heart::before {
     content: '♡';
     display: block;
     font-size: inherit;
@@ -76,494 +218,146 @@
     line-height: 1;
 }
 
-/* 圆形微光 */
-.boot-particle.circle {
-    border-radius: 50%;
-}
-
-.boot-particle:nth-child(1) {
-    left: 8%;
+.boot-heart.h-1 {
+    left: 18%;
+    bottom: 30%;
     font-size: 10px;
-    color: rgba(180, 200, 230, .25);
-    animation-duration: 7s;
-    animation-delay: 0s;
+    color: rgba(255, 255, 255, .25);
+    animation: heartUp1 6s 1.5s ease-in-out infinite;
 }
 
-.boot-particle:nth-child(2) {
-    left: 22%;
+.boot-heart.h-2 {
+    left: 68%;
+    bottom: 25%;
     font-size: 7px;
-    color: rgba(200, 180, 160, .3);
-    animation-duration: 6.2s;
-    animation-delay: .5s;
+    color: rgba(255, 255, 255, .2);
+    animation: heartUp2 7s 2s ease-in-out infinite;
 }
 
-.boot-particle:nth-child(3) {
-    left: 40%;
-    font-size: 9px;
-    color: rgba(190, 175, 160, .22);
-    animation-duration: 8s;
-    animation-delay: .8s;
-}
-
-.boot-particle:nth-child(4) {
-    left: 55%;
-    font-size: 6px;
-    color: rgba(175, 195, 220, .28);
-    animation-duration: 6.8s;
-    animation-delay: .2s;
-}
-
-.boot-particle:nth-child(5) {
-    left: 72%;
-    font-size: 11px;
-    color: rgba(195, 180, 165, .2);
-    animation-duration: 7.5s;
-    animation-delay: 1s;
-}
-
-.boot-particle:nth-child(6) {
-    left: 88%;
+.boot-heart.h-3 {
+    left: 45%;
+    bottom: 20%;
     font-size: 8px;
-    color: rgba(180, 200, 225, .25);
-    animation-duration: 5.8s;
-    animation-delay: .6s;
+    color: rgba(255, 255, 255, .18);
+    animation: heartUp3 5.5s 2.5s ease-in-out infinite;
 }
 
-.boot-particle:nth-child(7) {
-    left: 15%;
-    font-size: 6px;
-    color: rgba(200, 185, 165, .28);
-    animation-duration: 7.2s;
-    animation-delay: 1.3s;
-}
-
-.boot-particle:nth-child(8) {
-    left: 65%;
-    font-size: 8px;
-    color: rgba(185, 200, 225, .22);
-    animation-duration: 6.5s;
-    animation-delay: .3s;
-}
-
-/* 圆点微光 */
-.boot-particle:nth-child(9) {
-    left: 32%;
-    width: 4px;
-    height: 4px;
-    background: radial-gradient(circle, rgba(195, 210, 230, .3) 0%, transparent 70%);
-    animation-duration: 6s;
-    animation-delay: .9s;
-}
-
-.boot-particle:nth-child(10) {
-    left: 78%;
-    width: 3px;
-    height: 3px;
-    background: radial-gradient(circle, rgba(210, 195, 175, .3) 0%, transparent 70%);
-    animation-duration: 7.8s;
-    animation-delay: .1s;
-}
-
-.boot-particle:nth-child(11) {
-    left: 48%;
-    width: 5px;
-    height: 5px;
-    background: radial-gradient(circle, rgba(195, 205, 220, .25) 0%, transparent 70%);
-    animation-duration: 5.5s;
-    animation-delay: 1.5s;
-}
-
-.boot-particle:nth-child(12) {
-    left: 5%;
-    width: 4px;
-    height: 4px;
-    background: radial-gradient(circle, rgba(205, 190, 170, .25) 0%, transparent 70%);
-    animation-duration: 6.8s;
-    animation-delay: .7s;
-}
-
-@keyframes bootFloat {
+@keyframes heartUp1 {
     0% {
-        bottom: -15px;
+        transform: translateY(0) scale(.5) rotate(-5deg);
         opacity: 0;
-        transform: translateX(0) scale(.4) rotate(0deg);
     }
 
-    10% {
+    15% {
+        opacity: .5;
+    }
+
+    50% {
+        transform: translateY(-60px) scale(1) rotate(8deg);
         opacity: .6;
     }
 
-    50% {
-        transform: translateX(12px) scale(1) rotate(15deg);
-        opacity: .8;
+    85% {
+        opacity: .15;
+    }
+
+    100% {
+        transform: translateY(-110px) scale(.4) rotate(-3deg);
+        opacity: 0;
+    }
+}
+
+@keyframes heartUp2 {
+    0% {
+        transform: translateY(0) scale(.6) rotate(3deg);
+        opacity: 0;
+    }
+
+    20% {
+        opacity: .4;
+    }
+
+    55% {
+        transform: translateY(-50px) scale(1.1) rotate(-6deg);
+        opacity: .5;
     }
 
     90% {
-        opacity: .3;
+        opacity: .1;
     }
 
     100% {
-        bottom: 108%;
+        transform: translateY(-95px) scale(.3) rotate(5deg);
         opacity: 0;
-        transform: translateX(-8px) scale(.3) rotate(-10deg);
     }
 }
 
-/* ===== 主体容器 ===== */
-.boot-logo-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    z-index: 2;
-    animation: bootLogoEnter 1s cubic-bezier(.34, 1.56, .64, 1) both;
-}
-
-@keyframes bootLogoEnter {
+@keyframes heartUp3 {
     0% {
+        transform: translateY(0) scale(.4) rotate(-8deg);
         opacity: 0;
-        transform: scale(.4) translateY(35px);
+    }
+
+    10% {
+        opacity: .45;
+    }
+
+    45% {
+        transform: translateY(-55px) scale(.9) rotate(4deg);
+        opacity: .55;
+    }
+
+    80% {
+        opacity: .1;
     }
 
     100% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
+        transform: translateY(-100px) scale(.35) rotate(-2deg);
+        opacity: 0;
     }
 }
 
-/* ===== Logo 图片 ===== */
-.boot-logo-img {
-    width: 155px;
-    height: auto;
-    max-height: 155px;
-    object-fit: contain;
-    background: transparent;
-    filter: drop-shadow(0 4px 18px rgba(140, 150, 165, .1));
-    animation: bootLogoBreath 3s 1s ease-in-out infinite;
-    border-radius: 8px;
-}
-
-@keyframes bootLogoBreath {
-
-    0%,
-    100% {
-        transform: scale(1) translateY(0);
-        filter: drop-shadow(0 4px 18px rgba(140, 150, 165, .1));
-    }
-
-    50% {
-        transform: scale(1.03) translateY(-5px);
-        filter: drop-shadow(0 10px 28px rgba(140, 150, 165, .18));
-    }
-}
-
-/* ===== Logo 光晕 ===== */
-.boot-logo-halo {
+/* ===== 底部微光扫描线 ===== */
+.boot-shimmer {
     position: absolute;
-    width: 210px;
-    height: 210px;
-    border-radius: 50%;
-    background: radial-gradient(circle,
-            rgba(200, 215, 235, .15) 0%,
-            rgba(225, 215, 200, .08) 40%,
-            transparent 65%);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -55%);
-    animation: bootHaloPulse 2.8s ease-in-out infinite;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60%;
+    z-index: 1;
     pointer-events: none;
-    z-index: -1;
-}
-
-@keyframes bootHaloPulse {
-
-    0%,
-    100% {
-        transform: translate(-50%, -55%) scale(1);
-        opacity: .35;
-    }
-
-    50% {
-        transform: translate(-50%, -55%) scale(1.2);
-        opacity: .85;
-    }
-}
-
-/* ===== 品牌文字 ===== */
-.boot-brand {
-    margin-top: 20px;
-    text-align: center;
-    animation: bootSubEnter .7s .45s ease both;
-}
-
-@keyframes bootSubEnter {
-    0% {
-        opacity: 0;
-        transform: translateY(12px);
-    }
-
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.boot-title-cn {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 8px;
-    margin-bottom: 4px;
-    background: linear-gradient(135deg, #6b5a50 0%, #8b7a65 50%, #a09080 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.boot-title-en {
-    font-size: 8.5px;
-    font-weight: 500;
-    color: rgba(130, 120, 105, .25);
-    letter-spacing: 4px;
-    text-transform: uppercase;
-}
-
-/* ===== 分割线 ===== */
-.boot-divider {
-    width: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(175, 165, 145, .22), transparent);
-    margin: 15px auto 13px;
-    animation: bootDividerGrow .8s .7s ease forwards;
-}
-
-@keyframes bootDividerGrow {
-    0% {
-        width: 0;
-        opacity: 0;
-    }
-
-    100% {
-        width: 48px;
-        opacity: 1;
-    }
-}
-
-/* ===== 标语 ===== */
-.boot-slogan {
-    font-size: 8.5px;
-    color: rgba(130, 120, 100, .2);
-    letter-spacing: 1.5px;
-    text-align: center;
-    animation: bootSubEnter .6s .9s ease both;
-}
-
-/* ===== 底部三点跳动 ===== */
-.boot-loader {
-    position: absolute;
-    bottom: 54px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    animation: bootSubEnter .5s 1s ease both;
-}
-
-.boot-dot {
-    width: 3.5px;
-    height: 3.5px;
-    border-radius: 50%;
-    background: rgba(170, 160, 145, .28);
-    animation: bootDotBounce 1.2s ease-in-out infinite;
-}
-
-.boot-dot:nth-child(1) {
-    animation-delay: 0s;
-}
-
-.boot-dot:nth-child(2) {
-    animation-delay: .16s;
-}
-
-.boot-dot:nth-child(3) {
-    animation-delay: .32s;
-}
-
-@keyframes bootDotBounce {
-
-    0%,
-    80%,
-    100% {
-        transform: translateY(0) scale(1);
-        opacity: .25;
-    }
-
-    40% {
-        transform: translateY(-8px) scale(1.25);
-        opacity: .75;
-    }
-}
-
-/* ===== 进度条 ===== */
-.boot-progress {
-    position: absolute;
-    bottom: 38px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 72px;
-    height: 1.5px;
-    background: rgba(175, 165, 145, .06);
-    border-radius: 2px;
-    overflow: hidden;
-    animation: bootSubEnter .4s 1.1s ease both;
-}
-
-.boot-progress-fill {
-    width: 0%;
-    height: 100%;
-    background: linear-gradient(90deg, rgba(185, 175, 155, .1), rgba(175, 160, 135, .38));
-    border-radius: 2px;
-    animation: bootProgressRun 2.2s 1.1s ease-in-out forwards;
-}
-
-@keyframes bootProgressRun {
-    0% {
-        width: 0%;
-    }
-
-    12% {
-        width: 15%;
-    }
-
-    35% {
-        width: 42%;
-    }
-
-    60% {
-        width: 68%;
-    }
-
-    82% {
-        width: 90%;
-    }
-
-    100% {
-        width: 100%;
-    }
-}
-
-/* ===== 底部水印 ===== */
-.boot-watermark {
-    position: absolute;
-    bottom: 18px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 6px;
-    color: rgba(155, 145, 125, .12);
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    animation: bootSubEnter .4s 1.3s ease both;
-    white-space: nowrap;
-}
-
-/* ===== 四角装饰 ===== */
-.boot-corner {
-    position: absolute;
-    width: 16px;
-    height: 16px;
-    pointer-events: none;
+    background: linear-gradient(0deg,
+            rgba(255, 255, 255, .08) 0%,
+            transparent 100%);
     opacity: 0;
-    animation: bootCornerIn .5s .4s ease forwards;
+    animation: shimmerPulse 3s 1s ease-in-out infinite;
 }
 
-@keyframes bootCornerIn {
-    0% {
+@keyframes shimmerPulse {
+
+    0%,
+    100% {
         opacity: 0;
     }
 
-    100% {
+    50% {
         opacity: 1;
     }
 }
 
-.boot-corner::before,
-.boot-corner::after {
-    content: '';
-    position: absolute;
-    background: rgba(185, 175, 155, .09);
+/* ===== 淡出时额外光效 ===== */
+.boot-screen.boot-fade-out .boot-fullimg {
+    filter: brightness(1.2) blur(2px);
+    transform: scale(1.04);
+    transition: all .8s ease;
 }
 
-.boot-corner.tl {
-    top: 16px;
-    left: 12px;
+.boot-screen.boot-fade-out .boot-particles {
+    opacity: 0;
+    transition: opacity .4s ease;
 }
 
-.boot-corner.tr {
-    top: 16px;
-    right: 12px;
-}
-
-.boot-corner.bl {
-    bottom: 16px;
-    left: 12px;
-}
-
-.boot-corner.br {
-    bottom: 16px;
-    right: 12px;
-}
-
-.boot-corner.tl::before,
-.boot-corner.tr::before,
-.boot-corner.bl::before,
-.boot-corner.br::before {
-    width: 12px;
-    height: 1px;
-    top: 0;
-}
-
-.boot-corner.tl::after,
-.boot-corner.tr::after,
-.boot-corner.bl::after,
-.boot-corner.br::after {
-    width: 1px;
-    height: 12px;
-    top: 0;
-}
-
-.boot-corner.tl::before {
-    left: 0;
-}
-
-.boot-corner.tl::after {
-    left: 0;
-}
-
-.boot-corner.tr::before {
-    right: 0;
-}
-
-.boot-corner.tr::after {
-    right: 0;
-}
-
-.boot-corner.bl::before {
-    left: 0;
-}
-
-.boot-corner.bl::after {
-    left: 0;
-    bottom: 0;
-    top: auto;
-}
-
-.boot-corner.br::before {
-    right: 0;
-}
-
-.boot-corner.br::after {
-    right: 0;
-    bottom: 0;
-    top: auto;
+.boot-screen.boot-fade-out .boot-shimmer {
+    opacity: 0 !important;
+    transition: opacity .3s ease;
 }

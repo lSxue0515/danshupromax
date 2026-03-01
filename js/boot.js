@@ -1,71 +1,63 @@
 /* ============================================
-   boot.js — 蛋薯机 DanShu Pro 开机动画
+   boot.js — 蛋薯机 DanShu Pro 开机动画 v3
    ============================================ */
 
 (function () {
     'use strict';
 
-    var BOOT_LOGO_URL = 'img/boot-logo.png';
+    var BOOT_IMG = 'https://s3.bmp.ovh/2026/03/01/nn1m2Yea.png';
+    var BOOT_DURATION = 3800;
 
-    /* 开机总时长（毫秒） */
-    var BOOT_DURATION = 3600;
-
-    /* ===== 构建 DOM ===== */
     function buildBootScreen() {
         var el = document.createElement('div');
         el.className = 'boot-screen';
         el.id = 'bootScreen';
 
         var h = '';
-
-        /* 四角装饰 */
-        h += '<div class="boot-corner tl"></div>';
-        h += '<div class="boot-corner tr"></div>';
-        h += '<div class="boot-corner bl"></div>';
-        h += '<div class="boot-corner br"></div>';
-
-        /* 浮动粒子：8爱心 + 4圆点 */
+        h += '<img class="boot-fullimg" src="' + BOOT_IMG + '" alt="" draggable="false">';
         h += '<div class="boot-particles">';
-        for (var i = 1; i <= 8; i++) {
-            h += '<div class="boot-particle heart"></div>';
+        for (var i = 1; i <= 5; i++) {
+            h += '<div class="boot-spark s-' + i + '"></div>';
         }
-        for (var j = 9; j <= 12; j++) {
-            h += '<div class="boot-particle circle"></div>';
+        for (var j = 1; j <= 3; j++) {
+            h += '<div class="boot-heart h-' + j + '"></div>';
         }
         h += '</div>';
-
-        /* 主体 */
-        h += '<div class="boot-logo-wrap">';
-        h += '<div class="boot-logo-halo"></div>';
-        h += '<img class="boot-logo-img" src="' + BOOT_LOGO_URL + '" alt="蛋薯" draggable="false" crossorigin="anonymous">';
-        h += '<div class="boot-brand">';
-        h += '<div class="boot-title-cn">蛋 薯</div>';
-        h += '<div class="boot-title-en">DanShu Pro</div>';
-        h += '</div>';
-        h += '<div class="boot-divider"></div>';
-        h += '<div class="boot-slogan">用文字编织属于我们的故事</div>';
-        h += '</div>';
-
-        /* 底部 */
-        h += '<div class="boot-loader">';
-        h += '<div class="boot-dot"></div>';
-        h += '<div class="boot-dot"></div>';
-        h += '<div class="boot-dot"></div>';
-        h += '</div>';
-        h += '<div class="boot-progress"><div class="boot-progress-fill"></div></div>';
-        h += '<div class="boot-watermark">DANSHU PRO</div>';
+        h += '<div class="boot-shimmer"></div>';
 
         el.innerHTML = h;
         return el;
     }
 
-    /* ===== 注入手机框架 ===== */
     function injectBoot() {
-        var phone = document.getElementById('phoneFrame');
+        var phone = document.querySelector('.phone-frame') || document.getElementById('phoneFrame');
         if (!phone) return;
 
+        var placeholder = document.getElementById('bootPlaceholder');
         var screen = buildBootScreen();
-        phone.appendChild(screen);
+
+        /* 插入为第一个子元素 */
+        phone.insertBefore(screen, phone.firstChild);
+
+        /* 等开机图片加载完成后再移除黑色占位 */
+        var img = screen.querySelector('.boot-fullimg');
+        function removePlaceholder() {
+            if (placeholder && placeholder.parentNode) {
+                placeholder.parentNode.removeChild(placeholder);
+            }
+            /* 移除head里的内联样式 */
+            var bs = document.getElementById('bootBlockStyle');
+            if (bs) bs.parentNode.removeChild(bs);
+        }
+
+        if (img.complete) {
+            removePlaceholder();
+        } else {
+            img.addEventListener('load', removePlaceholder);
+            img.addEventListener('error', removePlaceholder);
+            /* 兜底：最多1.5秒后强制移除 */
+            setTimeout(removePlaceholder, 1500);
+        }
 
         /* 到时间后淡出 */
         setTimeout(function () {
@@ -78,7 +70,6 @@
         }, BOOT_DURATION);
     }
 
-    /* ===== 启动 ===== */
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', injectBoot);
     } else {
