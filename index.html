@@ -3,7 +3,18 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <script>
+        // 必须在 <head> 里、CSS加载前执行，这样CSS渲染时class已经在了
+        (function () {
+            var u = navigator.userAgent || '';
+            var h = document.documentElement;
+            if (/Android/i.test(u)) h.className += ' is-android';
+            if (/iPhone|iPad|iPod/i.test(u) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) h.className += ' is-ios';
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) h.className += ' is-touch';
+        })();
+    </script>
     <title>蛋薯机 DanShu Pro</title>
 
     <!-- ★★★ PWA + iOS 全屏适配 ★★★ -->
