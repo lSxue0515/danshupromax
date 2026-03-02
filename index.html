@@ -1209,6 +1209,39 @@
                                 oninput="setAppearBubbleFromHex(this.value)">
                         </div>
                     </div>
+                    <!-- ★ 图标文字颜色 ★ -->
+                    <div class="appear-section">
+                        <div class="appear-section-title">
+                            <svg viewBox="0 0 24 24" width="16" height="16">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="2" y1="12" x2="22" y2="12" />
+                                <path
+                                    d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                            </svg>
+                            图标文字颜色
+                        </div>
+                        <div class="appear-color-row">
+                            <div class="appear-label-color-dot" style="background:rgba(80,60,70,0.9)"
+                                data-color="rgba(80,60,70,0.9)" onclick="pickLabelColor(this)"></div>
+                            <div class="appear-label-color-dot" style="background:#ffffff" data-color="#ffffff"
+                                onclick="pickLabelColor(this)"></div>
+                            <div class="appear-label-color-dot" style="background:#333333" data-color="#333333"
+                                onclick="pickLabelColor(this)"></div>
+                            <div class="appear-label-color-dot" style="background:#ffdde7" data-color="#ffdde7"
+                                onclick="pickLabelColor(this)"></div>
+                            <div class="appear-label-color-dot" style="background:#ffa4b6" data-color="#ffa4b6"
+                                onclick="pickLabelColor(this)"></div>
+                            <div class="appear-label-color-dot" style="background:#a78bfa" data-color="#a78bfa"
+                                onclick="pickLabelColor(this)"></div>
+                        </div>
+                        <div class="appear-color-custom">
+                            <input type="color" id="appearLabelColorPicker" value="#333333"
+                                oninput="setLabelColorFromPicker(this.value)">
+                            <input type="text" id="appearLabelColorHex" placeholder="#333333 或 rgba(...)"
+                                oninput="setLabelColorFromHex(this.value)">
+                        </div>
+                        <div class="appear-font-hint">设置应用图标下方文字的颜色。留空则使用默认颜色。</div>
+                    </div>
                     <div class="appear-section">
                         <div class="appear-section-title">
                             <svg viewBox="0 0 24 24" width="14" height="14">

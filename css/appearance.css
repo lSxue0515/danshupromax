@@ -157,6 +157,8 @@
 }
 
 .appear-section-title svg {
+    width: 16px;
+    height: 16px;
     fill: none;
     stroke: rgba(248, 164, 184, 0.8);
     stroke-width: 2;
@@ -455,6 +457,26 @@
     width: auto;
     flex: 1;
     min-width: 0;
+}
+
+/* ★ 图标文字颜色色点 — 复用气泡色点样式 */
+.appear-label-color-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid rgba(200, 195, 210, 0.3);
+    transition: border-color 0.2s, transform 0.2s;
+    flex-shrink: 0;
+}
+
+.appear-label-color-dot:hover {
+    transform: scale(1.15);
+}
+
+.appear-label-color-dot.active {
+    border-color: rgba(80, 60, 100, 0.8);
+    box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.3);
 }
 
 /* ===== 开关 Toggle ===== */

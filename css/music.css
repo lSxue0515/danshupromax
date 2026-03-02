@@ -2929,26 +2929,61 @@
 }
 
 /* -- 评论弹窗 -- */
+/* ===== 评论弹窗遮罩 ===== */
 .mu-lt-cmt-ov {
-    position: fixed;
+    position: absolute;
     inset: 0;
-    z-index: 900;
-    background: rgba(0, 0, 0, .35);
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    animation: mu-lt-fi .2s;
+    z-index: 999;
+    background: rgba(0, 0, 0, .4);
 }
 
+/* ===== 评论弹窗面板 ===== */
 .mu-lt-cmt-modal {
-    width: 100%;
-    max-width: 420px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
     max-height: 60vh;
     background: #fff;
-    border-radius: 20px 20px 0 0;
+    border-radius: 16px 16px 0 0;
     display: flex;
     flex-direction: column;
-    animation: mu-lt-su .25s ease-out;
+    overflow: hidden;
+    /* ★ iOS键盘安全区 */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ★ 评论输入行 */
+.mu-lt-cmt-irow {
+    padding: 10px 16px;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+    background: #fff;
+}
+
+/* ★ 评论输入框 */
+.mu-lt-cmt-inp {
+    flex: 1;
+    border: 1px solid #eee;
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 14px;
+    outline: none;
+    background: #fafafa;
+    /* ★ 防止iOS自动缩放 */
+    font-size: 16px;
+}
+
+.mu-lt-cmt-inp:focus {
+    border-color: #ddd;
+    background: #fff;
+}
+
+.mu-lt-cmt-inp::placeholder {
+    color: #bbb;
 }
 
 @keyframes mu-lt-su {
