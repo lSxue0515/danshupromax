@@ -169,6 +169,7 @@ function _muRender() {
     h += _muRenderDock();
     if (_muEditType) h += _muRenderEditModal();
     if (_muImportModal) h += _muRenderImportModal();
+    if (_muLtCommentTarget) h += _muLtRenderCommentModal();    // ← ★ 移到 innerHTML 之前！
     el.innerHTML = h;
     _muStartTimer();
 }
@@ -406,7 +407,6 @@ function _muRenderListen() {
 
     // 弹窗
     if (_muLtShowPicker) h += _muLtRenderPicker(roles);
-    if (_muLtCommentTarget) h += _muLtRenderCommentModal();
 
     h += '</div>';
     return h;
@@ -506,90 +506,145 @@ function _muLtToggleLike(songId) {
 
 /* ===== 评论弹窗（独立，不连对话框） ===== */
 var _muLtCommentRoleId = '';
+var _muLtReplyTo = null;
+
 function _muLtOpenComment(songId, roleId) {
     _muLtCommentTarget = songId;
     _muLtCommentRoleId = roleId || '';
     _muLtCommentText = '';
+    _muLtReplyTo = null;
     _muRender();
-    setTimeout(function () { var inp = document.getElementById('muLtCmtInp'); if (inp) inp.focus(); }, 100);
+    setTimeout(function () {
+        var inp = document.getElementById('muLtCmtInp');
+        if (inp) inp.focus();
+    }, 100);
 }
 
 function _muLtRenderCommentModal() {
     var comments = _muLtComments[_muLtCommentTarget] || [];
-    var h = '<div class="mu-lt-cmt-ov" onclick="_muLtCommentTarget=\'\';_muRender()">';
-    h += '<div class="mu-lt-cmt-modal" onclick="event.stopPropagation()">';
+    var h = '<div class="mu-lt-cmt-ov" style="position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.4);" onclick="_muLtCommentTarget=\'\';_muLtReplyTo=null;_muRender()">';
+    h += '<div class="mu-lt-cmt-modal" style="position:absolute;bottom:0;left:0;right:0;max-height:70vh;background:#fff;border-radius:16px 16px 0 0;display:flex;flex-direction:column;overflow:hidden;" onclick="event.stopPropagation()">';
     h += '<div class="mu-lt-cmt-ti">评论</div>';
     if (comments.length) {
-        h += '<div class="mu-lt-cmt-list">';
-        for (var i = 0; i < comments.length; i++) {
-            var c = comments[i];
+        h += '<div class="mu-lt-cmt-list" style="flex:1;overflow-y:auto;padding:0 16px;">';
+        for (var ci = 0; ci < comments.length; ci++) {
+            var c = comments[ci];
             h += '<div class="mu-lt-cmt-row">';
             h += '<div class="mu-lt-cmt-rav">';
             if (c.avatar) h += '<img src="' + _muEsc(c.avatar) + '">';
-            else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+            else h += '👤';
             h += '</div><div class="mu-lt-cmt-rb">';
             h += '<span class="mu-lt-cmt-rn' + (c.isChar ? ' char' : '') + '">' + _muEsc(c.name) + '</span> ';
+            if (c.replyToName) {
+                h += '<span style="color:#999;font-size:10px;">回复 </span>';
+                h += '<span class="mu-lt-cmt-rn' + (c.replyToIsChar ? ' char' : '') + '" style="font-size:10px;">' + _muEsc(c.replyToName) + '</span> ';
+            }
             if (c.typing) h += '<span class="mu-lt-typing">思考中...</span>';
-            else h += _muEsc(c.text);
+            else h += '<span class="mu-lt-cmt-rt">' + _muEsc(c.text) + '</span>';
+            if (!c.typing) {
+                h += '<div style="font-size:9px;color:#aaa;cursor:pointer;margin-top:2px;" onclick="event.stopPropagation();_muLtSetReply(' + ci + ')">回复</div>';
+            }
             h += '</div></div>';
         }
         h += '</div>';
+    } else {
+        h += '<div style="text-align:center;padding:30px 20px;color:#bbb;font-size:11px;">暂无评论，快来说点什么吧~</div>';
     }
-    h += '<div class="mu-lt-cmt-irow">';
-    h += '<input class="mu-lt-cmt-inp" id="muLtCmtInp" placeholder="说点什么..." value="' + _muEsc(_muLtCommentText) + '" oninput="_muLtCommentText=this.value" onkeydown="if(event.key===\'Enter\'){event.preventDefault();_muLtSendComment()}">';
-    h += '<div class="mu-lt-cmt-send" onclick="_muLtSendComment()">发送</div>';
+    if (_muLtReplyTo) {
+        h += '<div style="padding:6px 16px;background:#f5f5f5;display:flex;align-items:center;gap:6px;font-size:10px;color:#888;">';
+        h += '<span>回复 <b style="color:#555;">' + _muEsc(_muLtReplyTo.name) + '</b>: ' + _muEsc((_muLtReplyTo.text || '').substring(0, 20)) + '</span>';
+        h += '<span style="margin-left:auto;cursor:pointer;color:#aaa;font-size:14px;" onclick="event.stopPropagation();_muLtReplyTo=null;_muRender()">✕</span>';
+        h += '</div>';
+    }
+    h += '<div class="mu-lt-cmt-irow" style="padding:10px 16px;border-top:1px solid #eee;display:flex;gap:8px;align-items:center;flex-shrink:0;">';
+    var placeholder = _muLtReplyTo ? ('回复 ' + _muLtReplyTo.name + '...') : '说点什么...';
+    h += '<input class="mu-lt-cmt-inp" id="muLtCmtInp" placeholder="' + _muEsc(placeholder) + '" value="' + _muEsc(_muLtCommentText) + '" oninput="_muLtCommentText=this.value" onkeydown="if(event.key===\'Enter\'){event.preventDefault();_muLtSendComment()}" style="flex:1;border:1px solid #eee;border-radius:20px;padding:8px 14px;font-size:12px;outline:none;">';
+    h += '<div class="mu-lt-cmt-send" onclick="_muLtSendComment()" style="color:#000;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">发送</div>';
     h += '</div></div></div>';
     return h;
 }
 
-function _muLtSendComment() {
-    if (!_muLtCommentText.trim()) return;
-    var songId = _muLtCommentTarget;
-    if (!_muLtComments[songId]) _muLtComments[songId] = [];
-    _muLtComments[songId].push({
-        name: _muProfile.name || 'Me',
-        text: _muLtCommentText.trim(),
-        isChar: false,
-        avatar: _muProfile.avatar || ''
-    });
-    var userText = _muLtCommentText.trim();
-    _muLtCommentText = '';
-    _muSave(); _muRender();
-
-    // 找到这首歌对应的角色
-    var role = _muLtCommentRoleId ? _muFindChatRole(_muLtCommentRoleId) : null;
-    if (!role) {
-        // 从feed里找
-        for (var i = 0; i < _muLtFeed.length; i++) {
-            if (_muLtFeed[i].song.id === songId && _muLtFeed[i].role) { role = _muLtFeed[i].role; break; }
-        }
+function _muLtSetReply(commentIdx) {
+    var comments = _muLtComments[_muLtCommentTarget] || [];
+    if (commentIdx >= 0 && commentIdx < comments.length) {
+        _muLtReplyTo = comments[commentIdx];
+        _muRender();
+        setTimeout(function () {
+            var inp = document.getElementById('muLtCmtInp');
+            if (inp) inp.focus();
+        }, 100);
     }
-    if (role) _muLtCommentReply(songId, userText, role);
 }
 
-/* ===== 评论 — char API回复（贴人设） ===== */
-function _muLtCommentReply(songId, userText, role) {
+function _muLtSendComment() {
+    var text = (_muLtCommentText || '').trim();
+    if (!text) return;
+    var songId = _muLtCommentTarget;
     if (!_muLtComments[songId]) _muLtComments[songId] = [];
+
+    var commentObj = {
+        name: _muProfile.name || 'Me',
+        text: text,
+        isChar: false,
+        avatar: _muProfile.avatar || ''
+    };
+    if (_muLtReplyTo) {
+        commentObj.replyToName = _muLtReplyTo.name;
+        commentObj.replyToIsChar = !!_muLtReplyTo.isChar;
+        commentObj.replyToText = _muLtReplyTo.text;
+    }
+    _muLtComments[songId].push(commentObj);
+
+    _muLtCommentText = '';
+    _muLtReplyTo = null;
+    _muSave(); _muRender();
+
+    /* char API回复 */
+    var role = _muLtCommentRoleId ? _muFindChatRole(_muLtCommentRoleId) : null;
+    if (!role) return;
+    var song = null;
+    var allS = _muGetAllSongs();
+    for (var si = 0; si < allS.length; si++) {
+        if (allS[si].id === songId) { song = allS[si]; break; }
+    }
+
+    /* typing占位 — 标记为回复用户 */
     _muLtComments[songId].push({
-        name: role.nickname || role.name,
+        name: role.name || 'AI',
         text: '', isChar: true, typing: true,
-        avatar: role.avatar || ''
+        avatar: role.avatar || '',
+        replyToName: _muProfile.name || 'Me',
+        replyToIsChar: false,
+        replyToText: text
     });
     _muRender();
 
-    var song = _muFindSongById(songId);
-    _muLtCallAPI(role, song, userText, null, function (reply) {
+    /* ★ 构建评论上下文传给API — 这样char能看到完整对话历史 */
+    var allCm = _muLtComments[songId] || [];
+    var contextStr = '';
+    for (var ci = 0; ci < allCm.length; ci++) {
+        var cm = allCm[ci];
+        if (cm.typing) continue;
+        var who = cm.isChar ? (cm.name + '(角色)') : (cm.name + '(用户)');
+        if (cm.replyToName) who += ' 回复 ' + cm.replyToName;
+        contextStr += who + ': ' + cm.text + '\n';
+    }
+
+    _muLtCallAPI(role, song, text, null, function (reply) {
         _muLtComments[songId] = (_muLtComments[songId] || []).filter(function (c) { return !c.typing; });
         var clean = (reply || '').replace(/^\s*["'"]/, '').replace(/["'"]\s*$/, '').trim();
-        if (!clean) clean = '~';
-        if (clean.length > 150) clean = clean.substring(0, 150) + '...';
-        _muLtComments[songId].push({
-            name: role.nickname || role.name,
-            text: clean, isChar: true,
-            avatar: role.avatar || ''
-        });
+        if (clean) {
+            _muLtComments[songId].push({
+                name: role.name || 'AI',
+                text: clean, isChar: true,
+                avatar: role.avatar || '',
+                replyToName: _muProfile.name || 'Me',
+                replyToIsChar: false,
+                replyToText: text
+            });
+        }
         _muSave(); _muRender();
-    });
+    }, contextStr);
 }
 
 /* ===== 对话 ===== */
@@ -624,7 +679,7 @@ function _muLtScrollChat() {
 }
 
 /* ===== 统一API调用（贴人设） ===== */
-function _muLtCallAPI(role, song, userText, history, callback) {
+function _muLtCallAPI(role, song, userText, history, callback, commentContext) {
     var songInfo = '';
     if (song) {
         songInfo = '\n[当前歌曲: "' + song.name + '" - ' + (song.artist || '未知') + ']';
@@ -637,6 +692,9 @@ function _muLtCallAPI(role, song, userText, history, callback) {
     var sys = '你是"' + (role.nickname || role.name) + '"。\n';
     if (role.detail) sys += '你的人设信息：' + role.detail + '\n';
     sys += '\n你正在音乐APP的"一起听"功能中。' + songInfo;
+    if (commentContext) {
+        sys += '\n\n以下是评论区的对话记录（你需要结合上下文自然回复最新一条用户评论）：\n' + commentContext;
+    }
     sys += '\n要求：\n1. 完全贴合你的人设性格、喜好、个人习惯、说话方式\n2. 根据你的人设特点来评价这首歌\n3. 保持简短自然(1-3句话)\n4. 只输出纯对话文字，不要括号动作描述\n5. 如果能识别到歌曲和歌词内容，结合内容回复';
 
     var msgs = [{ role: 'system', content: sys }];

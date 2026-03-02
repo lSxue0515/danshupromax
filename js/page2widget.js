@@ -39,11 +39,12 @@ function initPage2Widget() {
         'p2NoteLine3': 'noteLine3',
         'p2NoteFooter': 'noteFooter'
     };
+    // 恢复文本
     for (var elId in textFields) {
         var key = textFields[elId];
-        if (_p2Data[key]) {
+        if (_p2Data[key] !== undefined) {  // ★ 改这里，允许空字符串
             var el = document.getElementById(elId);
-            if (el) el.textContent = _p2Data[key];
+            if (el) el.textContent = _p2Data[key] || '\u200B';  // ★ 空时放零宽字符
         }
     }
 
@@ -99,9 +100,9 @@ function initPage2Widget() {
     };
     for (var dId in duoTextFields) {
         var dKey = duoTextFields[dId];
-        if (_p2Data[dKey]) {
+        if (_p2Data[dKey] !== undefined) {  // ★ 改这里
             var dEl = document.getElementById(dId);
-            if (dEl) dEl.textContent = _p2Data[dKey];
+            if (dEl) dEl.textContent = _p2Data[dKey] || '\u200B';  // ★ 空时放零宽字符
         }
     }
     if (_p2Data.duoAvatarL) {
@@ -132,11 +133,38 @@ function _p2UpdateNoteDate() {
 function _p2BindEditable(elId, key) {
     var el = document.getElementById(elId);
     if (!el) return;
+
+    /* ★ 保证空元素也有最小高度可点击 */
+    el.style.minHeight = el.style.minHeight || '1em';
+
     el.addEventListener('blur', function () {
         _p2Load();
-        _p2Data[key] = el.textContent.trim();
+        var txt = el.textContent.trim();
+        _p2Data[key] = txt;
         _p2Save();
+        /* ★ 如果清空了，插入一个零宽字符保持可编辑 */
+        if (!txt && !el.textContent.trim()) {
+            el.innerHTML = '\u200B';
+        }
     });
+
+    el.addEventListener('focus', function () {
+        /* ★ 聚焦时如果只有零宽字符，清掉让用户正常输入 */
+        if (el.textContent === '\u200B') {
+            el.textContent = '';
+            var range = document.createRange();
+            range.selectNodeContents(el);
+            range.collapse(false);
+            var sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+    });
+
+    /* ★ 初始就检查一下是否为空 */
+    if (!el.textContent.trim()) {
+        el.innerHTML = '\u200B';
+    }
 }
 
 /* ========== 头像选择（搜索栏） ========== */

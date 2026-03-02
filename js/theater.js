@@ -15,8 +15,50 @@ var _thPersona = null;
 var _thCustomCSS = '';
 var _thStyleEl = null;
 
+/* ===== 文风系统 ===== */
+var _thStyles = [];
+var _thActiveStyle = null;
+
 try { _thBg = localStorage.getItem('_thBg') || ''; } catch (e) { }
 try { _thCustomCSS = localStorage.getItem('_thCustomCSS') || ''; } catch (e) { }
+try {
+    var _ss = localStorage.getItem('_thStyles');
+    if (_ss) _thStyles = JSON.parse(_ss);
+} catch (e) { }
+try {
+    var _sa = localStorage.getItem('_thActiveStyleId');
+    if (_sa && _thStyles.length) {
+        for (var si = 0; si < _thStyles.length; si++) {
+            if (_thStyles[si].id === _sa) { _thActiveStyle = _thStyles[si]; break; }
+        }
+    }
+} catch (e) { }
+
+function _thSaveStyles() {
+    try { localStorage.setItem('_thStyles', JSON.stringify(_thStyles)); } catch (e) { }
+    try { localStorage.setItem('_thActiveStyleId', _thActiveStyle ? _thActiveStyle.id : ''); } catch (e) { }
+}
+
+/* ===== 记忆存储 ===== */
+function _thMemoryKey(roleId) { return '_thMem_' + (roleId || 'default'); }
+
+function _thSaveMemory() {
+    if (!_thRole) return;
+    try {
+        localStorage.setItem(_thMemoryKey(_thRole.id), JSON.stringify({
+            history: _thHistory, segments: _thSegments, segIdx: _thSegIdx,
+            phase: _thPhase, personaId: _thPersona ? _thPersona.id : null
+        }));
+    } catch (e) { }
+}
+
+function _thLoadMemory(roleId) {
+    try { var raw = localStorage.getItem(_thMemoryKey(roleId)); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+}
+
+function _thClearMemory(roleId) {
+    try { localStorage.removeItem(_thMemoryKey(roleId)); } catch (e) { }
+}
 
 /* 初始化时注入自定义CSS */
 function _thInitCustomCSS() {
@@ -40,9 +82,9 @@ function openTheaterApp() {
     _thRenderList();
 }
 function closeTheaterApp() {
+    _thSaveMemory();
     var el = document.getElementById('theaterOverlay');
     if (el) el.classList.remove('show');
-    _thRole = null; _thSegments = [];
 }
 
 function _thGetApi() {
@@ -104,12 +146,14 @@ function _thRenderList() {
     }
     for (var i = 0; i < roles.length; i++) {
         var r = roles[i];
+        var hasMem = !!_thLoadMemory(r.id);
         h += '<div class="thtr-card" onclick="_thSelectRole(\'' + _thEsc(r.id || '') + '\')">';
         h += '<div class="thtr-card-av">';
         if (r.avatar) h += '<img src="' + _thEsc(r.avatar) + '">';
         else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
         h += '</div>';
         h += '<div class="thtr-card-name">' + _thEsc(r.name || 'unnamed') + '</div>';
+        if (hasMem) h += '<div style="font-size:8px;color:#999;margin-top:3px;letter-spacing:.5px;">● 有存档</div>';
         h += '</div>';
     }
     h += '</div></div>';
@@ -126,8 +170,25 @@ function _thSelectRole(roleId) {
     }
     if (!_thRole) return;
     _thView = 'detail';
-    _thHistory = []; _thSegments = []; _thSegIdx = 0;
-    _thPhase = 'input'; _thPersona = null;
+
+    var mem = _thLoadMemory(roleId);
+    if (mem) {
+        _thHistory = mem.history || [];
+        _thSegments = mem.segments || [];
+        _thSegIdx = mem.segIdx || 0;
+        _thPhase = mem.phase || 'input';
+        _thPersona = null;
+        if (mem.personaId) {
+            var personas = (typeof _chatPersonas !== 'undefined' && _chatPersonas) ? _chatPersonas : [];
+            for (var pi = 0; pi < personas.length; pi++) {
+                if (personas[pi].id === mem.personaId) { _thPersona = personas[pi]; break; }
+            }
+        }
+    } else {
+        _thHistory = []; _thSegments = []; _thSegIdx = 0;
+        _thPhase = 'input'; _thPersona = null;
+    }
+
     _thRenderDetail();
 }
 
@@ -135,6 +196,7 @@ function _thRenderDetail() {
     var el = document.getElementById('theaterOverlay'); if (!el || !_thRole) return;
     var r = _thRole;
     var personas = (typeof _chatPersonas !== 'undefined' && _chatPersonas) ? _chatPersonas : [];
+    var hasMem = !!_thLoadMemory(r.id);
 
     var h = '';
     h += '<div class="thtr-detail-page">';
@@ -177,7 +239,15 @@ function _thRenderDetail() {
         h += '</div></div>';
     }
 
-    h += '<div class="thtr-start-btn" onclick="_thEnterStage()">START 开始演出</div>';
+    if (hasMem && _thHistory.length > 0) {
+        h += '<div style="display:flex;gap:10px;margin-top:22px;">';
+        h += '<div class="thtr-start-btn" onclick="_thResumeStage()" style="flex:1;text-align:center;">CONTINUE 继续</div>';
+        h += '<div class="thtr-start-btn" onclick="_thNewStage()" style="flex:1;text-align:center;opacity:.6;">NEW 新开始</div>';
+        h += '</div>';
+    } else {
+        h += '<div class="thtr-start-btn" onclick="_thEnterStage()">START 开始演出</div>';
+    }
+
     h += '</div>';
     el.innerHTML = h;
 }
@@ -195,7 +265,20 @@ function _thPickPersona(pid) {
 function _thEnterStage() {
     _thView = 'stage'; _thPhase = 'input';
     _thHistory = []; _thSegments = []; _thSegIdx = 0;
+    _thSaveMemory();
     _thRenderStage();
+}
+
+function _thResumeStage() {
+    _thView = 'stage';
+    if (_thPhase === 'generating') _thPhase = 'waiting';
+    _thRenderStage();
+}
+
+function _thNewStage() {
+    if (!_thRole) return;
+    _thClearMemory(_thRole.id);
+    _thEnterStage();
 }
 
 function _thRenderStage() {
@@ -213,6 +296,10 @@ function _thRenderStage() {
     h += '<div class="thtr-stage-top">';
     h += '<div class="thtr-stage-name">' + _thEsc(r.name) + '</div>';
     h += '<div class="thtr-stage-btns">';
+    /* ★ 文风按钮 */
+    h += '<div class="thtr-stage-btn" onclick="_thOpenWF()" title="Writing Style 文风"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>';
+    /* ★ 对话记录按钮 */
+    h += '<div class="thtr-stage-btn" onclick="_thShowLog()" title="Dialog Log 对话记录"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div>';
     /* 齿轮设置 */
     h += '<div class="thtr-stage-btn" onclick="_thOpenStyle()" title="Style Settings 样式设置"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>';
     /* 换背景 */
@@ -237,6 +324,12 @@ function _thRenderStage() {
         h += '<div class="thtr-dlg-box thtr-output-box clickable" onclick="_thTapDialog()">';
         h += '<div class="thtr-dlg-speaker">' + _thEsc(r.name) + '</div>';
         h += '<div class="thtr-dlg-text">' + _thFmt(seg) + '</div>';
+        /* ★ 右下角 ◁ 页码 ▷ */
+        h += '<div class="thtr-dlg-controls">';
+        h += '<div class="thtr-dlg-ctrl-btn' + (_thSegIdx <= 0 ? ' disabled' : '') + '" onclick="event.stopPropagation();_thPrevSeg()"><svg viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg></div>';
+        h += '<span class="thtr-seg-idx">' + (_thSegIdx + 1) + ' / ' + _thSegments.length + '</span>';
+        h += '<div class="thtr-dlg-ctrl-btn' + (isLast ? ' disabled' : '') + '" onclick="event.stopPropagation();_thNextSeg()"><svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg></div>';
+        h += '</div>';
         h += '<div class="thtr-dlg-hint">';
         if (!isLast) {
             h += '<span class="thtr-hint-arrow"></span>';
@@ -262,9 +355,6 @@ function _thRenderStage() {
 
     /* 底部输入 */
     h += '<div class="thtr-stage-bottom">';
-    if (_thHistory.length > 0) {
-        h += '<div class="thtr-log-toggle" onclick="_thShowLog()">LOG 记录</div>';
-    }
     h += '<div class="thtr-stage-bar thtr-input-bar">';
     h += '<input type="text" class="thtr-stage-inp thtr-input-field" id="thtrInput" placeholder="Your line 你的台词..." value="' + _thEsc(_thInputText) + '" ' + (_thPhase === 'generating' ? 'disabled' : '') + ' onkeydown="if(event.key===\'Enter\')_thSend()">';
     h += '<div class="thtr-bar-btn" onclick="_thSend()">SEND 发送</div>';
@@ -286,11 +376,27 @@ function _thTapDialog() {
     if (_thPhase !== 'reading') return;
     if (_thSegIdx < _thSegments.length - 1) {
         _thSegIdx++;
+        _thSaveMemory();
         _thRenderStage();
     } else {
         _thPhase = 'waiting';
+        _thSaveMemory();
         _thRenderStage();
     }
+}
+
+/* ★ 上一段 / 下一段 */
+function _thPrevSeg() {
+    if (_thPhase !== 'reading' || _thSegIdx <= 0) return;
+    _thSegIdx--;
+    _thSaveMemory();
+    _thRenderStage();
+}
+function _thNextSeg() {
+    if (_thPhase !== 'reading' || _thSegIdx >= _thSegments.length - 1) return;
+    _thSegIdx++;
+    _thSaveMemory();
+    _thRenderStage();
 }
 
 /* ===== 样式设置面板 ===== */
@@ -366,50 +472,40 @@ function _thSaveCSS() {
 function _thResetCSS() {
     _thCustomCSS = '';
     _thApplyCSS();
-    try { localStorage.setItem('_thCustomCSS', ''); } catch (e) { }
+    try { localStorage.removeItem('_thCustomCSS'); } catch (e) { }
     var ta = document.getElementById('thtrCSSInput');
     if (ta) ta.value = '';
     if (typeof showToast === 'function') showToast('Reset 已重置');
 }
 
-/* ===== 操作 ===== */
+/* ===== 发送 / 生成 ===== */
 function _thSend() {
     var inp = document.getElementById('thtrInput');
-    var txt = inp ? inp.value.trim() : '';
-    if (!txt) return;
+    if (!inp) return;
+    var text = inp.value.trim();
+    if (!text) return;
     _thInputText = '';
-    _thHistory.push({ from: 'user', text: txt });
+    _thHistory.push({ role: 'user', content: text });
     _thPhase = 'input';
+    _thSaveMemory();
     _thRenderStage();
-    if (typeof showToast === 'function') showToast('Sent 已发送，点击 WRITE 续写 继续');
 }
 
 function _thGenerate() {
     if (_thPhase === 'generating') return;
-    var lastUser = '';
-    for (var i = _thHistory.length - 1; i >= 0; i--) {
-        if (_thHistory[i].from === 'user') { lastUser = _thHistory[i].text; break; }
-    }
-    if (!lastUser) {
-        if (typeof showToast === 'function') showToast('Enter your line first 请先输入台词');
-        return;
-    }
-    _thPhase = 'generating'; _thSegments = []; _thSegIdx = 0;
-    _thRenderStage();
-    _thCallAI();
-}
-
-/* ===== AI ===== */
-function _thCallAI() {
-    var r = _thRole; if (!r) return;
     var api = _thGetApi();
-
     if (!api.url || !api.key) {
-        if (typeof showToast === 'function') showToast('Please configure API first 请先配置API');
-        _thPhase = 'input'; _thRenderStage();
+        if (typeof showToast === 'function') showToast('请先设置API');
         return;
     }
 
+    _thPhase = 'generating';
+    _thSaveMemory();
+    _thRenderStage();
+
+    var r = _thRole;
+
+    /* 构建 system prompt — 保持原始白描风格 */
     var sys = '';
     sys += '你是「' + (r.name || '未知') + '」，正在和对方进行一场线下面对面的互动。\n';
     if (r.detail) sys += '你的设定：' + r.detail.substring(0, 2000) + '\n\n';
@@ -417,6 +513,12 @@ function _thCallAI() {
     if (_thPersona) {
         sys += '对方：' + (_thPersona.name || '对方') + '\n';
         if (_thPersona.detail) sys += '对方设定：' + _thPersona.detail.substring(0, 500) + '\n\n';
+    }
+
+    /* ★ 文风注入 — 如果选了文风就强制用文风要求 */
+    if (_thActiveStyle && _thActiveStyle.prompt) {
+        sys += '【文风要求 — 必须严格遵守，不可偏离】\n';
+        sys += _thActiveStyle.prompt + '\n\n';
     }
 
     sys += '【输出要求】\n';
@@ -428,15 +530,14 @@ function _thCallAI() {
     sys += '心理活动可以写但要克制，一两句点到为止，不要大段独白。\n';
     sys += '只写你扮演的角色，不写对方的动作和对话。\n';
     sys += '每段之间空一行，每段50-120字左右。\n';
-    sys += '总字数不少于800字。\n';
+    sys += '总字数不少于1000字。\n';
 
     var msgs = [{ role: 'system', content: sys }];
     for (var i = 0; i < _thHistory.length; i++) {
-        var hm = _thHistory[i];
-        msgs.push({
-            role: hm.from === 'user' ? 'user' : 'assistant',
-            content: hm.from === 'user' ? '（对方）' + hm.text : hm.text
-        });
+        msgs.push({ role: _thHistory[i].role, content: _thHistory[i].content });
+    }
+    if (msgs.length === 1) {
+        msgs.push({ role: 'user', content: '（场景开始，你先开口。）' });
     }
 
     var endpoint = _thBuildEndpoint(api.url);
@@ -450,39 +551,36 @@ function _thCallAI() {
         body: JSON.stringify({
             model: api.model,
             messages: msgs,
-            temperature: 0.78,
+            temperature: 0.85,
             max_tokens: 4096
         })
     })
-        .then(function (resp) {
-            if (!resp.ok) {
-                return resp.text().then(function (t) { throw new Error('HTTP ' + resp.status + ': ' + t.substring(0, 200)); });
-            }
-            return resp.json();
-        })
+        .then(function (res) { return res.json(); })
         .then(function (data) {
-            if (!_thRole) return;
             var text = '';
-            try { text = data.choices[0].message.content.trim(); } catch (e) { }
+            if (data.choices && data.choices[0]) {
+                if (data.choices[0].message) text = data.choices[0].message.content || '';
+                else if (data.choices[0].text) text = data.choices[0].text;
+            }
             if (!text) {
-                if (typeof showToast === 'function') showToast('Empty response 生成为空，请重试');
-                _thPhase = 'input'; _thRenderStage();
+                _thPhase = 'input'; _thSaveMemory(); _thRenderStage();
+                if (typeof showToast === 'function') showToast('Empty response 空回复');
                 return;
             }
-            _thHistory.push({ from: 'char', text: text });
+            _thHistory.push({ role: 'assistant', content: text });
             _thSegments = _thSplitSegs(text);
             _thSegIdx = 0;
             _thPhase = 'reading';
+            _thSaveMemory();
             _thRenderStage();
         })
         .catch(function (err) {
-            console.error('Theater AI error:', err);
-            if (typeof showToast === 'function') showToast('Error 错误: ' + (err.message || 'network fail').substring(0, 80));
-            _thPhase = 'input'; _thRenderStage();
+            _thPhase = 'input'; _thSaveMemory(); _thRenderStage();
+            if (typeof showToast === 'function') showToast('Error: ' + (err.message || err));
         });
 }
 
-/* 智能分段 */
+/* ===== 分段 — 原始橙光式 ===== */
 function _thSplitSegs(text) {
     var rawSegs = text.split(/\n\s*\n/);
     var segs = [];
@@ -508,9 +606,9 @@ function _thSplitSegs(text) {
     return segs;
 }
 
-function _thBackDetail() { _thView = 'detail'; _thRenderDetail(); }
+/* ===== 工具 ===== */
+function _thBackDetail() { _thSaveMemory(); _thView = 'detail'; _thRenderDetail(); }
 
-/* 背景图 */
 function _thPickBg() {
     var inp = document.createElement('input');
     inp.type = 'file'; inp.accept = 'image/*';
@@ -519,41 +617,148 @@ function _thPickBg() {
         var reader = new FileReader();
         reader.onload = function (e) {
             _thBg = e.target.result;
-            try { localStorage.setItem('_thBg', _thBg); } catch (ex) { }
+            try { localStorage.setItem('_thBg', _thBg); } catch (err) { }
             if (_thView === 'stage') _thRenderStage();
-            if (typeof showToast === 'function') showToast('Background updated 背景已更新');
+            else if (_thView === 'detail') _thRenderDetail();
+            else _thRenderList();
         };
         reader.readAsDataURL(inp.files[0]);
     };
     inp.click();
 }
 
-/* LOG */
+/* ===== ★ 对话记录面板（右上角按钮打开） ===== */
 function _thShowLog() {
     var el = document.getElementById('theaterOverlay'); if (!el) return;
+    if (document.getElementById('thtrLogPanel')) return;
+    var r = _thRole;
+
     var h = '<div class="thtr-log-overlay">';
     h += '<div class="thtr-log-header">';
-    h += '<div class="thtr-log-title">LOG 演出记录</div>';
+    h += '<div class="thtr-log-title">DIALOG LOG 对话记录</div>';
     h += '<div class="thtr-log-close" onclick="_thCloseLog()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>';
     h += '</div>';
+
     h += '<div class="thtr-log-list">';
+    if (_thHistory.length === 0) {
+        h += '<div style="text-align:center;padding:60px 20px;color:#aaa;font-size:10px;letter-spacing:.5px;">暂无对话记录</div>';
+    }
     for (var i = 0; i < _thHistory.length; i++) {
-        var hm = _thHistory[i];
-        var isU = hm.from === 'user';
-        h += '<div class="thtr-log-item ' + (isU ? 'user' : 'char') + '">';
-        h += '<div class="thtr-log-who">' + (isU ? 'YOU 你' : _thEsc(_thRole ? _thRole.name : '?').toUpperCase()) + '</div>';
-        h += '<div class="thtr-log-txt">' + _thEsc(hm.text).substring(0, 500) + (hm.text.length > 500 ? '...' : '') + '</div>';
+        var msg = _thHistory[i];
+        var speaker = msg.role === 'user' ? (_thPersona ? _thPersona.name : 'YOU') : (r ? r.name : 'AI');
+        h += '<div class="thtr-log-item">';
+        h += '<div class="thtr-log-role">' + _thEsc(speaker) + '</div>';
+        h += '<div class="thtr-log-text">' + _thFmt(msg.content) + '</div>';
         h += '</div>';
     }
-    if (_thHistory.length === 0) h += '<div class="thtr-log-empty">No history 暂无记录</div>';
     h += '</div></div>';
+
     var panel = document.createElement('div');
     panel.id = 'thtrLogPanel';
-    panel.style.cssText = 'position:absolute;inset:0;z-index:100;';
+    panel.style.cssText = 'position:absolute;inset:0;z-index:110;';
     panel.innerHTML = h;
     el.appendChild(panel);
 }
+
 function _thCloseLog() {
     var p = document.getElementById('thtrLogPanel');
     if (p) p.remove();
+}
+
+/* ===== ★ 文风设置面板 ===== */
+function _thOpenWF() {
+    var el = document.getElementById('theaterOverlay'); if (!el) return;
+    if (document.getElementById('thtrWFPanel')) return;
+
+    var h = '<div class="thtr-style-overlay">';
+    h += '<div class="thtr-style-card">';
+    h += '<div class="thtr-style-header">';
+    h += '<div class="thtr-style-title">WRITING STYLE 文风设置</div>';
+    h += '<div class="thtr-style-close" onclick="_thCloseWF()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>';
+    h += '</div>';
+
+    h += '<div class="thtr-style-body">';
+
+    /* 当前文风 */
+    h += '<div class="thtr-style-label">当前文风 Active Style</div>';
+    if (_thActiveStyle) {
+        h += '<div style="background:rgba(255,255,255,.5);border-radius:10px;padding:10px 12px;margin-bottom:14px;">';
+        h += '<div style="font-size:11px;font-weight:700;color:#444;">' + _thEsc(_thActiveStyle.name) + '</div>';
+        h += '<div style="font-size:9px;color:#888;margin-top:4px;line-height:1.5;">' + _thEsc(_thActiveStyle.prompt.substring(0, 120)) + (_thActiveStyle.prompt.length > 120 ? '...' : '') + '</div>';
+        h += '<div style="margin-top:8px;"><span class="thtr-style-btn danger" style="font-size:9px;padding:4px 12px;" onclick="_thClearActiveWF()">取消使用</span></div>';
+        h += '</div>';
+    } else {
+        h += '<div style="color:#aaa;font-size:10px;margin-bottom:14px;">未选择文风，将使用默认白描叙述</div>';
+    }
+
+    /* 预设列表 */
+    h += '<div class="thtr-style-label">预设列表 Presets</div>';
+    if (_thStyles.length === 0) {
+        h += '<div style="color:#bbb;font-size:10px;margin-bottom:14px;">暂无预设，在下方创建</div>';
+    }
+    for (var wi = 0; wi < _thStyles.length; wi++) {
+        var ws = _thStyles[wi];
+        var isActive = (_thActiveStyle && _thActiveStyle.id === ws.id);
+        h += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.04);">';
+        h += '<div style="flex:1;">';
+        h += '<div style="font-size:10px;font-weight:700;color:#444;">' + _thEsc(ws.name) + (isActive ? ' <span style="color:#6a5;font-size:8px;">● 使用中</span>' : '') + '</div>';
+        h += '<div style="font-size:9px;color:#999;margin-top:2px;line-height:1.4;">' + _thEsc(ws.prompt.substring(0, 60)) + (ws.prompt.length > 60 ? '...' : '') + '</div>';
+        h += '</div>';
+        if (!isActive) h += '<span class="thtr-style-btn" style="font-size:8px;padding:3px 10px;" onclick="_thUseWF(' + wi + ')">使用</span>';
+        h += '<span class="thtr-style-btn danger" style="font-size:8px;padding:3px 10px;" onclick="_thDelWF(' + wi + ')">删除</span>';
+        h += '</div>';
+    }
+
+    /* 新建 */
+    h += '<div class="thtr-style-label" style="margin-top:16px;">新建文风 Create New</div>';
+    h += '<input type="text" id="thtrWFName" placeholder="文风名称，如：冷硬白描 / 诗意抒情 / 悬疑暗黑..." style="width:100%;padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:8px;font-size:11px;background:rgba(255,255,255,.5);margin-bottom:8px;box-sizing:border-box;">';
+    h += '<textarea id="thtrWFPrompt" placeholder="文风描述/要求，例如：\n\n以白描手法叙述，语言简练克制，不用华丽辞藻。对话干净利落，动作描写用短句。整体氛围冷峻。" style="width:100%;height:120px;padding:10px 12px;border:1px solid rgba(0,0,0,.08);border-radius:8px;font-size:10px;line-height:1.6;background:rgba(255,255,255,.5);resize:vertical;box-sizing:border-box;"></textarea>';
+
+    h += '<div class="thtr-style-btns">';
+    h += '<div class="thtr-style-btn primary" onclick="_thAddWF()">保存预设 Save</div>';
+    h += '</div>';
+
+    h += '</div></div></div>';
+
+    var panel = document.createElement('div');
+    panel.id = 'thtrWFPanel';
+    panel.style.cssText = 'position:absolute;inset:0;z-index:110;';
+    panel.innerHTML = h;
+    el.appendChild(panel);
+}
+
+function _thCloseWF() { var p = document.getElementById('thtrWFPanel'); if (p) p.remove(); }
+
+function _thAddWF() {
+    var nameEl = document.getElementById('thtrWFName');
+    var promptEl = document.getElementById('thtrWFPrompt');
+    if (!nameEl || !promptEl) return;
+    var name = nameEl.value.trim(), prompt = promptEl.value.trim();
+    if (!name || !prompt) { if (typeof showToast === 'function') showToast('请填写文风名称和描述'); return; }
+    var ws = { id: 'wf_' + Date.now(), name: name, prompt: prompt };
+    _thStyles.push(ws);
+    _thActiveStyle = ws;
+    _thSaveStyles();
+    if (typeof showToast === 'function') showToast('已保存并启用: ' + name);
+    _thCloseWF(); _thOpenWF();
+}
+
+function _thUseWF(idx) {
+    if (idx >= 0 && idx < _thStyles.length) {
+        _thActiveStyle = _thStyles[idx]; _thSaveStyles();
+        if (typeof showToast === 'function') showToast('已启用: ' + _thActiveStyle.name);
+        _thCloseWF(); _thOpenWF();
+    }
+}
+
+function _thDelWF(idx) {
+    if (idx >= 0 && idx < _thStyles.length) {
+        var removed = _thStyles.splice(idx, 1)[0];
+        if (_thActiveStyle && _thActiveStyle.id === removed.id) _thActiveStyle = null;
+        _thSaveStyles(); _thCloseWF(); _thOpenWF();
+    }
+}
+
+function _thClearActiveWF() {
+    _thActiveStyle = null; _thSaveStyles(); _thCloseWF(); _thOpenWF();
 }

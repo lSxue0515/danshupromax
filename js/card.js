@@ -22,8 +22,8 @@ function setCardTextColor(color) {
 function saveCardContent() {
     var title = document.getElementById('cardTitle');
     var text = document.getElementById('cardText');
-    if (title) localStorage.setItem('ds_card_title', title.innerText);
-    if (text) localStorage.setItem('ds_card_text', text.innerText);
+    if (title) localStorage.setItem('ds_card_title', title.innerText.replace(/\u200B/g, ''));
+    if (text) localStorage.setItem('ds_card_text', text.innerText.replace(/\u200B/g, ''));
 }
 
 function loadCardContent() {
@@ -53,12 +53,61 @@ document.addEventListener('click', function (e) {
     }
 });
 
+/* ★ 通用：给 contenteditable 元素加空文字保护 */
+function _cardProtectEditable(el) {
+    if (!el || el.dataset.editFixed) return;
+    el.dataset.editFixed = '1';
+
+    // 保证最小尺寸
+    if (!el.style.minHeight || el.style.minHeight === '0px') {
+        el.style.minHeight = '1.2em';
+    }
+    el.style.minWidth = el.style.minWidth || '2em';
+    var cs = window.getComputedStyle(el);
+    if (cs.display === 'inline') {
+        el.style.display = 'inline-block';
+    }
+
+    el.addEventListener('blur', function () {
+        if (!el.textContent.replace(/\u200B/g, '').trim()) {
+            el.innerHTML = '\u200B';
+        }
+    });
+
+    el.addEventListener('focus', function () {
+        var raw = el.textContent;
+        if (raw === '\u200B' || raw.replace(/\u200B/g, '').trim() === '') {
+            el.textContent = '';
+            try {
+                var range = document.createRange();
+                range.selectNodeContents(el);
+                range.collapse(false);
+                var sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            } catch (e) { }
+        }
+    });
+
+    // 初始检查
+    if (!el.textContent.trim()) {
+        el.innerHTML = '\u200B';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     loadCardContent();
+
     var ct = document.getElementById('cardTitle');
     var cx = document.getElementById('cardText');
-    if (ct) ct.addEventListener('blur', saveCardContent);
-    if (cx) cx.addEventListener('blur', saveCardContent);
+    if (ct) {
+        ct.addEventListener('blur', saveCardContent);
+        _cardProtectEditable(ct);
+    }
+    if (cx) {
+        cx.addEventListener('blur', saveCardContent);
+        _cardProtectEditable(cx);
+    }
 
     // 气泡文字
     var bt = document.getElementById('bubbleTextTop');
@@ -67,8 +116,19 @@ document.addEventListener('DOMContentLoaded', function () {
     var savedBB = localStorage.getItem('ds_bubble_bottom');
     if (savedBT && bt) bt.innerText = savedBT;
     if (savedBB && bb) bb.innerText = savedBB;
-    if (bt) bt.addEventListener('blur', function () { localStorage.setItem('ds_bubble_top', bt.innerText); });
-    if (bb) bb.addEventListener('blur', function () { localStorage.setItem('ds_bubble_bottom', bb.innerText); });
+
+    if (bt) {
+        bt.addEventListener('blur', function () {
+            localStorage.setItem('ds_bubble_top', bt.innerText.replace(/\u200B/g, ''));
+        });
+        _cardProtectEditable(bt);
+    }
+    if (bb) {
+        bb.addEventListener('blur', function () {
+            localStorage.setItem('ds_bubble_bottom', bb.innerText.replace(/\u200B/g, ''));
+        });
+        _cardProtectEditable(bb);
+    }
 
     // 气泡头像
     var al = localStorage.getItem('ds_img_avatarLeft');
