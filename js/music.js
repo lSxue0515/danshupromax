@@ -510,20 +510,26 @@ var _muLtReplyTo = null;
 
 function _muLtOpenComment(songId, roleId) {
     _muLtCommentTarget = songId;
-    _muLtCommentRoleId = roleId || '';
+    _muLtCommentCharId = roleId || '';
     _muLtCommentText = '';
     _muLtReplyTo = null;
     _muRender();
+    // ★ 延迟聚焦，避免iOS键盘动画冲突
     setTimeout(function () {
         var inp = document.getElementById('muLtCmtInp');
-        if (inp) inp.focus();
-    }, 100);
+        if (inp) {
+            inp.focus();
+            // ★ iOS修正：确保不会滚动整个页面
+            setTimeout(function () { window.scrollTo(0, 0); }, 300);
+        }
+    }, 350);
 }
 
 function _muLtRenderCommentModal() {
     var comments = _muLtComments[_muLtCommentTarget] || [];
-    var h = '<div class="mu-lt-cmt-ov" style="position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.4);" onclick="_muLtCommentTarget=\'\';_muLtReplyTo=null;_muRender()">';
-    h += '<div class="mu-lt-cmt-modal" style="position:absolute;bottom:0;left:0;right:0;max-height:70vh;background:#fff;border-radius:16px 16px 0 0;display:flex;flex-direction:column;overflow:hidden;" onclick="event.stopPropagation()">';
+    // ★ 用 absolute 代替 fixed，避免iOS键盘推高
+    var h = '<div class="mu-lt-cmt-ov" onclick="_muLtCloseComment()">';
+    h += '<div class="mu-lt-cmt-modal" onclick="event.stopPropagation()">';
     h += '<div class="mu-lt-cmt-ti">评论</div>';
     if (comments.length) {
         h += '<div class="mu-lt-cmt-list" style="flex:1;overflow-y:auto;padding:0 16px;">';
@@ -531,36 +537,40 @@ function _muLtRenderCommentModal() {
             var c = comments[ci];
             h += '<div class="mu-lt-cmt-row">';
             h += '<div class="mu-lt-cmt-rav">';
-            if (c.avatar) h += '<img src="' + _muEsc(c.avatar) + '">';
-            else h += '👤';
+            if (_muCoverOk(c.avatar)) h += '<img src="' + _muEsc(c.avatar) + '">';
+            else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
             h += '</div><div class="mu-lt-cmt-rb">';
             h += '<span class="mu-lt-cmt-rn' + (c.isChar ? ' char' : '') + '">' + _muEsc(c.name) + '</span> ';
             if (c.replyToName) {
-                h += '<span style="color:#999;font-size:10px;">回复 </span>';
+                h += '<span style="color:#aaa;font-size:10px;">▸ </span>';
                 h += '<span class="mu-lt-cmt-rn' + (c.replyToIsChar ? ' char' : '') + '" style="font-size:10px;">' + _muEsc(c.replyToName) + '</span> ';
             }
-            if (c.typing) h += '<span class="mu-lt-typing">思考中...</span>';
+            if (c.replyToText) h += '<span class="mu-lt-cmt-rt" style="color:#999;font-size:10px;">"' + _muEsc(c.replyToText.substring(0, 15)) + '"</span><br>';
             else h += '<span class="mu-lt-cmt-rt">' + _muEsc(c.text) + '</span>';
-            if (!c.typing) {
-                h += '<div style="font-size:9px;color:#aaa;cursor:pointer;margin-top:2px;" onclick="event.stopPropagation();_muLtSetReply(' + ci + ')">回复</div>';
-            }
+            if (c.replyToText) h += '<span class="mu-lt-cmt-rt">' + _muEsc(c.text) + '</span>';
+            // reply button
+            h += '<div style="margin-top:4px;"><span style="font-size:10px;color:#bbb;cursor:pointer;" onclick="event.stopPropagation();_muLtReplyToComment(' + ci + ')">回复</span></div>';
             h += '</div></div>';
         }
         h += '</div>';
     } else {
         h += '<div style="text-align:center;padding:30px 20px;color:#bbb;font-size:11px;">暂无评论，快来说点什么吧~</div>';
     }
+
+    // ★ 回复提示条
     if (_muLtReplyTo) {
-        h += '<div style="padding:6px 16px;background:#f5f5f5;display:flex;align-items:center;gap:6px;font-size:10px;color:#888;">';
+        h += '<div style="padding:6px 16px;background:#f9f9f9;border-top:1px solid #f0f0f0;display:flex;align-items:center;font-size:11px;color:#999;flex-shrink:0;">';
         h += '<span>回复 <b style="color:#555;">' + _muEsc(_muLtReplyTo.name) + '</b>: ' + _muEsc((_muLtReplyTo.text || '').substring(0, 20)) + '</span>';
         h += '<span style="margin-left:auto;cursor:pointer;color:#aaa;font-size:14px;" onclick="event.stopPropagation();_muLtReplyTo=null;_muRender()">✕</span>';
         h += '</div>';
     }
-    h += '<div class="mu-lt-cmt-irow" style="padding:10px 16px;border-top:1px solid #eee;display:flex;gap:8px;align-items:center;flex-shrink:0;">';
+
     var placeholder = _muLtReplyTo ? ('回复 ' + _muLtReplyTo.name + '...') : '说点什么...';
-    h += '<input class="mu-lt-cmt-inp" id="muLtCmtInp" placeholder="' + _muEsc(placeholder) + '" value="' + _muEsc(_muLtCommentText) + '" oninput="_muLtCommentText=this.value" onkeydown="if(event.key===\'Enter\'){event.preventDefault();_muLtSendComment()}" style="flex:1;border:1px solid #eee;border-radius:20px;padding:8px 14px;font-size:12px;outline:none;">';
+    h += '<div class="mu-lt-cmt-irow">';
+    h += '<input class="mu-lt-cmt-inp" id="muLtCmtInp" placeholder="' + _muEsc(placeholder) + '" value="' + _muEsc(_muLtCommentText) + '" oninput="_muLtCommentText=this.value" onkeydown="if(event.key===\'Enter\'){event.preventDefault();_muLtSendComment()}">';
     h += '<div class="mu-lt-cmt-send" onclick="_muLtSendComment()" style="color:#000;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">发送</div>';
-    h += '</div></div></div>';
+    h += '</div>';
+    h += '</div></div>';
     return h;
 }
 
@@ -575,6 +585,11 @@ function _muLtSetReply(commentIdx) {
         }, 100);
     }
 }
+
+// ★ iOS修正：发送后先收起键盘
+var _inp = document.getElementById('muLtCmtInp');
+if (_inp) _inp.blur();
+setTimeout(function () { window.scrollTo(0, 0); }, 200);
 
 function _muLtSendComment() {
     var text = (_muLtCommentText || '').trim();

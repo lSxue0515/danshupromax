@@ -63,6 +63,16 @@ function loadAppearanceSettings() {
     }
     var ringtoneInput = document.getElementById('appearRingtoneUrl');
     if (ringtoneInput) ringtoneInput.value = ringtoneUrl;
+
+    // ★ 加载图标文字颜色
+    var labelColor = localStorage.getItem('ds_appear_labelColor') || '';
+    var labelColorHex = document.getElementById('appearLabelColorHex');
+    if (labelColorHex) labelColorHex.value = labelColor;
+    if (labelColor && labelColor.startsWith('#')) {
+        var labelPicker = document.getElementById('appearLabelColorPicker');
+        if (labelPicker) labelPicker.value = labelColor;
+    }
+    highlightLabelColorDot(labelColor);
 }
 
 /* ========== 壁纸 ========== */
@@ -259,6 +269,44 @@ function applyBubbleColor(color) {
     });
 }
 
+/* ========== ★ 图标文字颜色 ========== */
+function pickLabelColor(el) {
+    var color = el.getAttribute('data-color');
+    var hex = document.getElementById('appearLabelColorHex');
+    if (hex) hex.value = color;
+    if (color.startsWith('#')) {
+        var picker = document.getElementById('appearLabelColorPicker');
+        if (picker) picker.value = color;
+    }
+    highlightLabelColorDot(color);
+}
+
+function setLabelColorFromPicker(val) {
+    var hex = document.getElementById('appearLabelColorHex');
+    if (hex) hex.value = val;
+    highlightLabelColorDot(val);
+}
+
+function setLabelColorFromHex(val) {
+    if (val.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)) {
+        var picker = document.getElementById('appearLabelColorPicker');
+        if (picker) picker.value = val;
+    }
+    highlightLabelColorDot(val);
+}
+
+function highlightLabelColorDot(color) {
+    document.querySelectorAll('.appear-label-color-dot').forEach(function (d) {
+        d.classList.toggle('active', d.getAttribute('data-color') === color);
+    });
+}
+
+function applyLabelColor(color) {
+    document.querySelectorAll('.app-name').forEach(function (el) {
+        el.style.color = color || '';
+    });
+}
+
 /* ========== 全局字体 ========== */
 var _globalFontLoaded = '';
 function applyGlobalFont(url) {
@@ -296,6 +344,9 @@ function saveAppearanceSettings() {
     var fontUrl = document.getElementById('appearFontUrl').value.trim();
     var bubbleColor = document.getElementById('appearBubbleColorHex').value.trim() || 'rgba(80,60,70,0.9)';
     var statusbar = document.getElementById('appearStatusbarToggle').checked;
+    var labelColor = '';
+    var labelColorEl = document.getElementById('appearLabelColorHex');
+    if (labelColorEl) labelColor = labelColorEl.value.trim();
 
     if (wpUrl) {
         if (wpUrl.startsWith('data:')) {
@@ -307,11 +358,11 @@ function saveAppearanceSettings() {
                     if (ok) {
                         // localStorage存标记，实际数据在IndexedDB
                         safeSetItem('ds_appear_wallpaper', '__idb_wp__');
-                        doFinishAppearSave(compressed, fontUrl, bubbleColor, statusbar);
+                        doFinishAppearSave(compressed, fontUrl, bubbleColor, statusbar, labelColor);
                     } else {
                         // 回退：尝试直接存localStorage
                         if (safeSetItem('ds_appear_wallpaper', compressed)) {
-                            doFinishAppearSave(compressed, fontUrl, bubbleColor, statusbar);
+                            doFinishAppearSave(compressed, fontUrl, bubbleColor, statusbar, labelColor);
                         } else {
                             showToast('壁纸太大无法保存，请使用图片URL链接');
                         }
@@ -326,10 +377,10 @@ function saveAppearanceSettings() {
         localStorage.removeItem('ds_appear_wallpaper');
     }
 
-    doFinishAppearSave(wpUrl, fontUrl, bubbleColor, statusbar);
+    doFinishAppearSave(wpUrl, fontUrl, bubbleColor, statusbar, labelColor);
 }
 
-function doFinishAppearSave(wpSrc, fontUrl, bubbleColor, statusbar) {
+function doFinishAppearSave(wpSrc, fontUrl, bubbleColor, statusbar, labelColor) {
     // 保存铃声
     var ringtoneUrl = document.getElementById('appearRingtoneUrl');
     if (ringtoneUrl && typeof saveRingtoneUrl === 'function') {
@@ -339,6 +390,13 @@ function doFinishAppearSave(wpSrc, fontUrl, bubbleColor, statusbar) {
     safeSetItem('ds_appear_fontUrl', fontUrl);
     safeSetItem('ds_appear_bubbleColor', bubbleColor);
     safeSetItem('ds_appear_statusbar', statusbar ? 'visible' : 'hidden');
+
+    // ★ 保存图标文字颜色
+    if (labelColor) {
+        safeSetItem('ds_appear_labelColor', labelColor);
+    } else {
+        localStorage.removeItem('ds_appear_labelColor');
+    }
 
     // ★ 应用壁纸（wpSrc可能是实际数据或URL）
     var wallpaper = document.getElementById('wallpaper');
@@ -356,6 +414,7 @@ function doFinishAppearSave(wpSrc, fontUrl, bubbleColor, statusbar) {
     if (fontUrl) { applyGlobalFont(fontUrl); }
     else { document.getElementById('phoneFrame').style.fontFamily = ''; }
     applyBubbleColor(bubbleColor);
+    applyLabelColor(labelColor);
     applyStatusbarState(statusbar);
 
     closeAppearanceApp();
@@ -422,6 +481,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var bubbleColor = localStorage.getItem('ds_appear_bubbleColor');
     if (bubbleColor) applyBubbleColor(bubbleColor);
+
+    var labelColor = localStorage.getItem('ds_appear_labelColor');
+    if (labelColor) applyLabelColor(labelColor);
 
     var statusbar = localStorage.getItem('ds_appear_statusbar');
     if (statusbar === 'hidden') applyStatusbarState(false);
