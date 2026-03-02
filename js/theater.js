@@ -15,6 +15,88 @@ var _thPersona = null;
 var _thCustomCSS = '';
 var _thStyleEl = null;
 
+/* ★ vivo等安卓机型键盘弹出适配 */
+var _thKbFixTimer = null;
+
+function _thInitKeyboardFix() {
+    // 如果已经初始化过就跳过
+    if (window._thKbFixInited) return;
+    window._thKbFixInited = true;
+
+    // 方案1：使用 visualViewport API（现代浏览器推荐）
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', _thHandleViewportResize);
+        window.visualViewport.addEventListener('scroll', _thHandleViewportScroll);
+    }
+
+    // 方案2：兜底 resize 监听
+    var lastH = window.innerHeight;
+    window.addEventListener('resize', function () {
+        if (_thView !== 'stage') return;
+        var newH = window.innerHeight;
+        // 键盘弹出：高度减少超过150px
+        if (lastH - newH > 150) {
+            _thOnKeyboardShow(newH);
+        }
+        // 键盘收起：高度恢复
+        if (newH - lastH > 150) {
+            _thOnKeyboardHide();
+        }
+        lastH = newH;
+    });
+}
+
+function _thHandleViewportResize() {
+    if (_thView !== 'stage') return;
+    var vv = window.visualViewport;
+    if (!vv) return;
+    var stage = document.querySelector('.thtr-stage');
+    if (!stage) return;
+
+    // 用 visualViewport.height 设置舞台实际可见高度
+    stage.style.height = vv.height + 'px';
+    stage.style.maxHeight = vv.height + 'px';
+
+    // 确保不滚动到奇怪的位置
+    if (_thKbFixTimer) clearTimeout(_thKbFixTimer);
+    _thKbFixTimer = setTimeout(function () {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+    }, 50);
+}
+
+function _thHandleViewportScroll() {
+    if (_thView !== 'stage') return;
+    // 阻止 visualViewport 的滚动偏移
+    window.scrollTo(0, 0);
+}
+
+function _thOnKeyboardShow(viewportH) {
+    var stage = document.querySelector('.thtr-stage');
+    if (!stage) return;
+    stage.style.height = viewportH + 'px';
+    stage.style.maxHeight = viewportH + 'px';
+
+    // 强制修正滚动位置
+    setTimeout(function () {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+    }, 100);
+}
+
+function _thOnKeyboardHide() {
+    var stage = document.querySelector('.thtr-stage');
+    if (!stage) return;
+    // 恢复全屏
+    stage.style.height = '100%';
+    stage.style.maxHeight = '';
+    setTimeout(function () {
+        window.scrollTo(0, 0);
+    }, 100);
+}
+
 /* ===== 文风系统 ===== */
 var _thStyles = [];
 var _thActiveStyle = null;
@@ -73,7 +155,13 @@ function _thApplyCSS() {
     _thStyleEl.textContent = _thCustomCSS;
 }
 
+
 function openTheaterApp() {
+    // ★ 防止安卓键盘弹出时缩放页面
+    var vpMeta = document.querySelector('meta[name="viewport"]');
+    if (vpMeta && vpMeta.content.indexOf('interactive-widget') === -1) {
+        vpMeta.content = vpMeta.content + ', interactive-widget=resizes-content';
+    }
     var el = document.getElementById('theaterOverlay'); if (!el) return;
     if (typeof loadChatRoles === 'function') loadChatRoles();
     _thView = 'list'; _thRole = null;
@@ -85,6 +173,11 @@ function closeTheaterApp() {
     _thSaveMemory();
     var el = document.getElementById('theaterOverlay');
     if (el) el.classList.remove('show');
+    // ★ 恢复滚动位置
+    setTimeout(function () { window.scrollTo(0, 0); }, 100);
+    // ★ 清理键盘适配状态
+    var stage = document.querySelector('.thtr-stage');
+    if (stage) { stage.style.height = ''; stage.style.maxHeight = ''; }
 }
 
 function _thGetApi() {
@@ -250,6 +343,35 @@ function _thRenderDetail() {
 
     h += '</div>';
     el.innerHTML = h;
+
+    el.innerHTML = h;
+
+    // ★ 初始化键盘适配（针对vivo S18 Pro等机型）
+    _thInitKeyboardFix();
+
+    // ★ 给输入框添加 focus/blur 事件，主动处理键盘弹出
+    var inp = document.getElementById('thtrInput');
+    if (inp) {
+        inp.addEventListener('focus', function () {
+            // 键盘即将弹出，延迟一点等浏览器完成布局
+            setTimeout(function () {
+                window.scrollTo(0, 0);
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+                // 确保输入框在可视区域内
+                var bar = document.querySelector('.thtr-stage-bottom');
+                if (bar) bar.scrollIntoView({ block: 'end', behavior: 'smooth' });
+            }, 300);
+        });
+
+        inp.addEventListener('blur', function () {
+            // 键盘收起，恢复布局
+            setTimeout(function () {
+                _thOnKeyboardHide();
+            }, 200);
+        });
+    }
+
 }
 
 function _thPickPersona(pid) {
@@ -290,10 +412,10 @@ function _thRenderStage() {
         : 'background:linear-gradient(180deg,#d5d7d6 0%,#c5c7c6 100%);';
 
     var h = '';
-    h += '<div class="thtr-stage" style="' + bgCss + '">';
+    h += '<div class="thtr-stage" style="' + bgCss + 'display:flex;flex-direction:column;height:100%;max-height:100%;overflow:hidden;">';
 
     /* 顶栏 */
-    h += '<div class="thtr-stage-top">';
+    h += '<div class="thtr-stage-top" style="flex-shrink:0;">';
     h += '<div class="thtr-stage-name">' + _thEsc(r.name) + '</div>';
     h += '<div class="thtr-stage-btns">';
     /* ★ 文风按钮 */
@@ -309,7 +431,7 @@ function _thRenderStage() {
     h += '</div></div>';
 
     /* 对话区 */
-    h += '<div class="thtr-stage-dialog">';
+    h += '<div class="thtr-stage-dialog" style="flex:1;overflow-y:auto;min-height:0;">';
 
     if (_thPhase === 'generating') {
         h += '<div class="thtr-dlg-box thtr-output-box">';
@@ -354,7 +476,7 @@ function _thRenderStage() {
     h += '</div>';
 
     /* 底部输入 */
-    h += '<div class="thtr-stage-bottom">';
+    h += '<div class="thtr-stage-bottom" style="flex-shrink:0;">';
     h += '<div class="thtr-stage-bar thtr-input-bar">';
     h += '<input type="text" class="thtr-stage-inp thtr-input-field" id="thtrInput" placeholder="Your line 你的台词..." value="' + _thEsc(_thInputText) + '" ' + (_thPhase === 'generating' ? 'disabled' : '') + ' onkeydown="if(event.key===\'Enter\')_thSend()">';
     h += '<div class="thtr-bar-btn" onclick="_thSend()">SEND 发送</div>';
@@ -365,10 +487,8 @@ function _thRenderStage() {
     h += '</div>';
     el.innerHTML = h;
 
-    if (_thPhase !== 'generating') {
-        var inp = document.getElementById('thtrInput');
-        if (inp) setTimeout(function () { inp.focus(); }, 100);
-    }
+    // ★ 不再自动focus（vivo等机型键盘弹出会导致页面错位）
+    // 用户需要时自己点击输入框即可
 }
 
 /* ===== 点击对话框翻页 ===== */
