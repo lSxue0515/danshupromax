@@ -6,25 +6,14 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <script>
-        // 必须在 <head> 里、CSS加载前执行，这样CSS渲染时class已经在了
         (function () {
             var u = navigator.userAgent || '';
             var h = document.documentElement;
-            if (/Android/i.test(u)) h.className += ' is-android';
-            if (/iPhone|iPad|iPod/i.test(u) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) h.className += ' is-ios';
-            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) h.className += ' is-touch';
+            if (/Android/i.test(u)) h.classList.add('is-android');
+            if (/iPhone|iPad|iPod/i.test(u) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) h.classList.add('is-ios');
         })();
     </script>
     <title>蛋薯机 DanShu Pro</title>
-
-    <!-- ★★★ PWA + iOS 全屏适配 ★★★ -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="蛋薯机">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#000000">
-    <link rel="manifest" href="manifest.json">
-    <!-- 如果有 icon 可以加：<link rel="apple-touch-icon" href="icon-180.png"> -->
 
     <!-- ★★★ 开机遮挡：fixed定位，绝对挡住一切 ★★★ -->
     <style id="bootBlockStyle">
@@ -1417,6 +1406,7 @@
                         </svg>
                         <span>创建角色</span>
                     </div>
+
                 </div>
             </div>
             <div class="chat-body" id="chatBody"></div>
@@ -1877,6 +1867,7 @@
     <script src="js/boot.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/utils.js"></script>
+    <script src="js/viewport-fix.js"></script>
     <script src="js/pages.js"></script>
     <script src="js/card.js"></script>
     <script src="js/countdown.js"></script>
@@ -1902,7 +1893,7 @@
     <script src="js/page3widget.js"></script>
     <script src="js/phonesnoop.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
-    <script src="js/viewport-fix.js"></script>
+
 
 
 </body>
