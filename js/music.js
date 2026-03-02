@@ -525,6 +525,33 @@ function _muLtOpenComment(songId, roleId) {
     }, 350);
 }
 
+/* ★ 关闭评论弹窗 — 点击空白区域/遮罩即可关闭 */
+function _muLtCloseComment() {
+    // 1. 先让输入框失焦（收起iOS键盘）
+    var inp = document.getElementById('muLtCmtInp');
+    if (inp) inp.blur();
+
+    // 2. 清除评论状态
+    _muLtCommentTarget = '';
+    _muLtReplyTo = null;
+    _muLtCommentText = '';
+
+    // 3. 延迟移除弹窗，等iOS键盘收起动画完成
+    setTimeout(function () {
+        var ov = document.querySelector('.mu-lt-cmt-ov');
+        if (ov) {
+            ov.style.transition = 'opacity 0.2s ease';
+            ov.style.opacity = '0';
+            setTimeout(function () {
+                // 安全移除DOM
+                if (ov.parentNode) ov.parentNode.removeChild(ov);
+            }, 220);
+        }
+        // 修正iOS页面偏移
+        window.scrollTo(0, 0);
+    }, 80);
+}
+
 function _muLtRenderCommentModal() {
     var comments = _muLtComments[_muLtCommentTarget] || [];
     // ★ 用 absolute 代替 fixed，避免iOS键盘推高
