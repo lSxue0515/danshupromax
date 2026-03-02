@@ -7,7 +7,47 @@ var _momentsPosts = [];
 var _momentsPublishImages = [];
 var _momentsAutoTimer = null;
 var _momentsCommentingPostId = null;
+var _momentsReplyToName = '';   // ★ 正在回复谁的名字
+var _momentsReplyToIdx = -1;   // ★ 正在回复的评论索引
 var MOMENTS_STORAGE_KEY = 'ds_chat_moments';
+
+/* ★ 截断修复：如果AI输出被截断（没有正常结尾），自动补句号 */
+function _mtFixTruncated(text, data) {
+    if (!text) return text;
+    // 检查API是否返回了 finish_reason === 'length'（被截断）
+    var truncated = false;
+    if (data && data.choices && data.choices[0] && data.choices[0].finish_reason === 'length') {
+        truncated = true;
+    }
+    // 即使不检查finish_reason，也可以通过末尾特征判断截断
+    if (!truncated) {
+        var lastChar = text.charAt(text.length - 1);
+        var normalEndings = '。！？…~♡♥」』）)!?.~\n';
+        // 如果末尾不是正常标点，且倒数几个字看起来像被截
+        if (normalEndings.indexOf(lastChar) === -1 && text.length > 30) {
+            truncated = true;
+        }
+    }
+    if (truncated) {
+        // 找到最后一个完整句子的位置
+        var lastGoodEnd = -1;
+        for (var i = text.length - 1; i >= 0; i--) {
+            var ch = text.charAt(i);
+            if ('。！？…!?.~\n'.indexOf(ch) !== -1) {
+                lastGoodEnd = i;
+                break;
+            }
+        }
+        if (lastGoodEnd > 0 && lastGoodEnd > text.length * 0.4) {
+            // 截取到最后一个完整句子
+            text = text.substring(0, lastGoodEnd + 1);
+        } else {
+            // 找不到合适的截断点，加省略号
+            text = text.replace(/[,，、\s]+$/, '') + '…';
+        }
+    }
+    return text;
+}
 
 function loadMoments() {
     try { _momentsPosts = JSON.parse(localStorage.getItem(MOMENTS_STORAGE_KEY) || '[]'); } catch (e) { _momentsPosts = []; }
@@ -243,14 +283,19 @@ function renderMomentPost(post) {
             if (cm.avatar) h += '<img src="' + cm.avatar + '" alt="">';
             else h += '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
             h += '</div><div class="mt-comment-body">';
-            h += '<div class="mt-comment-name">' + esc(cm.name || '未知') + '</div>';
-            h += '<div class="mt-comment-text">' + esc(cm.text || '').replace(/\n/g, '<br>') + '</div>';
+            // ★ 如果是回复某人的评论，显示"回复 @xxx"
+            if (cm.replyTo) {
+                h += '<div class="mt-comment-name">' + esc(cm.name || '未知') + ' <span style="color:#999;font-weight:normal;">回复</span> <span style="color:var(--ds-accent,#e8a0bf);">' + esc(cm.replyTo) + '</span></div>';
+            } else {
+                h += '<div class="mt-comment-name">' + esc(cm.name || '未知') + '</div>';
+            }
+            h += '<div class="mt-comment-text">' + esc(cm.text || '').replace(/\\n/g, '<br>') + '</div>';
             // 评论翻译
             if (mtNeedsTranslation(cm.text)) {
                 var cmTrId = 'mtCmTr_' + postId + '_' + c;
                 h += '<div id="' + cmTrId + '">';
                 if (cm._translated) {
-                    h += '<div class="mt-translate-area"><div class="mt-translate-text">' + esc(cm._translated).replace(/\n/g, '<br>') + '</div></div>';
+                    h += '<div class="mt-translate-area"><div class="mt-translate-text">' + esc(cm._translated).replace(/\\n/g, '<br>') + '</div></div>';
                 } else {
                     h += '<div class="mt-translate-btn" onclick="event.stopPropagation();momentTranslateComment(\'' + postId + '\',' + c + ')">';
                     h += '<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>';
@@ -258,7 +303,10 @@ function renderMomentPost(post) {
                 }
                 h += '</div>';
             }
-            h += '<div class="mt-comment-time">' + formatMomentTime(cm.ts || Date.now()) + '</div>';
+            h += '<div class="mt-comment-time">' + formatMomentTime(cm.ts || Date.now());
+            // ★ 给每条评论加"回复"按钮
+            h += ' <span class="mt-comment-reply-btn" onclick="event.stopPropagation();momentReplyToComment(\'' + postId + '\',' + c + ')" style="color:var(--ds-accent,#e8a0bf);margin-left:10px;cursor:pointer;font-size:11px;">回复</span>';
+            h += '</div>';
             h += '</div></div>';
         }
         h += '</div>';
@@ -476,18 +524,59 @@ function momentToggleLike(postId) {
 function momentOpenCommentInput(postId) {
     _momentsCommentingPostId = postId;
     var old = document.getElementById('mtCommentInputBar'); if (old) old.remove();
+    var oldOv = document.getElementById('mtCommentDismissOverlay'); if (oldOv) oldOv.remove();
+
+    // ★ 创建一个透明遮罩层，点击即可关闭评论输入
+    var overlay = document.createElement('div');
+    overlay.id = 'mtCommentDismissOverlay';
+    overlay.style.cssText = 'position:absolute;inset:0;z-index:998;background:transparent;';
+    overlay.onclick = function () { momentCloseCommentInput(); };
+    document.querySelector('.chat-app-overlay').appendChild(overlay);
+
     var bar = document.createElement('div');
     bar.id = 'mtCommentInputBar';
     bar.className = 'mt-comment-input-bar';
-    bar.innerHTML = '<input id="mtCommentInputText" type="text" placeholder="写评论..." onkeydown="if(event.key===\'Enter\'){momentSubmitComment();event.preventDefault();}">'
+    bar.style.zIndex = '999'; // ★ 确保在遮罩之上
+    bar.innerHTML = '<input id="mtCommentInputText" type="text" placeholder="写评论..." style="font-size:16px;" onkeydown="if(event.key===\'Enter\'){momentSubmitComment();event.preventDefault();}">'
         + '<div class="mt-comment-send-btn" onclick="momentSubmitComment()"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>';
     document.querySelector('.chat-app-overlay').appendChild(bar);
     setTimeout(function () { var inp = document.getElementById('mtCommentInputText'); if (inp) inp.focus(); }, 100);
+
+    _momentsReplyToName = '';
+    _momentsReplyToIdx = -1;
+
 }
 
 function momentCloseCommentInput() {
     _momentsCommentingPostId = null;
+    // ★ 先blur收起键盘
+    var inp = document.getElementById('mtCommentInputText');
+    if (inp) inp.blur();
+    // ★ 移除遮罩层
+    var ov = document.getElementById('mtCommentDismissOverlay'); if (ov) ov.remove();
+    // ★ 移除输入条
     var bar = document.getElementById('mtCommentInputBar'); if (bar) bar.remove();
+    // ★ iOS修正页面偏移
+    setTimeout(function () { window.scrollTo(0, 0); }, 100);
+}
+
+/* ★ 点击评论的"回复"按钮 */
+function momentReplyToComment(postId, commentIdx) {
+    var post = findMomentPost(postId);
+    if (!post || !post.comments || !post.comments[commentIdx]) return;
+    var cm = post.comments[commentIdx];
+    _momentsReplyToName = cm.name || '未知';
+    _momentsReplyToIdx = commentIdx;
+    // 打开评论输入，并显示"回复 @xxx"
+    momentOpenCommentInput(postId);
+    // 修改 placeholder
+    setTimeout(function () {
+        var inp = document.getElementById('mtCommentInputText');
+        if (inp) {
+            inp.placeholder = '回复 ' + _momentsReplyToName + '...';
+            inp.focus();
+        }
+    }, 150);
 }
 
 function momentSubmitComment() {
@@ -497,12 +586,107 @@ function momentSubmitComment() {
     if (!post) { momentCloseCommentInput(); return; }
     var p = getActivePersona();
     if (!post.comments) post.comments = [];
-    post.comments.push({ name: (p && p.name) ? p.name : '我', avatar: (p && p.avatar) ? p.avatar : '', text: text, ts: Date.now() });
-    saveMoments(); momentCloseCommentInput(); mtRefreshFeed();
-    if (post.authorType === 'char' && post.roleId) momentAIReplyComment(post, text);
+
+    // ★ 构建评论对象，支持"回复@某人"
+    var commentObj = {
+        name: (p && p.name) ? p.name : '我',
+        avatar: (p && p.avatar) ? p.avatar : '',
+        text: text,
+        ts: Date.now()
+    };
+    if (_momentsReplyToName) {
+        commentObj.replyTo = _momentsReplyToName;
+    }
+    post.comments.push(commentObj);
+
+    // ★ 保存并刷新，但不关闭输入条（让user可以继续回复）
+    saveMoments(); mtRefreshFeed();
+    inp.value = '';
+    inp.placeholder = '写评论...';
+    _momentsReplyToName = '';
+    _momentsReplyToIdx = -1;
+
+    // ★ char回复逻辑
+    if (post.authorType === 'char' && post.roleId) {
+        // 评论的是char发的动态 → char直接回复
+        momentAIReplyComment(post, text);
+    } else if (post.authorType === 'self') {
+        // 评论的是user自己的动态 → 找之前评论过的char来回复
+        _mtCharReplyOnUserPost(post, text);
+    }
+}
+
+/* ★ user在自己动态下评论后，之前评论过的char会来回复 */
+var _p = getActivePersona();
+var userName = (_p && _p.name) ? _p.name : '我';
+function _mtCharReplyOnUserPost(post, userText) {
+    if (!post.comments || post.comments.length < 2) return;
+    // 找出在这条动态下评论过的所有char
+    var charRoleIds = [];
+    var seen = {};
+    for (var i = 0; i < post.comments.length; i++) {
+        var cm = post.comments[i];
+        if (cm.roleId && !seen[cm.roleId]) {
+            seen[cm.roleId] = true;
+            charRoleIds.push(cm.roleId);
+        }
+    }
+    if (charRoleIds.length === 0) return;
+
+    // 随机挑一个char来回复
+    var pickId = charRoleIds[Math.floor(Math.random() * charRoleIds.length)];
+    var role = (typeof findRole === 'function') ? findRole(pickId) : null;
+    if (!role) return;
+
+    var apiConfig = getActiveApiConfig();
+    if (!apiConfig || !apiConfig.url || !apiConfig.key || !apiConfig.model) return;
+
+    var sysPrompt = (role.prompt || '你是' + (role.name || '角色'));
+    sysPrompt += '\n\n[当前场景]\n你在社交平台上看到你之前评论过的一条好友动态，现在动态作者又写了一条新评论。\n';
+    sysPrompt += '动态原文：\n"' + (post.text || '') + '"\n\n';
+    sysPrompt += '之前的评论记录：\n';
+    for (var j = 0; j < post.comments.length; j++) {
+        sysPrompt += (post.comments[j].name || '某人') + '：' + (post.comments[j].text || '') + '\n';
+    }
+    sysPrompt += '\n请以符合你人设和性格的方式回复最新评论。\n';
+    sysPrompt += '规则：1-3句话，简短自然，不加引号，不加前缀，直接输出回复。\n';
+
+    var messages = [
+        { role: 'system', content: sysPrompt },
+        { role: 'user', content: userText }
+    ];
+    var url = apiConfig.url.replace(/\/+$/, '') + '/chat/completions';
+
+    // 延迟2-5秒模拟思考
+    setTimeout(function () {
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiConfig.key },
+            body: JSON.stringify({ model: apiConfig.model, messages: messages, temperature: 0.75, max_tokens: 600 })
+        }).then(function (r) { return r.json(); })
+            .then(function (data) {
+                var reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+                reply = reply.trim().replace(/^["'""「」]+|["'""「」]+$/g, '');
+                reply = _mtFixTruncated(reply, data);
+                if (!reply) reply = '👍';
+                if (!post.comments) post.comments = [];
+                post.comments.push({
+                    name: role.nickname || role.name || '未知',
+                    avatar: role.avatar || '',
+                    text: reply,
+                    roleId: role.id,
+                    replyTo: userName,
+                    ts: Date.now()
+                });
+                saveMoments();
+                if (typeof _chatCurrentTab !== 'undefined' && _chatCurrentTab === 'moments') mtRefreshFeed();
+            }).catch(function (e) { console.warn('char reply error', e); });
+    }, 2000 + Math.floor(Math.random() * 3000));
 }
 
 /* ---------- AI 回复评论 ---------- */
+var _p = getActivePersona();
+var userName = (_p && _p.name) ? _p.name : '我';
 function momentAIReplyComment(post, userComment) {
     var role = findRole(post.roleId); if (!role) return;
     var apiConfig = getActiveApiConfig();
@@ -533,11 +717,12 @@ function momentAIReplyComment(post, userComment) {
     fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiConfig.key },
-        body: JSON.stringify({ model: apiConfig.model, messages: messages, temperature: 0.75, max_tokens: 300 })
+        body: JSON.stringify({ model: apiConfig.model, messages: messages, temperature: 0.75, max_tokens: 600 })
     }).then(function (r) { return r.json(); })
         .then(function (data) {
             var reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
             reply = reply.trim().replace(/^["'""「」]+|["'""「」]+$/g, '');
+            reply = _mtFixTruncated(reply, data);
             if (!reply) reply = '👍';
             var p2 = findMomentPost(post.id);
             if (p2) {
@@ -546,6 +731,8 @@ function momentAIReplyComment(post, userComment) {
                     name: role.nickname || role.name || '未知',
                     avatar: role.avatar || '',
                     text: reply,
+                    roleId: role.id,   // ★ 记录角色ID，方便后续二次回复
+                    replyTo: userName,   // ★ 回复谁
                     ts: Date.now()
                 };
                 // 外语评论自动翻译
@@ -655,11 +842,12 @@ function mtCharCommentOnPost(post, role) {
     fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiConfig.key },
-        body: JSON.stringify({ model: apiConfig.model, messages: messages, temperature: 0.85, max_tokens: 300 })
+        body: JSON.stringify({ model: apiConfig.model, messages: messages, temperature: 0.85, max_tokens: 600 })
     }).then(function (r) { return r.json(); })
         .then(function (data) {
             var reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
             reply = reply.trim().replace(/^["'""「」]+|["'""「」]+$/g, '');
+            reply = _mtFixTruncated(reply, data);
             if (!reply) return;
 
             // 找到动态并添加评论
@@ -671,6 +859,7 @@ function mtCharCommentOnPost(post, role) {
                 name: role.nickname || role.name || '未知',
                 avatar: role.avatar || '',
                 text: reply,
+                roleId: role.id,   // ★ 记录角色ID
                 ts: Date.now()
             };
 
@@ -841,11 +1030,12 @@ function mtShareToRole(postId, roleId) {
     fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiConfig.key },
-        body: JSON.stringify({ model: apiConfig.model, messages: messages, temperature: 0.8, max_tokens: 400 })
+        body: JSON.stringify({ model: apiConfig.model, messages: messages, temperature: 0.8, max_tokens: 600 })
     }).then(function (r) { return r.json(); })
         .then(function (data) {
             var reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
             reply = reply.trim().replace(/^["'""「」]+|["'""「」]+$/g, '');
+            reply = _mtFixTruncated(reply, data);
             if (!reply) reply = '收到~';
 
             var msgObj = {
@@ -957,11 +1147,13 @@ function generateCharMoment(role, callback) {
     fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiConfig.key },
-        body: JSON.stringify({ model: apiConfig.model, messages: messages, temperature: 0.88, max_tokens: 500 })
+        body: JSON.stringify({ model: apiConfig.model, messages: messages, temperature: 0.88, max_tokens: 800 })
     }).then(function (r) { return r.json(); })
         .then(function (data) {
             var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
             text = text.trim().replace(/^["'""「」]+|["'""「」]+$/g, '').replace(/^(动态[：:]|朋友圈[：:]|发布[：:])\s*/i, '');
+            text = _mtFixTruncated(text, data);
+
             if (!text) text = '...';
             _momentsPosts.push({
                 id: 'mp' + Date.now() + Math.random().toString(36).substr(2, 4),
