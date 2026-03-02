@@ -456,7 +456,7 @@
     fill: none;
 }
 
-/* 对话区 */
+/* 对话区 — 改为可滚动的历史列表 */
 .thtr-stage-dialog {
     flex: 1;
     display: flex;
@@ -464,21 +464,104 @@
     justify-content: flex-end;
     padding: 0 14px;
     z-index: 5;
+    overflow: hidden;
 }
 
-/* 纯白毛玻璃对话框 */
+/* 历史消息滚动区 */
+.thtr-history-scroll {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.thtr-history-scroll::-webkit-scrollbar {
+    width: 0;
+}
+
+/* ===== 新对话框样式（sketch风格） ===== */
 .thtr-dlg-box {
+    position: relative;
     background: rgba(255, 255, 255, .7);
     backdrop-filter: blur(32px);
     -webkit-backdrop-filter: blur(32px);
-    border-radius: 16px;
+    border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, .8);
     box-shadow:
         0 2px 8px rgba(0, 0, 0, .03),
         0 8px 24px rgba(0, 0, 0, .025),
         inset 0 1px 0 rgba(255, 255, 255, .9);
-    padding: 16px 18px;
-    margin-bottom: 8px;
+    padding: 28px 16px 14px;
+    margin-top: 10px;
+}
+
+/* speaker name — 小盒子浮在左上角 */
+.thtr-dlg-speaker {
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    background: rgba(255, 255, 255, .85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, .9);
+    border-radius: 8px;
+    padding: 3px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #555;
+    letter-spacing: .8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .04);
+    white-space: nowrap;
+    z-index: 2;
+}
+
+/* 文字内容 */
+.thtr-dlg-text {
+    font-size: 12.5px;
+    color: #444;
+    line-height: 1.75;
+    letter-spacing: .2px;
+    word-break: break-word;
+}
+
+.thtr-dlg-text::-webkit-scrollbar {
+    width: 0;
+}
+
+/* 控制按钮行 — 右下角 ◁ ‖ ▷ */
+.thtr-dlg-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 6px;
+}
+
+.thtr-dlg-ctrl-btn {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: .35;
+    transition: opacity .15s;
+}
+
+.thtr-dlg-ctrl-btn:active {
+    opacity: .7;
+}
+
+.thtr-dlg-ctrl-btn svg {
+    width: 13px;
+    height: 13px;
+    stroke: #444;
+    stroke-width: 2;
+    fill: none;
 }
 
 /* 可点击的对话框 — 橙光式 */
@@ -499,51 +582,71 @@
     background: rgba(255, 255, 255, .4);
 }
 
-.idle-text {
-    color: #aaa;
+.thtr-dlg-box .idle-text {
+    color: #999;
     font-size: 11px;
     text-align: center;
-    line-height: 1.8;
 }
 
-.thtr-dlg-speaker {
-    font-size: 11px;
-    font-weight: 800;
-    color: #3a3a3a;
-    letter-spacing: .8px;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(0, 0, 0, .04);
+/* 历史条目样式 */
+.thtr-history-item {
+    position: relative;
+    background: rgba(255, 255, 255, .5);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, .6);
+    padding: 28px 16px 14px;
+    margin-top: 10px;
 }
 
-.thtr-dlg-text {
-    font-size: 12.5px;
-    color: #444;
-    line-height: 2;
-    word-break: break-word;
-    max-height: 42vh;
-    overflow-y: auto;
+.thtr-history-item .thtr-dlg-speaker {
+    background: rgba(240, 240, 240, .8);
 }
 
-.thtr-dlg-text::-webkit-scrollbar {
-    width: 0;
+.thtr-history-item.user-msg {
+    background: rgba(220, 225, 230, .5);
+    border-color: rgba(200, 205, 210, .6);
 }
 
-.thtr-quote {
-    color: #3a3a3a;
-    font-weight: 600;
+.thtr-history-item .thtr-dlg-text {
+    font-size: 11.5px;
+    color: #555;
+    line-height: 1.65;
 }
 
-.thtr-action {
-    color: #888;
-    font-style: italic;
-}
-
-/* 底部翻页提示 */
+/* 提示箭头 / 结束提示 */
 .thtr-dlg-hint {
-    margin-top: 12px;
     text-align: right;
-    min-height: 16px;
+    margin-top: 6px;
+}
+
+.thtr-hint-arrow {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid rgba(0, 0, 0, .15);
+    animation: thtrBounce .8s infinite;
+}
+
+@keyframes thtrBounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(3px);
+    }
+}
+
+.thtr-hint-end {
+    font-size: 9px;
+    color: #aaa;
+    letter-spacing: .5px;
 }
 
 /* 三角箭头 — 橙光式闪烁提示 */
@@ -969,4 +1072,66 @@
 
 .thtr-style-btn.danger:active {
     background: rgba(180, 80, 80, .12);
+}
+
+/* ===== 对话框右下角 ◁ 页码 ▷ ===== */
+.thtr-dlg-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.thtr-dlg-ctrl-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: .3;
+    transition: opacity .15s;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, .03);
+}
+
+.thtr-dlg-ctrl-btn:active {
+    opacity: .6;
+}
+
+.thtr-dlg-ctrl-btn.disabled {
+    opacity: .08;
+    pointer-events: none;
+}
+
+.thtr-dlg-ctrl-btn svg {
+    width: 11px;
+    height: 11px;
+    stroke: #444;
+    stroke-width: 2;
+    fill: none;
+}
+
+.thtr-seg-idx {
+    font-size: 9px;
+    color: #999;
+    letter-spacing: .5px;
+    min-width: 32px;
+    text-align: center;
+}
+
+/* ===== 对话记录字体修正 ===== */
+.thtr-log-item .thtr-log-role {
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    color: #888 !important;
+    letter-spacing: .8px !important;
+    margin-bottom: 3px !important;
+}
+
+.thtr-log-item .thtr-log-text {
+    font-size: 10.5px !important;
+    line-height: 1.6 !important;
+    color: #555 !important;
 }
