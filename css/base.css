@@ -343,6 +343,11 @@ body {
         padding-top: 5px !important;
     }
 
+    /* ★★★ 第二页：内容稍微下移 ★★★ */
+    .page-2>.p2-page-wrap {
+        padding-top: 15px !important;
+    }
+
     /* ★★★ 第三页：整页内容统一缩放，避免间距问题 ★★★ */
     .page-3 {
         display: flex !important;
@@ -366,7 +371,7 @@ body {
     .page-3>.p3-profile-widget {
         transform: scale(0.88) !important;
         transform-origin: top center !important;
-        margin-top: 5px !important;
+        margin-top: 20px !important;
         margin-bottom: -40px !important;
         width: 100% !important;
     }
