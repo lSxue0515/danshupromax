@@ -510,7 +510,7 @@ var _muLtReplyTo = null;
 
 function _muLtOpenComment(songId, roleId) {
     _muLtCommentTarget = songId;
-    _muLtCommentCharId = roleId || '';
+    _muLtCommentRoleId = roleId || '';
     _muLtCommentText = '';
     _muLtReplyTo = null;
     _muRender();
