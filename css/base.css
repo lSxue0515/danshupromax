@@ -234,30 +234,27 @@ body {
 }
 
 /* =====================================================
-   手机端全屏适配（iOS Safari / Chrome / Edge / PWA）
+   手机端全屏适配
    核心原则：
-   ① 不写死任何像素高度，完全依赖 safe-area 动态适配
-   ② phone-frame 用 position:fixed + inset:0 铺满，
-      不写 height，避免 100dvh 在各浏览器的兼容差异
-   ③ 状态栏用 safe-area-inset-top 自动让出系统状态栏
-   ④ dock 底部用 safe-area-inset-bottom 让出手势条
-   ⑤ is-standalone class 区分 PWA 模式与浏览器模式
+   ① phone-frame 用 position:fixed + inset:0，不写 height
+   ② dock 不写死高度，用 padding-bottom 撑出安全区空间
+      但 dock 内图标行本身高度不变，不会变形
+   ③ safe-area-inset-top 自动让出刘海/灵动岛/普通机
+   ④ is-standalone 区分 PWA 与浏览器模式
    ===================================================== */
 
 @media screen and (max-width: 768px) {
 
-    /* ── 变量覆盖 ── */
+    /* ── 变量覆盖，全部归零，由 safe-area 动态撑开 ── */
     :root {
         --phone-radius: 0px;
         --phone-border: 0px;
         --home-indicator-height: 0px;
-        /* 状态栏高度 = 系统安全区顶部（刘海/灵动岛/普通机型自动适配） */
-        --status-bar-height: env(safe-area-inset-top, 0px);
-        /* 底部安全区（手势条 / 虚拟按键） */
-        --safe-bottom: env(safe-area-inset-bottom, 0px);
+        --status-bar-height: 0px;
+        --dock-height: auto;
     }
 
-    /* ── html / body 锁死，防止各浏览器弹性滚动 ── */
+    /* ── html / body 锁死视口 ── */
     html {
         position: fixed;
         width: 100%;
@@ -269,7 +266,6 @@ body {
     body {
         margin: 0;
         padding: 0;
-        /* 浏览器模式下 body 背景黑色兜底 */
         background: #000;
         overflow: hidden;
         width: 100%;
@@ -280,13 +276,13 @@ body {
         touch-action: pan-x pan-y;
     }
 
-    /* ── phone-frame：用 inset:0 铺满，不写 height ── */
-    /* inset:0 = top/right/bottom/left 全0，完全贴合视口，
-       无论 100vh/100dvh 在当前浏览器计算值如何都不影响 */
+    /* ── phone-frame：inset:0 四边贴死，不写 height ── */
     .phone-frame {
         position: fixed !important;
-        inset: 0 !important;
-        /* 四边贴死，自动铺满 */
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
         width: auto !important;
         height: auto !important;
         max-width: none !important;
@@ -307,13 +303,16 @@ body {
         display: none !important;
     }
 
-    /* 壁纸同样 inset:0，穿透到系统状态栏后面 */
+    /* 壁纸四边贴死 */
     .wallpaper {
         border-radius: 0 !important;
-        inset: 0 !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
     }
 
-    /* ── 状态栏：手机浏览器模式隐藏，PWA standalone 也隐藏（系统自带） ── */
+    /* ── 状态栏隐藏（系统自带，不需要画） ── */
     .status-bar {
         display: none !important;
         height: 0 !important;
@@ -324,7 +323,7 @@ body {
         overflow: hidden !important;
     }
 
-    /* ── home-indicator 完全移除 ── */
+    /* ── home-indicator 移除 ── */
     .home-indicator {
         display: none !important;
         height: 0 !important;
@@ -350,7 +349,6 @@ body {
     }
 
     /* ── 各页顶部避让系统状态栏安全区 ── */
-    /* safe-area-inset-top：刘海机 ≈ 44-59px，普通机 = 0，PWA standalone 下同样生效 */
     .grid-container {
         padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important;
     }
@@ -378,16 +376,28 @@ body {
         flex-shrink: 0 !important;
     }
 
-    /* ── Dock：底部加安全区 padding，不写死高度 ── */
+    /* ── Dock：
+         dock-container 本身不加 padding（避免撑高变形图标），
+         用一个伪元素在 dock 下方撑出安全区高度，
+         壁纸自然延伸过去，视觉上贴底且不挤压图标 ── */
     .dock-container {
         flex-shrink: 0 !important;
         position: relative !important;
         z-index: 10 !important;
         background: transparent !important;
         margin-bottom: 0 !important;
-        /* ★ 底部 padding = 手势条/虚拟键盘高度，自动适配所有机型 ★ */
-        padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+        padding-bottom: 0 !important;
+        /* 高度完全由内容撑开，不写死 */
         box-sizing: border-box !important;
+    }
+
+    /* 用 after 伪元素在 dock 图标下方撑出安全区空白 */
+    .dock-container::after {
+        content: '' !important;
+        display: block !important;
+        height: env(safe-area-inset-bottom, 0px) !important;
+        width: 100% !important;
+        pointer-events: none !important;
     }
 
     /* ── 所有 overlay 去圆角 + 顶部避让 ── */
@@ -425,25 +435,15 @@ body {
     }
 }
 
-/* =====================================================
-   PWA standalone 模式专属修复
-   .is-standalone 由 head 里的 JS 在启动时注入
-   ===================================================== */
-
-/* standalone 模式下 body 背景透明（壁纸直接铺满） */
+/* ── standalone 模式：body 背景透明，壁纸直接铺满 ── */
 .is-standalone body {
     background: transparent !important;
 }
 
-/* iOS PWA standalone：safe-area 正常生效，无需额外处理 */
-/* Android Chrome/Edge PWA standalone：safe-area 同样正常生效 */
-
-/* ── iOS 低版本（< iOS 11.1）safe-area 不支持时的兜底 ── */
-/* 用 @supports 检测，不支持 env() 的设备回退固定值 */
+/* ── iOS < 11.1 不支持 env() 时的固定值兜底 ── */
 @supports not (padding-top: env(safe-area-inset-top)) {
     @media screen and (max-width: 768px) {
         .grid-container {
-            /* 老 iPhone 状态栏约 20px */
             padding-top: 28px !important;
         }
 
@@ -455,9 +455,9 @@ body {
             padding-top: 28px !important;
         }
 
-        .dock-container {
-            /* 老 iPhone 无手势条，0 即可 */
-            padding-bottom: 0px !important;
+        /* 老 iPhone 无手势条，伪元素高度 0 */
+        .dock-container::after {
+            height: 0 !important;
         }
     }
 }
