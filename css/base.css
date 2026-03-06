@@ -233,28 +233,31 @@ body {
     transform: translateX(-50%) translateY(0);
 }
 
-/* ===================================================
-   手机端全屏适配
-   ① 壁纸延伸到系统状态栏后面（透明状态栏效果）
-   ② 解决 iOS/安卓 100vh 被浏览器导航栏截断
-   ③ 解决安卓各大浏览器 safe-area 返回 0 的问题
-   =================================================== */
+/* =====================================================
+   手机端全屏适配（iOS Safari / Chrome / Edge / PWA）
+   核心原则：
+   ① 不写死任何像素高度，完全依赖 safe-area 动态适配
+   ② phone-frame 用 position:fixed + inset:0 铺满，
+      不写 height，避免 100dvh 在各浏览器的兼容差异
+   ③ 状态栏用 safe-area-inset-top 自动让出系统状态栏
+   ④ dock 底部用 safe-area-inset-bottom 让出手势条
+   ⑤ is-standalone class 区分 PWA 模式与浏览器模式
+   ===================================================== */
 
-/* ── 手机端变量覆盖 ── */
 @media screen and (max-width: 768px) {
+
+    /* ── 变量覆盖 ── */
     :root {
         --phone-radius: 0px;
         --phone-border: 0px;
         --home-indicator-height: 0px;
-        /* 状态栏高度自动取系统安全区，无法读取时回退 0 */
+        /* 状态栏高度 = 系统安全区顶部（刘海/灵动岛/普通机型自动适配） */
         --status-bar-height: env(safe-area-inset-top, 0px);
-        /* 底部安全区（手势条高度） */
+        /* 底部安全区（手势条 / 虚拟按键） */
         --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
-}
 
-/* ── html / body 锁死视口 ── */
-@media screen and (max-width: 768px) {
+    /* ── html / body 锁死，防止各浏览器弹性滚动 ── */
     html {
         position: fixed;
         width: 100%;
@@ -266,27 +269,26 @@ body {
     body {
         margin: 0;
         padding: 0;
+        /* 浏览器模式下 body 背景黑色兜底 */
         background: #000;
         overflow: hidden;
         width: 100%;
-        /* 多重回退：dvh 解决安卓Chrome地址栏截断，svh 兼容中版本，vh 兜底 */
-        height: 100vh;
-        height: 100svh;
-        height: 100dvh;
+        height: 100%;
         position: fixed;
         top: 0;
         left: 0;
         touch-action: pan-x pan-y;
     }
-}
 
-/* ── phone-frame 铺满全屏 ── */
-@media screen and (max-width: 768px) {
+    /* ── phone-frame：用 inset:0 铺满，不写 height ── */
+    /* inset:0 = top/right/bottom/left 全0，完全贴合视口，
+       无论 100vh/100dvh 在当前浏览器计算值如何都不影响 */
     .phone-frame {
-        width: 100% !important;
-        /* ★ 不写 height，让 top+bottom 自动撑满，彻底消灭底部黑边 ★ */
+        position: fixed !important;
+        inset: 0 !important;
+        /* 四边贴死，自动铺满 */
+        width: auto !important;
         height: auto !important;
-        min-height: 0 !important;
         max-width: none !important;
         max-height: none !important;
         border-radius: 0 !important;
@@ -294,40 +296,45 @@ body {
         box-shadow: none !important;
         margin: 0 !important;
         padding: 0 !important;
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
         transform: none !important;
         background: transparent !important;
-        /* flex 布局让内部自然分配高度 */
         display: flex !important;
         flex-direction: column !important;
+        overflow: hidden !important;
     }
 
     .phone-frame::before {
         display: none !important;
     }
 
+    /* 壁纸同样 inset:0，穿透到系统状态栏后面 */
     .wallpaper {
         border-radius: 0 !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
+        inset: 0 !important;
     }
-}
 
-/* ── 手机端：隐藏自带状态栏（系统已有，不需要重复画） ── */
-@media screen and (max-width: 768px) {
+    /* ── 状态栏：手机浏览器模式隐藏，PWA standalone 也隐藏（系统自带） ── */
     .status-bar {
         display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
     }
-}
 
-/* ── pages-viewport 撑满剩余高度 ── */
-@media screen and (max-width: 768px) {
+    /* ── home-indicator 完全移除 ── */
+    .home-indicator {
+        display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* ── pages-viewport 撑满剩余高度 ── */
     .pages-viewport {
         flex: 1 1 0 !important;
         min-height: 0 !important;
@@ -341,22 +348,17 @@ body {
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch;
     }
-}
 
-/* ── 各页内容顶部避让系统状态栏（状态栏已隐藏，只避让安全区） ── */
-@media screen and (max-width: 768px) {
-
-    /* 通用：grid 顶部留出系统状态栏安全区高度 */
+    /* ── 各页顶部避让系统状态栏安全区 ── */
+    /* safe-area-inset-top：刘海机 ≈ 44-59px，普通机 = 0，PWA standalone 下同样生效 */
     .grid-container {
-        padding-top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+        padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important;
     }
 
-    /* 第二页 */
     .page-2>.p2-page-wrap {
-        padding-top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+        padding-top: calc(env(safe-area-inset-top, 0px) + 15px) !important;
     }
 
-    /* 第三页 */
     .page-3 {
         display: flex !important;
         flex-direction: column !important;
@@ -368,49 +370,27 @@ body {
     .page-3::before {
         display: none !important;
     }
-}
 
-/* ── Dock 贴底 + 底部安全区 ── */
-@media screen and (max-width: 768px) {
+    /* ── page-dots ── */
+    .page-dots {
+        margin: 0 !important;
+        padding: 4px 0 !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* ── Dock：底部加安全区 padding，不写死高度 ── */
     .dock-container {
         flex-shrink: 0 !important;
         position: relative !important;
         z-index: 10 !important;
         background: transparent !important;
         margin-bottom: 0 !important;
-        /* ★ 高度自动，由内容撑开，不写死84px ★ */
-        height: auto !important;
-        /* ★ 底部 padding = 手势条高度，内容在上方，手势区在下方空出来 ★ */
-        padding-top: 8px !important;
+        /* ★ 底部 padding = 手势条/虚拟键盘高度，自动适配所有机型 ★ */
         padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-        /* 内部 flex 不溢出 */
-        overflow: visible !important;
         box-sizing: border-box !important;
     }
 
-    /* dock 内的图标行不受 padding 影响，正常居中 */
-    .dock-container .app-cell {
-        flex-shrink: 0 !important;
-    }
-
-    .page-dots {
-        margin: 0 !important;
-        padding: 2px 0 !important;
-        flex-shrink: 0 !important;
-    }
-
-    .home-indicator {
-        display: none !important;
-        height: 0 !important;
-        min-height: 0 !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-}
-
-/* ── 所有 overlay 覆盖层去圆角 + 顶部避让 ── */
-@media screen and (max-width: 768px) {
-
+    /* ── 所有 overlay 去圆角 + 顶部避让 ── */
     .chat-app-overlay,
     .novel-overlay,
     .forum-overlay,
@@ -425,16 +405,12 @@ body {
         border-radius: 0 !important;
     }
 
-    /* overlay 顶部 header 避让状态栏 */
     [class*="-overlay"] [class*="-header"]:first-child,
     [class*="-overlay"]>*:first-child {
         padding-top: max(12px, env(safe-area-inset-top, 12px)) !important;
     }
-}
 
-/* ── 输入框修复（iOS 不显示内阴影） ── */
-@media screen and (max-width: 768px) {
-
+    /* ── 输入框修复（iOS 内阴影） ── */
     input[type="text"],
     input[type="search"],
     textarea,
@@ -442,11 +418,46 @@ body {
         -webkit-appearance: none;
         appearance: none;
     }
-}
 
-/* ── Toast 底部避让 ── */
-@media screen and (max-width: 768px) {
+    /* ── Toast 底部避让 ── */
     .toast {
         bottom: calc(120px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+}
+
+/* =====================================================
+   PWA standalone 模式专属修复
+   .is-standalone 由 head 里的 JS 在启动时注入
+   ===================================================== */
+
+/* standalone 模式下 body 背景透明（壁纸直接铺满） */
+.is-standalone body {
+    background: transparent !important;
+}
+
+/* iOS PWA standalone：safe-area 正常生效，无需额外处理 */
+/* Android Chrome/Edge PWA standalone：safe-area 同样正常生效 */
+
+/* ── iOS 低版本（< iOS 11.1）safe-area 不支持时的兜底 ── */
+/* 用 @supports 检测，不支持 env() 的设备回退固定值 */
+@supports not (padding-top: env(safe-area-inset-top)) {
+    @media screen and (max-width: 768px) {
+        .grid-container {
+            /* 老 iPhone 状态栏约 20px */
+            padding-top: 28px !important;
+        }
+
+        .page-2>.p2-page-wrap {
+            padding-top: 28px !important;
+        }
+
+        .page-3 {
+            padding-top: 28px !important;
+        }
+
+        .dock-container {
+            /* 老 iPhone 无手势条，0 即可 */
+            padding-bottom: 0px !important;
+        }
     }
 }
