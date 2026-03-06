@@ -284,9 +284,9 @@ body {
 @media screen and (max-width: 768px) {
     .phone-frame {
         width: 100% !important;
-        height: 100vh !important;
-        height: 100svh !important;
-        height: 100dvh !important;
+        /* ★ 不写 height，让 top+bottom 自动撑满，彻底消灭底部黑边 ★ */
+        height: auto !important;
+        min-height: 0 !important;
         max-width: none !important;
         max-height: none !important;
         border-radius: 0 !important;
@@ -294,7 +294,6 @@ body {
         box-shadow: none !important;
         margin: 0 !important;
         padding: 0 !important;
-        /* 四边锁死，防止安卓 WebView fixed 不贴顶 */
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
@@ -302,6 +301,9 @@ body {
         bottom: 0 !important;
         transform: none !important;
         background: transparent !important;
+        /* flex 布局让内部自然分配高度 */
+        display: flex !important;
+        flex-direction: column !important;
     }
 
     .phone-frame::before {
@@ -310,8 +312,9 @@ body {
 
     .wallpaper {
         border-radius: 0 !important;
-        /* 壁纸从 top:0 开始，穿透到系统状态栏后面 */
         top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
         bottom: 0 !important;
     }
 }
@@ -373,11 +376,21 @@ body {
         flex-shrink: 0 !important;
         position: relative !important;
         z-index: 10 !important;
-        /* 底部内边距 = 系统手势条高度，没有手势条时为 0 */
-        padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-        /* 壁纸延伸到底部，不留黑边 */
         background: transparent !important;
         margin-bottom: 0 !important;
+        /* ★ 高度自动，由内容撑开，不写死84px ★ */
+        height: auto !important;
+        /* ★ 底部 padding = 手势条高度，内容在上方，手势区在下方空出来 ★ */
+        padding-top: 8px !important;
+        padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+        /* 内部 flex 不溢出 */
+        overflow: visible !important;
+        box-sizing: border-box !important;
+    }
+
+    /* dock 内的图标行不受 padding 影响，正常居中 */
+    .dock-container .app-cell {
+        flex-shrink: 0 !important;
     }
 
     .page-dots {
@@ -386,7 +399,6 @@ body {
         flex-shrink: 0 !important;
     }
 
-    /* home-indicator 完全消除，由 dock 的 padding-bottom 代替 */
     .home-indicator {
         display: none !important;
         height: 0 !important;
