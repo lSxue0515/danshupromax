@@ -387,17 +387,19 @@ body {
         background: transparent !important;
         margin-bottom: 0 !important;
         padding-bottom: 0 !important;
-        /* 高度完全由内容撑开，不写死 */
         box-sizing: border-box !important;
+        /* ★ flex-wrap 让 ::after 换行到图标下方，不挤占图标横向空间 ★ */
+        flex-wrap: wrap !important;
     }
 
-    /* 用 after 伪元素在 dock 图标下方撑出安全区空白 */
-    /* 默认高度 0，只在 standalone 模式才撑开（浏览器模式 Safari 自带地址栏，safe-area 已被系统处理） */
+    /* ::after 作为换行后的占位块，撑出底部安全区，默认高度0 */
     .dock-container::after {
         content: '' !important;
         display: block !important;
-        height: 0 !important;
         width: 100% !important;
+        height: 0 !important;
+        flex-shrink: 0 !important;
+        order: 999 !important;
         pointer-events: none !important;
     }
 
