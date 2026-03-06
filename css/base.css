@@ -233,21 +233,34 @@ body {
     transform: translateX(-50%) translateY(0);
 }
 
-/* ===== 手机端全屏铺满 ===== */
-@media screen and (max-width: 768px) {
+/* ===================================================
+   手机端全屏适配
+   ① 壁纸延伸到系统状态栏后面（透明状态栏效果）
+   ② 解决 iOS/安卓 100vh 被浏览器导航栏截断
+   ③ 解决安卓各大浏览器 safe-area 返回 0 的问题
+   =================================================== */
 
+/* ── 手机端变量覆盖 ── */
+@media screen and (max-width: 768px) {
     :root {
         --phone-radius: 0px;
         --phone-border: 0px;
-        --status-bar-height: 0px;
         --home-indicator-height: 0px;
+        /* 状态栏高度自动取系统安全区，无法读取时回退 0 */
+        --status-bar-height: env(safe-area-inset-top, 0px);
+        /* 底部安全区（手势条高度） */
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
+}
 
+/* ── html / body 锁死视口 ── */
+@media screen and (max-width: 768px) {
     html {
         position: fixed;
         width: 100%;
         height: 100%;
         overflow: hidden;
+        -webkit-text-size-adjust: 100%;
     }
 
     body {
@@ -256,16 +269,23 @@ body {
         background: #000;
         overflow: hidden;
         width: 100%;
+        /* 多重回退：dvh 解决安卓Chrome地址栏截断，svh 兼容中版本，vh 兜底 */
         height: 100vh;
+        height: 100svh;
         height: 100dvh;
         position: fixed;
         top: 0;
         left: 0;
+        touch-action: pan-x pan-y;
     }
+}
 
+/* ── phone-frame 铺满全屏 ── */
+@media screen and (max-width: 768px) {
     .phone-frame {
-        width: 100vw !important;
+        width: 100% !important;
         height: 100vh !important;
+        height: 100svh !important;
         height: 100dvh !important;
         max-width: none !important;
         max-height: none !important;
@@ -274,9 +294,12 @@ body {
         box-shadow: none !important;
         margin: 0 !important;
         padding: 0 !important;
+        /* 四边锁死，防止安卓 WebView fixed 不贴顶 */
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
         transform: none !important;
         background: transparent !important;
     }
@@ -287,36 +310,70 @@ body {
 
     .wallpaper {
         border-radius: 0 !important;
+        /* 壁纸从 top:0 开始，穿透到系统状态栏后面 */
+        top: 0 !important;
+        bottom: 0 !important;
     }
+}
 
-    /* ★ 隐藏状态栏 */
+/* ── 状态栏：改为透明悬浮，不再占 flex 高度 ── */
+@media screen and (max-width: 768px) {
     .status-bar {
-        display: none !important;
-        height: 0 !important;
+        /* 脱离 flex 流，悬浮在最顶部 */
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: auto !important;
         min-height: 0 !important;
-        max-height: 0 !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        overflow: hidden !important;
+        /* 上内边距 = 系统状态栏高度，让时间/信号图标显示在状态栏区域里 */
+        padding-top: env(safe-area-inset-top, 10px) !important;
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+        padding-bottom: 6px !important;
+        /* 完全透明，壁纸透出来 */
+        background: transparent !important;
+        z-index: 100 !important;
+        /* 文字加阴影，深色壁纸也能看清 */
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5) !important;
+        /* 不拦截下方点击 */
+        pointer-events: none !important;
+        box-sizing: border-box !important;
     }
 
-    /* ★ 隐藏底部横条 */
+    /* 状态栏文字阴影加强 */
+    .status-bar .status-time,
+    .status-bar .status-model,
+    .status-bar .status-brand {
+        text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    /* 状态栏图标阴影加强 */
+    .status-bar svg,
+    .status-bar .status-icon {
+        filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5)) !important;
+    }
+}
+
+/* ── 底部横条隐藏（由系统 safe-area 接管） ── */
+@media screen and (max-width: 768px) {
     .home-indicator {
         display: none !important;
         height: 0 !important;
-        min-height: 0 !important;
-        max-height: 0 !important;
         padding: 0 !important;
         margin: 0 !important;
         overflow: hidden !important;
     }
+}
 
-    /* ★ 内容区撑满 */
+/* ── pages-viewport 撑满剩余高度 ── */
+@media screen and (max-width: 768px) {
     .pages-viewport {
         flex: 1 1 0 !important;
         min-height: 0 !important;
         overflow: hidden !important;
         height: auto !important;
+        margin-top: 0 !important;
     }
 
     .page {
@@ -324,54 +381,45 @@ body {
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch;
     }
+}
 
-    /* ★ grid 内容往上顶 */
+/* ── 各页内容顶部避让悬浮状态栏 ── */
+@media screen and (max-width: 768px) {
+
+    /* 通用：grid 顶部留出安全区高度 */
     .grid-container {
-        padding-top: 10px !important;
+        padding-top: calc(env(safe-area-inset-top, 24px) + 8px) !important;
     }
 
-    /* ★ page-dots 紧凑 */
-    .page-dots {
-        margin: 0 !important;
-        padding: 4px 0 !important;
-    }
-
-    /* ★★★ 第一页：缩小到 90% ★★★ */
+    /* 第一页：整体缩 90% + 顶部避让 */
     .page-1>.grid-container {
         transform: scale(0.90) !important;
         transform-origin: top center !important;
-        padding-top: 5px !important;
+        padding-top: calc(env(safe-area-inset-top, 24px) + 4px) !important;
     }
 
-    /* ★★★ 第二页：内容稍微下移 ★★★ */
+    /* 第二页 */
     .page-2>.p2-page-wrap {
-        padding-top: 15px !important;
+        padding-top: calc(env(safe-area-inset-top, 24px) + 12px) !important;
     }
 
-    /* ★★★ 第三页：整页内容统一缩放，避免间距问题 ★★★ */
+    /* 第三页 */
     .page-3 {
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
         padding: 0 !important;
+        padding-top: calc(env(safe-area-inset-top, 24px) + 8px) !important;
     }
 
     .page-3::before {
-        content: '' !important;
-        display: block !important;
-        width: 100% !important;
-        height: 0 !important;
-    }
-
-    /* 用一个内层包裹的思路：直接缩整个 page-3 的子元素流 */
-    .page-3>* {
-        transform-origin: top center !important;
+        display: none !important;
     }
 
     .page-3>.p3-profile-widget {
         transform: scale(0.88) !important;
         transform-origin: top center !important;
-        margin-top: 20px !important;
+        margin-top: 0 !important;
         margin-bottom: -40px !important;
         width: 100% !important;
     }
@@ -384,7 +432,6 @@ body {
         width: 100% !important;
     }
 
-    /* 第三页其他可能的子组件也缩 */
     .page-3>.p3-status-widget,
     .page-3>.p3-gallery-widget,
     .page-3>.p3-links-widget {
@@ -393,8 +440,23 @@ body {
         margin-bottom: -25px !important;
         width: 100% !important;
     }
+}
 
-    /* 所有APP覆盖层去圆角 */
+/* ── Dock 底部加安全区内边距（避开手势条） ── */
+@media screen and (max-width: 768px) {
+    .dock {
+        padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    }
+
+    .page-dots {
+        margin: 0 !important;
+        padding: 4px 0 !important;
+    }
+}
+
+/* ── 所有 overlay 覆盖层去圆角 + 顶部避让 ── */
+@media screen and (max-width: 768px) {
+
     .chat-app-overlay,
     .novel-overlay,
     .forum-overlay,
@@ -409,9 +471,28 @@ body {
         border-radius: 0 !important;
     }
 
+    /* overlay 顶部 header 避让状态栏 */
+    [class*="-overlay"] [class*="-header"]:first-child,
+    [class*="-overlay"]>*:first-child {
+        padding-top: max(12px, env(safe-area-inset-top, 12px)) !important;
+    }
+}
+
+/* ── 输入框修复（iOS 不显示内阴影） ── */
+@media screen and (max-width: 768px) {
+
     input[type="text"],
+    input[type="search"],
+    textarea,
     .chat-conv-input {
         -webkit-appearance: none;
         appearance: none;
+    }
+}
+
+/* ── Toast 底部避让 ── */
+@media screen and (max-width: 768px) {
+    .toast {
+        bottom: calc(120px + env(safe-area-inset-bottom, 0px)) !important;
     }
 }
