@@ -392,10 +392,11 @@ body {
     }
 
     /* 用 after 伪元素在 dock 图标下方撑出安全区空白 */
+    /* 默认高度 0，只在 standalone 模式才撑开（浏览器模式 Safari 自带地址栏，safe-area 已被系统处理） */
     .dock-container::after {
         content: '' !important;
         display: block !important;
-        height: env(safe-area-inset-bottom, 0px) !important;
+        height: 0 !important;
         width: 100% !important;
         pointer-events: none !important;
     }
@@ -435,9 +436,17 @@ body {
     }
 }
 
-/* ── standalone 模式：body 背景透明，壁纸直接铺满 ── */
+/* ── standalone 模式专属 ── */
+/* body 背景透明，壁纸直接铺满 */
 .is-standalone body {
     background: transparent !important;
+}
+
+/* standalone 模式下 dock 底部才撑出系统手势条高度 */
+@media screen and (max-width: 768px) {
+    .is-standalone .dock-container::after {
+        height: env(safe-area-inset-bottom, 0px) !important;
+    }
 }
 
 /* ── iOS < 11.1 不支持 env() 时的固定值兜底 ── */
