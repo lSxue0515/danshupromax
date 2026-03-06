@@ -1,7 +1,10 @@
 /* ============================================
    蛋薯机 DanShu Pro — phonesnoop.js
-   「查手机」功能 — 远程操控回消息
-   格式完全匹配 chat.js 的消息系统
+   「查手机」功能 v2
+   ★ 保留：翻看聊天记录 + 锁屏
+   ★ 移除：替 user 回消息
+   ★ 所有 AI 回复严格贴人设，绝对禁止 OOC
+   ★ 锁屏：全屏真实锁定 5 分钟，右上角可解锁
    ============================================ */
 
 var _peekPhoneTimers = {};
@@ -52,7 +55,6 @@ function getSnoopUserName(roleId) {
     return p ? p.name : 'user';
 }
 
-/* ★ 与 chat.js 完全一致的时间格式 ★ */
 function _snoopPad(n) { return n < 10 ? '0' + n : '' + n; }
 function _snoopTimeStr() {
     var d = new Date();
@@ -93,7 +95,7 @@ function renderPeekSettingHTML(roleId) {
             (interval === ivs[i].v ? ' selected' : '') + '>' + ivs[i].t + '</option>';
     }
     h += '</select></div>';
-    h += '<div class="snoop-option-hint">TA 可能会：翻看聊天记录、替你回消息、锁你屏幕</div>';
+    h += '<div class="snoop-option-hint">TA 可能会：翻看聊天记录、锁你的屏幕</div>';
     h += '</div>';
     return h;
 }
@@ -157,14 +159,15 @@ function initAllPeekTimers() {
 }
 
 /* ===================================================
-   触发
+   触发（只剩翻看记录 + 锁屏两种行为）
    =================================================== */
 function triggerPeekPhone(roleId) {
     var role = findRole(roleId);
     if (!role) return;
     var cfg = loadPeekConfig();
     if (!cfg[roleId] || !cfg[roleId].enabled) return;
-    showSnoopPopup(roleId, Math.floor(Math.random() * 3));
+    // 0 = 翻看聊天记录，1 = 锁屏
+    showSnoopPopup(roleId, Math.floor(Math.random() * 2));
     startPeekTimer(roleId);
 }
 
@@ -193,12 +196,6 @@ function showSnoopPopup(roleId, actionType) {
             btnC = "snoopActionBrowse('" + roleId + "')";
             break;
         case 1:
-            desc = cn + ' 偷偷拿走了你的手机，要替你回消息！';
-            icon = '<svg class="snoop-action-icon" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="17" r="0.5"/><path d="M9 9l2 2 4-4"/></svg>';
-            btnT = '随TA去吧...';
-            btnC = "snoopActionReply('" + roleId + "')";
-            break;
-        case 2:
             desc = cn + ' 夺走了你的手机并锁了屏！';
             icon = '<svg class="snoop-action-icon" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="17" r="0.5"/><rect x="9" y="7" width="6" height="5" rx="1"/><path d="M10 7V5.5a2 2 0 0 1 4 0V7"/></svg>';
             btnT = '好吧...';
@@ -236,18 +233,14 @@ function closeSnoopPopup() {
 }
 
 /* ===================================================
-   ★★★ 核心：往 role.msgs 推消息 ★★★
-   格式完全匹配 chat.js：
-     { from: 'self'|'other', text: '...', time: 'HH:MM' }
+   推 char 消息（other）
    =================================================== */
-
-/* 推一条 char(other) 消息 */
 function _snoopPushCharMsg(roleId, text) {
     var role = findRole(roleId);
     if (!role) return;
     if (!role.msgs) role.msgs = [];
 
-    var ts = _snoopTimeStr();
+    var ts = _snoopTimeStr();   // "HH:MM" 格式字符串
 
     role.msgs.push({
         from: 'other',
@@ -256,7 +249,8 @@ function _snoopPushCharMsg(roleId, text) {
     });
 
     role.lastMsg = text.substring(0, 30);
-    role.lastTime = Date.now();
+    // ★ 修复：lastTime 也存格式化字符串，不存 Date.now() 数字时间戳
+    role.lastTime = ts;
     role.lastTimeStr = ts;
 
     if (_chatCurrentConv !== roleId) {
@@ -269,32 +263,8 @@ function _snoopPushCharMsg(roleId, text) {
     }
 }
 
-/* 推一条 user(self) 消息（char 冒充 user 发的） */
-function _snoopPushUserMsg(targetRoleId, text) {
-    var tRole = findRole(targetRoleId);
-    if (!tRole) return;
-    if (!tRole.msgs) tRole.msgs = [];
-
-    var ts = _snoopTimeStr();
-
-    tRole.msgs.push({
-        from: 'self',
-        text: text,
-        time: ts
-    });
-
-    tRole.lastMsg = text.substring(0, 30);
-    tRole.lastTime = Date.now();
-    tRole.lastTimeStr = ts;
-    saveChatRoles();
-
-    if (_chatCurrentConv === targetRoleId && typeof _refreshConvBody === 'function') {
-        _refreshConvBody();
-    }
-}
-
 /* ===================================================
-   行为：抢回手机
+   行为：抢回手机（结合人设 + 上下文，严禁 OOC）
    =================================================== */
 function snoopResist(roleId, actionType) {
     var role = findRole(roleId);
@@ -305,19 +275,27 @@ function snoopResist(roleId, actionType) {
 
     addPeekMemory(roleId, cn + '试图查手机被' + un + '抢回来了');
 
+    // 构建贴合上下文的情景描述
+    var ctxDesc = _snoopBuildContextDesc(roleId, cn, un);
+    var actionDesc = actionType === 1
+        ? cn + '正要锁住' + un + '的手机'
+        : cn + '正在翻看' + un + '的手机';
+
     _snoopCallAI(roleId,
-        '（情景：' + cn + '正在偷看' + un + '的手机，被' + un +
-        '发现一把抢了回来。请以' + cn + '的口吻说两三句完整台词，' +
-        '可以装无辜、撒娇、恼羞成怒等，符合你的性格设定。不要跳出角色。）',
+        '【当前情景】' + actionDesc + '，被' + un + '发现，' + un + '一把把手机抢了回来。\n' +
+        ctxDesc +
+        '【你的任务】完全以' + cn + '的身份，说出此刻真实的反应台词（两三句完整的话）。' +
+        '可以是装无辜、撒娇、恼羞成怒、辩解、死要面子等，必须完全符合' + cn + '的性格和口吻，' +
+        '绝对不能跳出角色，绝对不能说出"作为AI""系统""无法"等词，说真实的人会说的话。',
         function (reply) {
             if (reply) _snoopPushCharMsg(roleId, reply);
-            _snoopShowToast(roleId, '你发现 ' + cn + ' 在偷看你的手机，抢了回来！');
+            _snoopShowToast(roleId, '你把手机抢了回来！');
         }
     );
 }
 
 /* ===================================================
-   行为0：翻看聊天记录
+   行为0：翻看聊天记录（结合人设 + 上下文，严禁 OOC）
    =================================================== */
 function snoopActionBrowse(roleId) {
     var role = findRole(roleId);
@@ -327,20 +305,23 @@ function snoopActionBrowse(roleId) {
     closeSnoopPopup();
 
     var msgs = role.msgs || [];
-    var recent = msgs.filter(function (m) { return m.from === 'self' || m.from === 'other'; }).slice(-10);
+    var recent = msgs.filter(function (m) { return m.from === 'self' || m.from === 'other'; }).slice(-12);
     var summary = '';
     for (var i = 0; i < recent.length; i++) {
         var who = recent[i].from === 'self' ? un : cn;
-        var txt = (recent[i].text || '').substring(0, 80);
+        var txt = (recent[i].text || '').substring(0, 100);
         if (txt) summary += who + '：' + txt + '\n';
     }
 
     addPeekMemory(roleId, cn + '翻看了' + un + '的手机聊天记录');
 
     _snoopCallAI(roleId,
-        '（情景：' + cn + '偷偷拿起' + un + '的手机翻看了聊天记录，看到以下内容：\n' +
-        summary + '\n请以' + cn + '的口吻评价看到的内容，两三句完整台词，' +
-        '可以吃醋、好奇、吐槽，符合你的性格设定。不要跳出角色。）',
+        '【当前情景】' + cn + '趁' + un + '不注意，偷偷拿起手机翻看了和' + un + '之间的聊天记录，看到了以下内容：\n' +
+        '---\n' + (summary || '（聊天记录为空）') + '---\n' +
+        '【你的任务】完全以' + cn + '的身份，说出翻完聊天记录后真实的感受和反应（两三句完整的话）。' +
+        '结合你们聊天的实际内容来说——可以是吃醋、心动、吐槽、好奇、感动、回忆某句话等，' +
+        '必须完全符合' + cn + '的性格和口吻，' +
+        '绝对不能跳出角色，绝对不能说"作为AI""系统""无法"等词，说真实的人会说的话。',
         function (reply) {
             if (reply) _snoopPushCharMsg(roleId, reply);
             _snoopShowToast(roleId, cn + ' 翻看了你的聊天记录');
@@ -349,155 +330,7 @@ function snoopActionBrowse(roleId) {
 }
 
 /* ===================================================
-   行为1：替 user 回消息（远程操控）
-   =================================================== */
-function snoopActionReply(roleId) {
-    var role = findRole(roleId);
-    if (!role) { closeSnoopPopup(); return; }
-    var cn = role.nickname || role.name;
-    var un = getSnoopUserName(roleId);
-    closeSnoopPopup();
-
-    /* 找目标角色 */
-    var others = [];
-    for (var i = 0; i < _chatRoles.length; i++) {
-        if (_chatRoles[i].id !== roleId) others.push(_chatRoles[i]);
-    }
-
-    /* 没有其他角色时：在自己的聊天里冒充 user 发消息 */
-    if (others.length === 0) {
-        addPeekMemory(roleId, cn + '拿' + un + '的手机在自己的聊天窗里冒充' + un + '发了消息');
-
-        _snoopCallAI(roleId,
-            '（情景：' + cn + '偷拿了' + un + '的手机，发现手机里只有和自己的聊天。' +
-            cn + '决定冒充' + un + '在自己的聊天窗口里发一条消息，比如表白、说想念、' +
-            '说好喜欢' + cn + '之类，符合' + cn + '希望' + un + '说的话。\n\n' +
-            '请严格按以下格式回复，每一行不要多余内容：\n' +
-            'FAKE：（冒充' + un + '发的那条消息）\n' +
-            'SAY：（' + cn + '发完后得意地对' + un + '说的话）\n）',
-            function (reply) {
-                var parsed = _snoopParseFakeSay(reply, un, cn);
-                _snoopPushUserMsg(roleId, parsed.fake);
-                _snoopPushCharMsg(roleId, parsed.say);
-                _snoopShowToast(roleId, cn + ' 冒充你在聊天里发了消息！');
-            }
-        );
-        return;
-    }
-
-    /* 有其他角色：在目标角色的聊天里冒充 user 发消息 */
-    var target = others[Math.floor(Math.random() * others.length)];
-    var targetName = target.nickname || target.name;
-    var targetId = target.id;
-
-    addPeekMemory(roleId, cn + '冒充' + un + '给' + targetName + '发了消息');
-
-    _snoopCallAI(roleId,
-        '（情景：' + cn + '偷拿了' + un + '的手机，打开了和「' + targetName +
-        '」的聊天。' + cn + '要冒充' + un + '给' + targetName +
-        '发一条消息——可能是宣誓主权、警告对方离' + un +
-        '远点、故意说奇怪的话搞破坏等，符合' + cn + '的性格。\n\n' +
-        '请严格按以下格式回复：\n' +
-        'FAKE：（冒充' + un + '发给' + targetName + '的那条消息内容）\n' +
-        'SAY：（' + cn + '发完后得意地对' + un + '说的话）\n）',
-        function (reply) {
-            var parsed = _snoopParseFakeSay(reply, un, cn);
-            _snoopPushUserMsg(targetId, parsed.fake);
-            _snoopPushCharMsg(roleId, parsed.say);
-            _snoopShowToast(roleId, cn + ' 冒充你给 ' + targetName + ' 发了消息！');
-
-            setTimeout(function () {
-                _snoopTriggerTargetReply(targetId, parsed.fake);
-            }, 2000 + Math.random() * 3000);
-        }
-    );
-}
-
-/* 解析 FAKE/SAY 格式 */
-function _snoopParseFakeSay(reply, userName, charName) {
-    var fake = '', say = '';
-    if (!reply) return { fake: '我好想你啊~', say: '嘿嘿，帮你发了~' };
-
-    var fm = reply.match(/FAKE[：:]\s*([\s\S]*?)(?=\nSAY|SAY[：:]|$)/i);
-    var sm = reply.match(/SAY[：:]\s*([\s\S]*?)$/i);
-
-    if (fm) fake = fm[1].trim().replace(/^[「」""''（）]+/g, '').replace(/[「」""''（）]+$/g, '');
-    if (sm) say = sm[1].trim().replace(/^[「」""''（）]+/g, '').replace(/[「」""''（）]+$/g, '');
-
-    if (!fake) {
-        var lines = reply.split('\n').filter(function (l) { return l.trim(); });
-        if (lines.length >= 2) {
-            fake = lines[0].replace(/^[^：:]*[：:]\s*/, '').trim();
-            say = lines.slice(1).join(' ').replace(/^[^：:]*[：:]\s*/, '').trim();
-        } else {
-            fake = '别找我家' + userName + '了，离远点。';
-            say = reply;
-        }
-    }
-    if (!say) say = '嘿嘿，帮你发了一条~';
-    return { fake: fake, say: say };
-}
-
-/* 触发目标角色对假消息的自动回复 */
-function _snoopTriggerTargetReply(targetRoleId, fakeUserMsg) {
-    var tRole = findRole(targetRoleId);
-    if (!tRole) return;
-
-    var apiCfg = (typeof getActiveApiConfig === 'function') ? getActiveApiConfig() : null;
-    if (!apiCfg || !apiCfg.url || !apiCfg.key || !apiCfg.model) {
-        _snoopPushCharMsg(targetRoleId, '？你在说什么啊？');
-        return;
-    }
-
-    var tn = tRole.nickname || tRole.name;
-    var un = getSnoopUserName(targetRoleId);
-    var messages = [];
-
-    /* ★ 用正确的字段构建系统提示 ★ */
-    var sys = '';
-    if (tRole.detail) sys += tRole.detail + '\n\n';
-    if (tRole.prompt) sys += tRole.prompt + '\n\n';
-    sys += '你是' + tn + '，正在和' + un + '聊天。请以' + tn + '的身份自然回复，符合你的性格设定。\n';
-    sys = sys.replace(/\{\{user\}\}/g, un);
-    messages.push({ role: 'system', content: sys });
-
-    /* 最近对话上下文 — 用正确的 from 字段 */
-    var recent = (tRole.msgs || []).filter(function (m) {
-        return m.from === 'self' || m.from === 'other';
-    }).slice(-8);
-    for (var i = 0; i < recent.length; i++) {
-        var r = recent[i].from === 'self' ? 'user' : 'assistant';
-        messages.push({ role: r, content: recent[i].text || '' });
-    }
-
-    var url = apiCfg.url.replace(/\/+$/, '') + '/chat/completions';
-
-    fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + apiCfg.key
-        },
-        body: JSON.stringify({
-            model: apiCfg.model,
-            messages: messages,
-            temperature: 0.85,
-            top_p: 0.95,
-            max_tokens: 2048
-        })
-    }).then(function (r) { return r.json(); }).then(function (data) {
-        var reply = '';
-        if (data.choices && data.choices[0] && data.choices[0].message) {
-            reply = data.choices[0].message.content || '';
-        }
-        if (reply.trim()) _snoopPushCharMsg(targetRoleId, reply.trim());
-    }).catch(function () {
-        _snoopPushCharMsg(targetRoleId, '？？你今天怎么怪怪的？');
-    });
-}
-
-/* ===================================================
-   行为2：锁屏
+   行为1：锁屏（AI 贴人设生成锁屏理由，然后真正全屏锁定）
    =================================================== */
 function snoopActionLock(roleId) {
     var role = findRole(roleId);
@@ -507,22 +340,27 @@ function snoopActionLock(roleId) {
     closeSnoopPopup();
 
     addPeekMemory(roleId, cn + '夺走了' + un + '的手机不让玩');
-    _snoopShowLockNotify(roleId, cn + ' 不让你玩手机了！');
+
+    // 先展示全屏锁屏（占位文字），AI 生成后再填入
+    _snoopShowFullLock(roleId, '');
+
+    var ctxDesc = _snoopBuildContextDesc(roleId, cn, un);
 
     _snoopCallAI(roleId,
-        '（情景：' + cn + '一把夺过' + un + '的手机藏了起来，霸道地不让' + un +
-        '玩手机。请以' + cn + '的口吻说两三句完整台词，' +
-        '表达为什么不让玩——想让' + un + '陪自己、嫌' + un +
-        '一直看手机不理自己、吃醋、想引起注意等。' +
-        '要完全符合你的性格设定，不要跳出角色。）',
+        '【当前情景】' + cn + '一把夺过' + un + '的手机，霸道地锁住了屏幕，不让' + un + '玩。\n' +
+        ctxDesc +
+        '【你的任务】完全以' + cn + '的身份，说出为什么要锁手机（两三句完整的台词）。' +
+        '可以是：一直盯着手机不理我、结合最近聊天内容吃醋或抱怨、想让' + un + '陪自己、' +
+        '占有欲、想引起注意等——必须结合你们实际聊天的氛围和内容，' +
+        '完全符合' + cn + '的性格口吻，' +
+        '绝对不能跳出角色，绝对不能说"作为AI""系统""无法"等词，说真实的人会说的话。',
         function (reply) {
             if (reply) {
                 _snoopPushCharMsg(roleId, reply);
-                var msgEl = document.getElementById('snoopLockNotifyMsg');
+                // 更新锁屏上显示的角色话语，不截断，完整显示
+                var msgEl = document.getElementById('snoopFullLockMsg');
                 if (msgEl) {
-                    var s = reply.replace(/["""「」]/g, '').replace(/\n/g, ' ');
-                    if (s.length > 50) s = s.substring(0, 50) + '...';
-                    msgEl.textContent = s;
+                    msgEl.textContent = reply;
                 }
             }
         }
@@ -530,75 +368,167 @@ function snoopActionLock(roleId) {
 }
 
 /* ===================================================
-   锁屏悬浮通知
+   ★ 真正的全屏锁屏（5 分钟，右上角可解锁）
    =================================================== */
-function _snoopShowLockNotify(roleId, defaultMsg) {
+function _snoopShowFullLock(roleId, charMsg) {
     var role = findRole(roleId);
     if (!role) return;
     var cn = esc(role.nickname || role.name);
     var av = role.avatar
         ? '<img src="' + role.avatar + '" alt="">'
-        : '<svg viewBox="0 0 24 24" width="28" height="28"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+        : '<svg viewBox="0 0 24 24" width="36" height="36"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
 
-    var old = document.getElementById('snoopLockNotify');
+    // 移除旧锁屏
+    var old = document.getElementById('snoopFullLock');
     if (old) {
         if (old.dataset.timerId) clearInterval(parseInt(old.dataset.timerId));
         if (old.parentNode) old.parentNode.removeChild(old);
     }
 
     var el = document.createElement('div');
-    el.className = 'snoop-lock-notify';
-    el.id = 'snoopLockNotify';
+    el.className = 'snoop-full-lock';
+    el.id = 'snoopFullLock';
 
     var h = '';
-    h += '<div class="snoop-lock-notify-inner">';
-    h += '<div class="snoop-lock-notify-header">';
-    h += '<div class="snoop-lock-notify-avatar">' + av + '</div>';
-    h += '<div class="snoop-lock-notify-info">';
-    h += '<div class="snoop-lock-notify-name">' + cn + ' 锁定了你的手机</div>';
-    h += '<div class="snoop-lock-notify-time" id="snoopLockNotifyTime">剩余 5:00</div>';
+    // 右上角解锁按钮
+    h += '<div class="snoop-full-lock-unlock" onclick="_snoopUnlockEarly(\'' + roleId + '\')" title="强制解锁">';
+    h += '<svg viewBox="0 0 24 24" width="18" height="18"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>';
     h += '</div>';
-    h += '<div class="snoop-lock-notify-close" onclick="_snoopCloseLockNotify()">';
-    h += '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M18 6L6 18M6 6l12 12"/></svg>';
-    h += '</div></div>';
-    h += '<div class="snoop-lock-notify-msg" id="snoopLockNotifyMsg">' + esc(defaultMsg) + '</div>';
-    h += '<div class="snoop-lock-notify-progress"><div class="snoop-lock-notify-progress-bar" id="snoopLockNotifyBar"></div></div>';
+    // 内容区
+    h += '<div class="snoop-full-lock-body">';
+    h += '<div class="snoop-full-lock-avatar">' + av + '</div>';
+    h += '<div class="snoop-full-lock-name">' + cn + ' 锁定了你的手机</div>';
+    h += '<div class="snoop-full-lock-msg" id="snoopFullLockMsg">' +
+        (charMsg ? esc(charMsg) : '等 TA 说话...') + '</div>';
+    h += '<div class="snoop-full-lock-timer" id="snoopFullLockTimer">5:00</div>';
+    h += '<div class="snoop-full-lock-progress"><div class="snoop-full-lock-bar" id="snoopFullLockBar"></div></div>';
+    h += '<div class="snoop-full-lock-tip">手机被锁住了，请等待解锁</div>';
     h += '</div>';
     el.innerHTML = h;
 
-    var target = document.querySelector('.phone-screen')
-        || document.querySelector('.phone-frame')
+    var target = document.querySelector('.phone-frame')
         || document.getElementById('phoneFrame')
         || document.body;
     target.appendChild(el);
-    setTimeout(function () { el.classList.add('show'); }, 50);
 
+    // 强制 pointer-events 拦截所有操作，但放行解锁按钮
+    el.addEventListener('touchstart', function (e) {
+        if (!e.target.closest('.snoop-full-lock-unlock')) {
+            e.stopPropagation();
+        }
+    }, true);
+    el.addEventListener('touchmove', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }, { passive: false, capture: true });
+    el.addEventListener('click', function (e) {
+        // ★ 解锁按钮及其子元素放行，其余全部拦截
+        if (!e.target.closest('.snoop-full-lock-unlock')) {
+            e.stopPropagation();
+        }
+    }, true);
+
+    // 动画入场
+    setTimeout(function () { el.classList.add('show'); }, 50);
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+
+    // 5 分钟倒计时
     var remain = 300, total = 300;
     var tid = setInterval(function () {
         remain--;
-        if (remain <= 0) { clearInterval(tid); _snoopCloseLockNotify(); showToast('手机解锁了！'); return; }
+        if (remain <= 0) {
+            clearInterval(tid);
+            _snoopCloseFullLock(roleId, true);
+            return;
+        }
         var m = Math.floor(remain / 60), s = remain % 60;
-        var te = document.getElementById('snoopLockNotifyTime');
-        if (te) te.textContent = '剩余 ' + m + ':' + (s < 10 ? '0' : '') + s;
-        var bar = document.getElementById('snoopLockNotifyBar');
+        var te = document.getElementById('snoopFullLockTimer');
+        if (te) te.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+        var bar = document.getElementById('snoopFullLockBar');
         if (bar) bar.style.width = ((total - remain) / total * 100) + '%';
     }, 1000);
     el.dataset.timerId = String(tid);
+    el.dataset.roleId = roleId;
 }
 
-function _snoopCloseLockNotify() {
-    var el = document.getElementById('snoopLockNotify');
+/* 解锁（时间到自动解锁 / 右上角手动解锁） */
+function _snoopCloseFullLock(roleId, autoUnlock) {
+    var el = document.getElementById('snoopFullLock');
     if (el) {
         if (el.dataset.timerId) clearInterval(parseInt(el.dataset.timerId));
         el.classList.remove('show');
-        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
+    }
+    if (!autoUnlock) {
+        // 手动解锁：char 说一句话（贴人设）
+        if (roleId) {
+            var role = findRole(roleId);
+            if (role) {
+                var cn = role.nickname || role.name;
+                var un = getSnoopUserName(roleId);
+                var ctxDesc = _snoopBuildContextDesc(roleId, cn, un);
+                _snoopCallAI(roleId,
+                    '【当前情景】' + un + '等不及了，强行解锁了手机。\n' +
+                    ctxDesc +
+                    '【你的任务】完全以' + cn + '的身份，说出被' + un + '解锁后的真实反应（一两句话）。' +
+                    '可以是不情愿、撒娇、无奈、继续闹别扭等，必须符合' + cn + '的性格，绝对不能跳出角色。',
+                    function (reply) {
+                        if (reply) _snoopPushCharMsg(roleId, reply);
+                        showToast('手机解锁了！');
+                    }
+                );
+            }
+        }
+    } else {
+        // 自动到时解锁：char 说一句话
+        if (roleId) {
+            var role = findRole(roleId);
+            if (role) {
+                var cn = role.nickname || role.name;
+                var un = getSnoopUserName(roleId);
+                var ctxDesc = _snoopBuildContextDesc(roleId, cn, un);
+                _snoopCallAI(roleId,
+                    '【当前情景】' + cn + '锁了' + un + '手机 5 分钟，时间到了，手机自动解锁。\n' +
+                    ctxDesc +
+                    '【你的任务】完全以' + cn + '的身份，说出此刻的反应（一两句话）。' +
+                    '可以是不舍得、条件式交还、还想继续霸占、勉为其难等，必须符合' + cn + '的性格，绝对不能跳出角色。',
+                    function (reply) {
+                        if (reply) _snoopPushCharMsg(roleId, reply);
+                        showToast('手机解锁了！');
+                    }
+                );
+            }
+        }
     }
 }
-/* 兼容旧调用名 */
-var closeSnoopLockNotify = _snoopCloseLockNotify;
+
+/* 右上角按钮触发的手动解锁 */
+function _snoopUnlockEarly(roleId) {
+    _snoopCloseFullLock(roleId, false);
+}
 
 /* ===================================================
-   聊天内操作提示条（纯视觉 DOM，不进 msgs）
+   构建最近对话上下文描述（给 AI 提示用）
+   =================================================== */
+function _snoopBuildContextDesc(roleId, cn, un) {
+    var role = findRole(roleId);
+    if (!role) return '';
+    var msgs = (role.msgs || []).filter(function (m) {
+        return (m.from === 'self' || m.from === 'other') && m.text;
+    }).slice(-8);
+    if (!msgs.length) return '';
+    var lines = [];
+    for (var i = 0; i < msgs.length; i++) {
+        var who = msgs[i].from === 'self' ? un : cn;
+        var txt = (msgs[i].text || '').substring(0, 80);
+        if (txt) lines.push(who + '：' + txt);
+    }
+    if (!lines.length) return '';
+    return '【你们最近的对话】\n' + lines.join('\n') + '\n';
+}
+
+/* ===================================================
+   聊天内操作提示条
    =================================================== */
 function _snoopShowToast(roleId, text) {
     if (_chatCurrentConv !== roleId) return;
@@ -617,9 +547,7 @@ function _snoopShowToast(roleId, text) {
 }
 
 /* ===================================================
-   ★★★ AI 调用 — 用正确的人设字段 ★★★
-   role.detail = 角色详细设定（人设卡）
-   role.prompt = 角色系统提示
+   ★★★ AI 调用核心 — 严格贴人设，绝对禁止 OOC ★★★
    =================================================== */
 function _snoopCallAI(roleId, snoopPrompt, callback) {
     var role = findRole(roleId);
@@ -635,37 +563,43 @@ function _snoopCallAI(roleId, snoopPrompt, callback) {
     var cn = role.nickname || role.name;
     var messages = [];
 
-    /* ★ 系统提示：用 role.detail + role.prompt（与 chat.js 一致）★ */
+    /* ★ 系统提示：人设 + persona + 记忆 + 严格 OOC 禁令 */
     var sys = '';
 
-    /* 角色人设 */
+    // 角色人设（核心）
     if (role.detail) sys += role.detail + '\n\n';
     if (role.prompt) sys += role.prompt + '\n\n';
 
-    /* persona 人设 */
+    // 用户人设
     var persona = (typeof getActivePersona === 'function') ? getActivePersona(roleId) : null;
     if (persona && persona.detail) {
         sys += '【用户人设】\n' + persona.detail + '\n\n';
     }
 
-    /* 查手机记忆 */
+    // 查手机记忆
     var mem = getPeekMemoryText(roleId);
     if (mem) sys += mem + '\n';
 
-    /* 互动规则 */
-    sys += '【互动规则】这是一个虚拟生活情景互动。你要完全沉浸在' + cn + '这个角色中，' +
-        '像真实的恋人/朋友一样自然说话。绝对不要提到"系统""权限""AI""指令""命令"' +
-        '"无法执行""作为AI"等词汇。说完整的话，不要突然中断。\n';
+    // ★ 严格角色扮演规则
+    sys += '【角色扮演规则 — 绝对遵守】\n' +
+        '1. 你现在完全是' + cn + '这个人，不是 AI，不是助手，不是任何程序。\n' +
+        '2. 永远不能说"作为AI""作为语言模型""系统""权限""指令""命令""无法执行""抱歉我不能"等词汇。\n' +
+        '3. 永远不能跳出角色进行说明、解释或道歉。\n' +
+        '4. 说真实的人在这个情景下会说的话，有情绪、有个性、有温度。\n' +
+        '5. 回复要简短自然（两三句话），不要长篇大论，不要说教。\n' +
+        '6. 【翻译规则】如果角色的母语不是中文（例如日语、英语、韩语等），则先用角色的母语说台词，然后在括号内附上中文翻译，格式为：\n' +
+        '   外语原文（中文翻译）\n' +
+        '   例如：さっきからそればっか見てニヤニヤしやがって。気色悪い（你刚才一直盯着那个偷笑，真讨厌）\n';
 
     sys = sys.replace(/\{\{user\}\}/g, un).replace(/\{\{char\}\}/g, cn);
     snoopPrompt = snoopPrompt.replace(/\{\{user\}\}/g, un).replace(/\{\{char\}\}/g, cn);
 
     if (sys) messages.push({ role: 'system', content: sys });
 
-    /* ★ 最近对话上下文 — 用正确的 from 字段映射 ★ */
+    // 最近对话上下文（10条，让 AI 更了解当前氛围）
     var recent = (role.msgs || []).filter(function (m) {
         return m.from === 'self' || m.from === 'other';
-    }).slice(-6);
+    }).slice(-10);
     for (var i = 0; i < recent.length; i++) {
         var apiRole = recent[i].from === 'self' ? 'user' : 'assistant';
         messages.push({ role: apiRole, content: recent[i].text || '' });
@@ -686,13 +620,21 @@ function _snoopCallAI(roleId, snoopPrompt, callback) {
             messages: messages,
             temperature: 0.85,
             top_p: 0.95,
-            max_tokens: 2048
+            max_tokens: 600
         })
     }).then(function (r) { return r.json(); }).then(function (data) {
         var reply = '';
         if (data.choices && data.choices[0] && data.choices[0].message) {
             reply = data.choices[0].message.content || '';
         }
+        // 清理多余的引号和角色前缀
+        reply = reply.trim()
+            // 只删开头多余的引号/括号（不删结尾，保护"外语（翻译）"格式）
+            .replace(/^["'""「」『』【】\[\]]+/, '')
+            // 只删结尾多余的引号（不删括号）
+            .replace(/["'""「」『』【】\[\]]+$/, '')
+            // 删除开头的角色名前缀，如"藤原池寻："
+            .replace(/^(说：|[^ ]{1,8}说：|[^ ]{1,8}[：:])/, '');
         callback(reply.trim());
     }).catch(function (err) {
         console.error('Snoop AI error:', err);
@@ -708,7 +650,6 @@ function _snoopFallback() {
         '嘻嘻，被我抓到了~你完蛋了！',
         '手机先放我这里保管！不许玩了！',
         '不许看手机了，陪我！',
-        '你的手机密码我已经知道了哦~',
         '我就看一眼嘛...你紧张什么，心虚了？'
     ];
     return r[Math.floor(Math.random() * r.length)];

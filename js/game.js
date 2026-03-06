@@ -1354,70 +1354,54 @@ function sheepStart() {
 }
 
 function _sheepInitLevel() {
-    // 12种图案，每种9张=108张，3张消除
-    var ICONS = ['🍎', '🍊', '🍋', '🍇', '🍓', '🌸', '🍰', '☕', '🎀', '💎', '🌙', '⭐'];
+    // 难度提升：16种图案，每种15张（15÷3=5组消除），共240张
+    // 5层堆叠，层间错位更密集，遮挡更多，卡槽仅7格
+    var ICONS = ['🍎', '🍊', '🍋', '🍇', '🍓', '🌸', '🍰', '☕', '🎀', '💎', '🌙', '⭐', '🍌', '🥥', '🍑', '🎵'];
     var pool = [];
     for (var i = 0; i < ICONS.length; i++) {
-        for (var j = 0; j < 9; j++) pool.push(ICONS[i]);
+        for (var j = 0; j < 15; j++) pool.push(ICONS[i]);
     }
-    // 洗牌
+    // Fisher-Yates 洗牌
     for (var k = pool.length - 1; k > 0; k--) {
         var r = Math.floor(Math.random() * (k + 1));
         var tmp = pool[k]; pool[k] = pool[r]; pool[r] = tmp;
     }
-    // 分配成4层，每层排列在网格上，有重叠
-    var layers = [];
-    var idx = 0;
-    // 第1层(底): 6x6=36张
-    var L0 = [];
-    for (var r0 = 0; r0 < 6; r0++) for (var c0 = 0; c0 < 6; c0++) {
-        if (idx < pool.length) { L0.push({ icon: pool[idx++], row: r0, col: c0, layer: 0, id: idx }); }
-    }
-    layers.push(L0);
-    // 第2层: 5x5=25张 偏移0.5
-    var L1 = [];
-    for (var r1 = 0; r1 < 5; r1++) for (var c1 = 0; c1 < 5; c1++) {
-        if (idx < pool.length) { L1.push({ icon: pool[idx++], row: r1 + 0.5, col: c1 + 0.5, layer: 1, id: idx }); }
-    }
-    layers.push(L1);
-    // 第3层: 4x4=16张 偏移1
-    var L2 = [];
-    for (var r2 = 0; r2 < 4; r2++) for (var c2 = 0; c2 < 4; c2++) {
-        if (idx < pool.length) { L2.push({ icon: pool[idx++], row: r2 + 1, col: c2 + 1, layer: 2, id: idx }); }
-    }
-    layers.push(L2);
-    // 第4层(顶): 把剩余牌散布在中间区域
-    var L3 = [];
-    var remaining = pool.length - idx;
-    var positions3 = [];
-    for (var r3 = 0; r3 < 5; r3++) for (var c3 = 0; c3 < 6; c3++) positions3.push({ row: r3 + 0.5, col: c3 });
-    // 洗positions3
-    for (var p3 = positions3.length - 1; p3 > 0; p3--) {
-        var rr = Math.floor(Math.random() * (p3 + 1));
-        var tt = positions3[p3]; positions3[p3] = positions3[rr]; positions3[rr] = tt;
-    }
-    for (var q = 0; q < remaining && q < positions3.length; q++) {
-        if (idx < pool.length) { L3.push({ icon: pool[idx++], row: positions3[q].row, col: positions3[q].col, layer: 3, id: idx }); }
-    }
-    layers.push(L3);
-
-    // 合并所有牌
+    // 5层布局，总格数 = 48+48+48+48+48 = 240，恰好容纳全部240张
+    // 每层 6行×8列 = 48格，层间用不同偏移制造大量遮挡
+    var layerConfigs = [
+        { rows: 6, cols: 8, rowOff: 0, colOff: 0 }, // 底层
+        { rows: 6, cols: 8, rowOff: 0.5, colOff: 0.5 }, // 第2层错位
+        { rows: 6, cols: 8, rowOff: 0, colOff: 0 }, // 第3层同底
+        { rows: 6, cols: 8, rowOff: 0.5, colOff: 0.5 }, // 第4层错位
+        { rows: 6, cols: 8, rowOff: 0.25, colOff: 0.25 }  // 顶层斜插，遮挡最多
+    ];
     var allTiles = [];
-    for (var li = 0; li < layers.length; li++) {
-        for (var ti = 0; ti < layers[li].length; ti++) {
-            allTiles.push(layers[li][ti]);
+    var idx = 0;
+    for (var li = 0; li < layerConfigs.length; li++) {
+        var cfg = layerConfigs[li];
+        for (var ro = 0; ro < cfg.rows; ro++) {
+            for (var co = 0; co < cfg.cols; co++) {
+                if (idx < pool.length) {
+                    allTiles.push({
+                        icon: pool[idx++],
+                        row: ro + cfg.rowOff,
+                        col: co + cfg.colOff,
+                        layer: li,
+                        id: idx
+                    });
+                }
+            }
         }
     }
-
     return {
         tiles: allTiles,
-        slot: [],           // 卡槽，最多7张
-        maxSlot: 7,
-        helpUsed: false,     // 是否已用过帮助
-        helpChar: null,      // 帮助的角色
-        helpMsg: '',         // 角色说的话
-        showHelp: false,     // 是否显示帮助弹窗
-        showCharPick: false, // 是否显示角色选择
+        slot: [],
+        maxSlot: 7,      // 卡槽保持7格，难度保证
+        helpUsed: false,
+        helpChar: null,
+        helpMsg: '',
+        showHelp: false,
+        showCharPick: false,
         gameOver: false,
         win: false
     };
@@ -1559,12 +1543,25 @@ function _sheepPickHelpChar(charId) {
     s.helpMsg = msg;
     s.showHelp = true;
 
-    // 帮助效果：移除卡槽中最左边的一张牌（放回场上顶层随机位置）
+    // ★ 修复：移除卡槽中出现次数不足3张的那种牌（避免凑不成组导致永久卡死）
+    // 统计卡槽中各图案数量
     if (s.slot.length > 0) {
-        var removed = s.slot.shift();
+        var slotCounts = {};
+        for (var sc = 0; sc < s.slot.length; sc++) {
+            var ic = s.slot[sc].icon;
+            slotCounts[ic] = (slotCounts[ic] || 0) + 1;
+        }
+        // 优先选不足3张的图案的牌放回去（这些牌留在槽里也消不掉）
+        var removeIdx = -1;
+        for (var si2 = 0; si2 < s.slot.length; si2++) {
+            if (slotCounts[s.slot[si2].icon] < 3) { removeIdx = si2; break; }
+        }
+        // 如果都够3张，则移除最后一张（腾出空间）
+        if (removeIdx === -1) removeIdx = s.slot.length - 1;
+        var removed = s.slot.splice(removeIdx, 1)[0];
         removed.layer = 4;
-        removed.row = 1 + Math.random() * 4;
-        removed.col = Math.random() * 5;
+        removed.row = 0.5 + Math.floor(Math.random() * 4);
+        removed.col = Math.floor(Math.random() * 5);
         removed.id = Date.now();
         s.tiles.push(removed);
     }
@@ -1613,9 +1610,14 @@ function _sheepRender() {
     h += '</div></div>';
 
     // 牌桌区
-    h += '<div class="sheep-board" id="sheepBoard">';
-    // 计算格子大小 — 6列，适配宽度
-    // 排序：先画底层再画顶层
+    // 每张牌 cellW×cellH，8列×6行，总宽 = 8*cellW + 额外层偏移
+    // 用 cellW=40, cellH=44，8列总宽=320px，外加最大层偏移(0.5*40=20)=340px
+    var cellW = 40, cellH = 44;
+    var boardCols = 8, boardRows = 6;
+    // board 实际宽高：多出半格偏移量 + 边距
+    var boardW = boardCols * cellW + Math.ceil(cellW * 0.5) + 8;  // ~368px
+    var boardH = boardRows * cellH + Math.ceil(cellH * 0.5) + 8;  // ~294px
+    h += '<div class="sheep-board" id="sheepBoard" style="position:relative;width:' + boardW + 'px;height:' + boardH + 'px;margin:8px auto 0;flex-shrink:0">';
     var sorted = s.tiles.slice().sort(function (a, b) {
         if (a.layer !== b.layer) return a.layer - b.layer;
         if (a.row !== b.row) return a.row - b.row;
@@ -1624,20 +1626,21 @@ function _sheepRender() {
     for (var i = 0; i < sorted.length; i++) {
         var t = sorted[i];
         var blocked = _sheepIsTileBlocked(t, s.tiles);
-        var topPx = t.row * 46 + 4;
-        var leftPx = t.col * 48 + 4;
+        var topPx = t.row * cellH + 4;
+        var leftPx = t.col * cellW + 4;
         var zIdx = t.layer * 100 + Math.floor(t.row * 10) + Math.floor(t.col);
-        var shadow = t.layer === 0 ? 'none' : '0 ' + (t.layer * 1) + 'px ' + (t.layer * 3) + 'px rgba(0,0,0,.08)';
-        var brightness = blocked ? '0.7' : '1';
+        var shadow = t.layer === 0 ? 'none' : '0 ' + t.layer + 'px ' + (t.layer * 3) + 'px rgba(0,0,0,.10)';
+        var brightness = blocked ? '0.65' : '1';
         h += '<div class="sheep-tile' + (blocked ? ' blocked' : '') + '" ';
-        h += 'style="top:' + topPx + 'px;left:' + leftPx + 'px;z-index:' + zIdx + ';box-shadow:' + shadow + ';filter:brightness(' + brightness + ')" ';
+        h += 'style="position:absolute;width:' + (cellW - 2) + 'px;height:' + (cellH - 2) + 'px;line-height:' + (cellH - 2) + 'px;font-size:22px;text-align:center;';
+        h += 'top:' + topPx + 'px;left:' + leftPx + 'px;z-index:' + zIdx + ';box-shadow:' + shadow + ';filter:brightness(' + brightness + ');" ';
         if (!blocked) h += 'onclick="_sheepClickTile(' + t.id + ')" ';
         h += '>' + t.icon + '</div>';
     }
     h += '</div>';
 
     // 卡槽
-    h += '<div class="sheep-slot">';
+    h += '<div class="sheep-slot" style="display:flex;justify-content:center;gap:4px;padding:8px 12px;flex-wrap:nowrap">';
     for (var j = 0; j < s.maxSlot; j++) {
         if (j < s.slot.length) {
             var sc = s.slot[j];
@@ -1652,8 +1655,8 @@ function _sheepRender() {
 
     // 角色选择弹窗
     if (s.showCharPick) {
-        h += '<div class="sheep-overlay">';
-        h += '<div class="sheep-modal">';
+        h += '<div class="sheep-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center">';
+        h += '<div class="sheep-modal" style="position:relative;z-index:10000;max-height:80vh;overflow-y:auto">';
         h += '<div class="sheep-modal-title">选择求助角色</div>';
         h += '<div class="sheep-modal-sub">选一个角色帮你~每局只能求助一次</div>';
         h += '<div class="sheep-char-list">';
@@ -1676,8 +1679,8 @@ function _sheepRender() {
 
     // 帮助消息弹窗
     if (s.showHelp && s.helpChar) {
-        h += '<div class="sheep-overlay" onclick="_sheepCloseHelp()">';
-        h += '<div class="sheep-help-bubble" onclick="event.stopPropagation()">';
+        h += '<div class="sheep-overlay" onclick="_sheepCloseHelp()" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center">';
+        h += '<div class="sheep-help-bubble" onclick="event.stopPropagation()" style="position:relative;z-index:10000">';
         h += '<div class="sheep-help-avatar">';
         if (s.helpChar.avatar) h += '<img src="' + _gEsc(s.helpChar.avatar) + '">';
         h += '</div>';
@@ -1690,8 +1693,8 @@ function _sheepRender() {
 
     // 胜负弹窗
     if (s.gameOver) {
-        h += '<div class="sheep-overlay">';
-        h += '<div class="sheep-result">';
+        h += '<div class="sheep-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center">';
+        h += '<div class="sheep-result" style="position:relative;z-index:10000">';
         if (s.win) {
             h += '<div class="sheep-result-icon">🎉</div>';
             h += '<div class="sheep-result-title">通关成功！</div>';

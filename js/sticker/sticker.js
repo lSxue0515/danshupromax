@@ -78,7 +78,7 @@ function renderStickerManager() {
     // 批量URL导入区
     h += '<div class="stk-section">';
     h += '<div class="stk-section-title">批量导入URL</div>';
-    h += '<textarea id="stkBatchUrlInput" class="stk-textarea" rows="3" placeholder="每行一个图片URL（支持 png/jpg/gif/webp）"></textarea>';
+    h += '<textarea id="stkBatchUrlInput" class="stk-textarea" rows="4" placeholder="每行一条，支持格式：\n纯URL：https://xxx.com/a.gif\n名字+URL：捶桌痛哭https://xxx.com/a.gif\n支持 png / jpg / jpeg / gif / webp"></textarea>';
     h += '<div class="stk-import-row">';
     h += '<select id="stkBatchTargetGroup" class="stk-select">';
     for (var g = 0; g < _stickerGroups.length; g++) {
@@ -115,15 +115,18 @@ function renderStickerManager() {
         h += '</div>';
 
         // 表情包网格
-        h += '<div class="stk-grid">';
+        h += '<div class="stk-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:8px 0">';
         if (!curGroup.stickers.length) {
-            h += '<div class="stk-empty">暂无表情包，可批量导入URL或导入JSON文件</div>';
+            h += '<div class="stk-empty" style="grid-column:1/-1">暂无表情包，可批量导入URL或导入JSON文件</div>';
         } else {
             for (var j = 0; j < curGroup.stickers.length; j++) {
                 var stk = curGroup.stickers[j];
-                h += '<div class="stk-item" data-stk-id="' + stk.id + '">';
-                h += '<img src="' + stk.url + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
-                h += '<div class="stk-item-del" onclick="event.stopPropagation();stkDeleteOne(\'' + curGroup.id + '\',\'' + stk.id + '\')">&times;</div>';
+                h += '<div class="stk-item" data-stk-id="' + stk.id + '" style="position:relative;width:100%;padding-top:100%;background:#fafafa;border-radius:8px;overflow:hidden;border:1px solid #f0e8e8">';
+                h += '<img src="' + stk.url + '" alt="" loading="lazy" '
+                    + 'style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box" '
+                    + 'onerror="this.parentElement.style.opacity=\'0.3\'">';
+                if (stk.desc) h += '<div style="position:absolute;bottom:0;left:0;right:0;font-size:9px;color:#888;text-align:center;background:rgba(255,255,255,0.85);padding:2px 3px;line-height:1.2;word-break:break-all">' + escapeHtml(stk.desc) + '</div>';
+                h += '<div class="stk-item-del" onclick="event.stopPropagation();stkDeleteOne(\'' + curGroup.id + '\',\'' + stk.id + '\')" style="position:absolute;top:2px;right:2px;width:16px;height:16px;line-height:16px;text-align:center;background:rgba(0,0,0,0.4);color:#fff;border-radius:50%;font-size:12px;cursor:pointer">&times;</div>';
                 h += '</div>';
             }
         }
@@ -187,27 +190,42 @@ function stkBatchImportUrl() {
     if (!textarea || !select) return;
 
     var lines = textarea.value.split('\n');
-    var urls = [];
+    // 支持格式：
+    //   纯URL：  https://xxx.com/a.gif
+    //   名字+URL：捶桌痛哭https://xxx.com/a.gif
+    //   名字 URL（空格分隔）：捶桌痛哭 https://xxx.com/a.gif
+    var imgExtReg = /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i;
+    var urlReg = /https?:\/\/[^\s]+/i;
+    var items = [];
     for (var i = 0; i < lines.length; i++) {
-        var u = lines[i].trim();
-        if (u && /^https?:\/\/.+/i.test(u)) urls.push(u);
+        var line = lines[i].trim();
+        if (!line) continue;
+        var match = line.match(urlReg);
+        if (!match) continue;
+        var url = match[0];
+        // 提取 URL 前面的文字作为 desc（去掉首尾空格/空格分隔符）
+        var desc = line.substring(0, match.index).trim();
+        // URL 后面若还有文字也追加到 desc
+        var afterUrl = line.substring(match.index + url.length).trim();
+        if (afterUrl) desc = desc ? desc + ' ' + afterUrl : afterUrl;
+        items.push({ url: url, desc: desc });
     }
-    if (!urls.length) { showToast('请输入有效的图片URL'); return; }
+    if (!items.length) { showToast('请输入有效的图片URL（支持 png/jpg/jpeg/gif/webp）'); return; }
 
     var grp = findStickerGroup(select.value);
     if (!grp) { showToast('请选择分组'); return; }
 
-    for (var j = 0; j < urls.length; j++) {
+    for (var j = 0; j < items.length; j++) {
         grp.stickers.push({
             id: 'st_' + Date.now() + '_' + j,
-            url: urls[j],
-            desc: ''
+            url: items[j].url,
+            desc: items[j].desc
         });
     }
     saveStickerGroups();
     textarea.value = '';
     renderStickerManager();
-    showToast('已导入 ' + urls.length + ' 个表情包');
+    showToast('已导入 ' + items.length + ' 个表情包');
 }
 
 /* ---- JSON导入/导出 ---- */
@@ -455,8 +473,20 @@ function openStickerPanel() {
     var panel = document.getElementById('chatStickerPanel');
     if (!panel) return;
     _stickerPanelOpen = true;
-    if (!_stickerActiveGroup && _stickerGroups.length) _stickerActiveGroup = _stickerGroups[0].id;
-    renderStickerPanel();
+
+    // ★ 只显示当前角色挂载的分组
+    var visibleGroups = _getMountedStickerGroups();
+
+    // 当前激活分组若不在可见列表里，重置到第一个
+    var activeInVisible = false;
+    for (var i = 0; i < visibleGroups.length; i++) {
+        if (visibleGroups[i].id === _stickerActiveGroup) { activeInVisible = true; break; }
+    }
+    if (!activeInVisible) {
+        _stickerActiveGroup = visibleGroups.length ? visibleGroups[0].id : '';
+    }
+
+    renderStickerPanel(visibleGroups);
     panel.classList.add('show');
 }
 
@@ -466,32 +496,52 @@ function closeStickerPanel() {
     _stickerPanelOpen = false;
 }
 
-function renderStickerPanel() {
+function renderStickerPanel(visibleGroups) {
     var panel = document.getElementById('chatStickerPanel');
     if (!panel) return;
 
+    // ★ 优先用传入的已过滤分组，否则兜底用全量
+    var groups = visibleGroups !== undefined ? visibleGroups : _getMountedStickerGroups();
+
     var h = '';
-    // 分组 tabs
-    h += '<div class="stk-panel-tabs">';
-    for (var i = 0; i < _stickerGroups.length; i++) {
-        var g = _stickerGroups[i];
-        var isActive = g.id === _stickerActiveGroup;
-        h += '<div class="stk-panel-tab' + (isActive ? ' active' : '') + '" onclick="stkPanelSwitchGroup(\'' + g.id + '\')">';
-        h += escapeHtml(g.name);
+
+    // 多分组时显示 tabs
+    if (groups.length > 0) {
+        h += '<div class="stk-panel-tabs">';
+        for (var i = 0; i < groups.length; i++) {
+            var g = groups[i];
+            var isActive = g.id === _stickerActiveGroup;
+            h += '<div class="stk-panel-tab' + (isActive ? ' active' : '') + '" onclick="stkPanelSwitchGroup(\'' + g.id + '\')">';
+            h += escapeHtml(g.name);
+            h += '</div>';
+        }
         h += '</div>';
     }
-    h += '</div>';
 
-    // 表情网格
-    var curGroup = findStickerGroup(_stickerActiveGroup);
-    h += '<div class="stk-panel-grid">';
-    if (!curGroup || !curGroup.stickers.length) {
-        h += '<div class="stk-panel-empty">暂无表情包<br>前往「我」→ 表情包管理 添加</div>';
+    // 找当前激活分组
+    var curGroup = null;
+    for (var ci = 0; ci < groups.length; ci++) {
+        if (groups[ci].id === _stickerActiveGroup) { curGroup = groups[ci]; break; }
+    }
+    if (!curGroup && groups.length > 0) curGroup = groups[0];
+
+    h += '<div class="stk-panel-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px;overflow-y:auto;max-height:220px">';
+    if (!curGroup || !curGroup.stickers || !curGroup.stickers.length) {
+        var emptyTip = groups.length === 0
+            ? '该角色未挂载表情包<br>前往角色设置挂载表情包分组'
+            : '暂无表情包<br>前往「我」→ 表情包管理 添加';
+        h += '<div class="stk-panel-empty" style="grid-column:1/-1;text-align:center;padding:20px;color:#aaa;font-size:12px">' + emptyTip + '</div>';
     } else {
         for (var j = 0; j < curGroup.stickers.length; j++) {
             var stk = curGroup.stickers[j];
-            h += '<div class="stk-panel-item" onclick="sendSticker(\'' + encodeURIComponent(stk.url) + '\',\'' + encodeURIComponent(stk.desc || '') + '\')">';
-            h += '<img src="' + stk.url + '" alt="" loading="lazy" onerror="this.parentElement.style.display=\'none\'">';
+            h += '<div class="stk-panel-item" onclick="sendSticker(\'' + encodeURIComponent(stk.url) + '\',\'' + encodeURIComponent(stk.desc || '') + '\')" '
+                + 'style="position:relative;width:100%;padding-top:100%;background:#fafafa;border-radius:8px;overflow:hidden;cursor:pointer;border:1px solid #f0e8e8">';
+            h += '<img src="' + stk.url + '" alt="" loading="lazy" '
+                + 'style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box" '
+                + 'onerror="this.parentElement.style.opacity=\'0.3\'">';
+            if (stk.desc) {
+                h += '<div style="position:absolute;bottom:0;left:0;right:0;font-size:9px;color:#888;text-align:center;background:rgba(255,255,255,0.88);padding:2px 3px;line-height:1.2;word-break:break-all">' + escapeHtml(stk.desc) + '</div>';
+            }
             h += '</div>';
         }
     }
@@ -502,7 +552,8 @@ function renderStickerPanel() {
 
 function stkPanelSwitchGroup(id) {
     _stickerActiveGroup = id;
-    renderStickerPanel();
+    // ★ 切换时保持挂载过滤
+    renderStickerPanel(_getMountedStickerGroups());
 }
 
 /* ---- 发送表情包 ---- */
@@ -558,4 +609,25 @@ function renderStickerBubbleRow(m, idx, myAv, roleAv) {
     h += '<div class="chat-bubble-ts">' + (m.time || '') + '</div>';
     h += '</div></div>';
     return h;
+}
+
+/* ★ 获取当前对话角色挂载的表情包分组（已过滤，供面板使用） */
+function _getMountedStickerGroups() {
+    var mountedIds = [];
+    // 从 chat.js 的全局变量取当前对话角色
+    if (typeof _chatCurrentConv !== 'undefined' && _chatCurrentConv &&
+        typeof _chatRoles !== 'undefined' && _chatRoles) {
+        for (var i = 0; i < _chatRoles.length; i++) {
+            if (_chatRoles[i].id === _chatCurrentConv) {
+                mountedIds = _chatRoles[i].stickerIds || (_chatRoles[i].stickerId ? [_chatRoles[i].stickerId] : []);
+                break;
+            }
+        }
+    }
+    // 没有挂载 → 返回空数组（面板显示"未挂载"提示）
+    if (!mountedIds.length) return [];
+    // 从 _stickerGroups 里过滤出挂载的
+    return _stickerGroups.filter(function (g) {
+        return mountedIds.indexOf(g.id) !== -1;
+    });
 }

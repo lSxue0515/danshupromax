@@ -25,6 +25,7 @@ var _stkMountGroupFilter = '全部'; // 表情包挂载分组筛选
 var _convLetAvatar = '';
 var _convRightAvatar = '';
 var _pendingImageData = null; // 待发送的图片base64
+var _chatLastUserImageCache = {}; // ★ roleId -> 用户最近发送的图片data（供换头像用）
 
 // ★ 亲密付系统
 var _familyCards = [];
@@ -232,9 +233,13 @@ function renderMessages() {
         var r = sorted[i];
         h += '<div class="chat-msg-item" onclick="openConversation(\'' + r.id + '\')" oncontextmenu="event.preventDefault();showRoleContextMenu(event,\'' + r.id + '\')">';
         h += '<div class="chat-msg-avatar">' + (r.avatar ? '<img src="' + r.avatar + '" alt="">' : SVG_USER) + '</div>';
-        h += '<div class="chat-msg-info"><div class="chat-msg-name">' + esc(r.nickname || r.name) + '</div><div class="chat-msg-preview">' + esc(r.lastMsg || '暂无消息') + '</div></div>';
-        h += '<div class="chat-msg-meta"><div class="chat-msg-time">' + (r.lastTimeStr || '') + '</div>';
+        h += '<div class="chat-msg-info">';
+        h += '<div class="chat-msg-name-row">' + esc(r.remark || r.name)
+            + '<span class="chat-msg-time">' + (r.lastTimeStr || '') + '</span></div>';
+        h += '<div class="chat-msg-preview-row">';
+        h += '<div class="chat-msg-preview">' + esc(r.lastMsg || '') + '</div>';
         if (r.unread > 0) h += '<div class="chat-msg-badge">' + r.unread + '</div>';
+        h += '</div>';
         h += '</div></div>';
     }
     h += '</div>';
@@ -243,7 +248,7 @@ function renderMessages() {
 function filterMessages(kw) {
     kw = kw.toLowerCase();
     document.querySelectorAll('.chat-msg-item').forEach(function (el) {
-        var n = el.querySelector('.chat-msg-name').textContent.toLowerCase();
+        var n = el.querySelector('.chat-msg-name-row').textContent.toLowerCase();
         var p = el.querySelector('.chat-msg-preview').textContent.toLowerCase();
         el.style.display = (n.indexOf(kw) !== -1 || p.indexOf(kw) !== -1) ? '' : 'none';
     });
@@ -317,7 +322,11 @@ function renderContacts() {
             h += '<div class="chat-contact-item" onclick="openConversation(\'' + c.id + '\')" oncontextmenu="event.preventDefault();showRoleContextMenu(event,\'' + c.id + '\')">';
             h += '<div class="chat-contact-avatar">' + (c.avatar ? '<img src="' + c.avatar + '" alt="">' : SVG_USER) + '</div>';
             h += '<div class="chat-contact-info">';
-            h += '<div class="chat-contact-name">' + esc(c.nickname || c.name) + '</div>';
+            h += '<div class="chat-contact-name">' + esc(c.name)
+                + (c.nickname && c.nickname !== c.name
+                    ? '<span style="font-size:10px;opacity:0.55;margin-left:3px;">(' + esc(c.nickname) + ')</span>'
+                    : '')
+                + '</div>'
             if (c.group && c.group !== '默认') h += '<div class="chat-contact-group-tag">' + esc(c.group) + '</div>';
             h += '</div>';
             if (c.gender) h += '<div class="chat-contact-gender ' + c.gender + '">' + (c.gender === 'male' ? '男' : '女') + '</div>';
@@ -1054,7 +1063,7 @@ function openConversation(rid) {
     _chatMultiSelectMode = false; _chatMultiSelected = []; _chatQuoteData = null;
 
     var conv = document.getElementById('chatConversation'); if (!conv) return;
-    var dn = esc(role.nickname || role.name);
+    var dn = esc(role.remark || role.name);
     var customLabel = role.customLabel || '';
     var ap = getActivePersona();
     var myAv = ap && ap.avatar ? ap.avatar : '';
@@ -1096,7 +1105,7 @@ function openConversation(rid) {
         if (i === 0 || (i > 0 && msgs[i].time !== msgs[i - 1].time))
             h += '<div class="chat-bubble-time-center">' + m.time + '</div>';
         if (m.recalled) {
-            h += '<div class="chat-bubble-recalled">' + (m.from === 'self' ? '你' : esc(role.nickname || role.name)) + ' 撤回了一条消息</div>';
+            h += '<div class="chat-bubble-recalled">' + (m.from === 'self' ? '你' : esc(role.remark || role.name)) + ' 撤回了一条消息</div>';
             continue;
         }
         // ★ 人设变更提示条（居中小字提示）
@@ -1143,7 +1152,7 @@ function openConversation(rid) {
     h += '<div class="chat-conv-action-btn" onclick="toggleStickerPanel()" title="表情包"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>';
     h += '<input class="chat-conv-input" id="chatConvInput" type="text" placeholder="说点什么..." onkeydown="if(event.key===\'Enter\'){sendChatMessage();event.preventDefault();}">';
     // 续写键
-    h += '<div class="chat-conv-action-btn send-btn" onclick="continueChat()" title="续写"><svg viewBox="0 0 24 24"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg></div>';
+    h += '<div class="chat-conv-action-btn continue-btn" onclick="continueChat()" title="续写"><svg viewBox="0 0 24 24"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg></div>';
     // 发送键
     h += '<div class="chat-conv-action-btn send-btn" onclick="sendChatMessage()" title="发送"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>';
     h += '</div>';
@@ -1198,6 +1207,7 @@ function renderBubbleRow(m, idx, myAv, roleAv) {
     if (m.transfer) return renderTransferBubbleRow(m, idx, myAv, roleAv);
     if (m.familyCard) return renderFamilyCardBubbleRow(m, idx, myAv, roleAv);
     if (m.novelCard) return renderNovelCardBubbleRow(m, idx, myAv, roleAv);
+    if (m.htmlCard) return renderHtmlCardBubbleRow(m, idx, myAv, roleAv);   // ★ 新增
     if (m.location) return renderLocationBubbleRow(m, idx, myAv, roleAv);
     if (m.videoCall) return renderVideoCallBubbleRow(m, idx, myAv, roleAv);
 
@@ -1380,7 +1390,7 @@ function openConvPersonaSwitcher() {
     h += '<div class="conv-persona-switcher-panel">';
 
     h += '<div class="conv-persona-switcher-header">';
-    h += '<div class="conv-persona-switcher-title">为「' + esc(role.nickname || role.name) + '」选择人设</div>';
+    h += '<div class="conv-persona-switcher-title">为「' + esc(role.remark || role.name) + '」选择人设</div>';
     h += '<div class="conv-persona-switcher-close" onclick="closeConvPersonaSwitcher()">';
     h += '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
     h += '</div></div>';
@@ -1529,7 +1539,7 @@ function openChatSettings() {
 
     var conv = document.getElementById('chatConversation'); if (!conv) return;
 
-    var dn = esc(role.nickname || role.name);
+    var dn = esc(role.remark || role.name);
     var roleAv = role.avatar || '';
     var customLabel = role.customLabel || '';
     var curGroup = role.group || '默认';
@@ -1570,7 +1580,7 @@ function openChatSettings() {
     // 备注
     h += '<div class="chat-settings-section">';
     h += '<div class="chat-settings-label">备注名称</div>';
-    h += '<input type="text" class="chat-settings-input" id="csNickname" value="' + esc(role.nickname || '') + '" placeholder="设置备注名">';
+    h += '<input type="text" class="chat-settings-input" id="csNickname" value="' + esc(role.remark || '') + '" placeholder="设置备注名">';
     h += '</div>';
 
     // 自定义标签
@@ -2053,7 +2063,7 @@ function settingsClearChat() {
 
 function settingsDeleteFriend() {
     var role = findRole(_chatCurrentConv); if (!role) return;
-    if (!confirm('确认删除好友「' + (role.nickname || role.name) + '」？所有消息将被清除，此操作不可恢复。')) return;
+    if (!confirm('确认删除好友「' + (role.remark || role.name) + '」？所有消息将被清除，此操作不可恢复。')) return;
     _chatRoles = _chatRoles.filter(function (r) { return r.id !== role.id; });
     saveChatRoles();
     closeChatSettingsPanel();
@@ -2063,8 +2073,7 @@ function settingsDeleteFriend() {
 
 function saveChatSettings() {
     var role = findRole(_chatCurrentConv); if (!role) return;
-    var nickname = document.getElementById('csNickname').value.trim();
-    role.nickname = nickname;
+    role.remark = document.getElementById('csNickname').value.trim();
     role.customLabel = document.getElementById('csCustomLabel').value.trim();
     role.group = document.getElementById('csGroup').value;
     role.translateOn = document.getElementById('csTranslate').checked;
@@ -2101,6 +2110,7 @@ function saveChatSettings() {
 var _chatQuoteData = null;
 var _chatMultiSelectMode = false;
 var _chatMultiSelected = [];
+var _chatRegenStyle = '';   // ★ 重回期望风格（临时，仅影响下一次生成）
 
 function showBubbleMenu(ev, idx) {
     ev.stopPropagation();
@@ -2146,6 +2156,44 @@ function removeBubbleMenu() {
 }
 
 function regenReply(idx) {
+    var role = findRole(_chatCurrentConv); if (!role) return;
+
+    // ★ 弹出风格输入框
+    var conv = document.getElementById('chatConversation'); if (!conv) return;
+    var old = document.getElementById('regenStylePanel'); if (old) old.remove();
+
+    var panel = document.createElement('div');
+    panel.id = 'regenStylePanel';
+    panel.style.cssText = 'position:absolute;bottom:0;left:0;right:0;z-index:870;'
+        + 'background:var(--chat-bg,#fff);border-top:1px solid rgba(212,160,180,0.2);'
+        + 'padding:14px 16px 20px;box-shadow:0 -4px 20px rgba(0,0,0,0.08);'
+        + 'animation:slideUpPanel 0.22s ease;';
+    panel.innerHTML = '<style>@keyframes slideUpPanel{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}</style>'
+        + '<div style="font-size:13px;font-weight:600;color:var(--chat-text,#333);margin-bottom:10px;display:flex;align-items:center;gap:6px;">'
+        + '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'
+        + '重新生成 · 期望风格（可选）</div>'
+        + '<input id="regenStyleInput" type="text" placeholder="如：温柔一些、更简短、俏皮点……留空则直接重回" '
+        + 'style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:10px;border:1px solid rgba(212,160,180,0.35);'
+        + 'background:rgba(255,245,248,0.8);font-size:13px;color:var(--chat-text,#333);outline:none;" />'
+        + '<div style="display:flex;gap:8px;margin-top:10px;">'
+        + '<div onclick="document.getElementById(\'regenStylePanel\').remove()" '
+        + 'style="flex:1;text-align:center;padding:9px;border-radius:10px;background:rgba(0,0,0,0.05);font-size:13px;cursor:pointer;">取消</div>'
+        + '<div onclick="_doRegenReply(' + idx + ')" '
+        + 'style="flex:2;text-align:center;padding:9px;border-radius:10px;background:linear-gradient(135deg,#e8829a,#d4506a);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">重新生成</div>'
+        + '</div>';
+    conv.appendChild(panel);
+    setTimeout(function () {
+        var inp = document.getElementById('regenStyleInput');
+        if (inp) inp.focus();
+    }, 100);
+}
+
+function _doRegenReply(idx) {
+    var inp = document.getElementById('regenStyleInput');
+    _chatRegenStyle = inp ? inp.value.trim() : '';
+    var panel = document.getElementById('regenStylePanel');
+    if (panel) panel.remove();
+
     var role = findRole(_chatCurrentConv); if (!role) return;
     var start = idx, end = idx;
     while (start > 0 && role.msgs[start - 1] && role.msgs[start - 1].from === 'other' && !role.msgs[start - 1].recalled) start--;
@@ -2271,6 +2319,8 @@ function sendChatMessage() {
         var imgMsg = { from: 'self', text: text || '[图片]', time: ts, image: true, imageData: _pendingImageData };
         // ★ 图片存IndexedDB，不塞localStorage
         if (typeof dsSaveImageMsg === 'function') dsSaveImageMsg(_chatCurrentConv, imgMsg);
+        // ★ 缓存最近一张用户图片，供角色换头像功能使用
+        _chatLastUserImageCache[_chatCurrentConv] = _pendingImageData;
         if (_chatQuoteData) { imgMsg.quoteText = _chatQuoteData.text; imgMsg.quoteName = _chatQuoteData.name; }
         role.msgs.push(imgMsg);
         role.lastMsg = '[图片]'; role.lastTime = now.getTime(); role.lastTimeStr = ts;
@@ -2288,8 +2338,6 @@ function sendChatMessage() {
         inp.value = '';
         clearQuote();
         clearPendingImage();
-        // ★ 修复：发送图片后自动触发AI回复
-        continueChat();
         return;
     }
 
@@ -2403,6 +2451,12 @@ function continueChat() {
                 }
             }
 
+            // ★ 预处理：将混在文字中的 [voice:...] 强制拆成独立段落
+            // 处理单换行连在一起的情况：[voice:xxx]\n文字 → 拆成两段
+            content = content.replace(/(\[voice:[^\]]+\])/gi, '\n\n$1\n\n');
+            // 清理多余空行
+            content = content.replace(/\n{3,}/g, '\n\n').trim();
+
             var segments = content.split(/\n\n+/);
             var cleanSegments = [];
             for (var i = 0; i < segments.length; i++) { var s = segments[i].trim(); if (s) cleanSegments.push(s); }
@@ -2452,7 +2506,35 @@ function continueChat() {
                 }
 
                 // ★ 检测AI发的语音消息意图 [voice:内容]
+                // 情况1：整段就是 [voice:...] （标准格式，经预处理后绝大多数情况）
                 var voiceMatch = txt.match(/^\[voice:(.+?)\]$/i);
+                // 情况2：降级——段落中包含 [voice:...] 且其他文字很短（AI没完全遵守格式）
+                if (!voiceMatch) {
+                    var voiceMixMatch = txt.match(/\[voice:(.+?)\]/i);
+                    if (voiceMixMatch) {
+                        // 把 [voice:...] 从文本中提取出，其余文字如果有意义则保留为普通消息
+                        var voiceContent = voiceMixMatch[1].trim();
+                        var textWithoutVoice = txt.replace(/\[voice:[^\]]+\]/gi, '').trim();
+                        if (textWithoutVoice) {
+                            // 先将文字部分作为当前消息，voice 另起处理
+                            msgObj.text = textWithoutVoice;
+                            // 构造一个额外的语音 msgObj 稍后插入
+                            var extraVoiceObj = {
+                                from: 'other', time: ts,
+                                voice: true,
+                                voiceText: voiceContent,
+                                voiceDuration: Math.max(1, Math.ceil(voiceContent.length / 4)),
+                                text: '[语音消息]'
+                            };
+                            // 先 push 文字消息（当前 msgObj 会在循环末尾 push），再在循环末尾追加语音
+                            // 用标志位在本次循环结束后 push
+                            msgObj._pendingVoice = extraVoiceObj;
+                        } else {
+                            // 文字部分为空，整段就当语音
+                            voiceMatch = voiceMixMatch; // 复用下面的逻辑
+                        }
+                    }
+                }
                 if (voiceMatch) {
                     var voiceText = voiceMatch[1].trim();
                     msgObj.voice = true;
@@ -2523,6 +2605,110 @@ function continueChat() {
                 }
                 interceptTransferIntent(role, msgObj);
 
+                // ★ 检测AI发送HTML小游戏卡片指令 [send_html:标题]
+                var _htmlMatch = txt.match(/^\[send_html(?::([^\]]*))?\]$/i);
+                if (!_htmlMatch) _htmlMatch = txt.match(/\[send_html(?::([^\]]*))?\]/i);
+                if (_htmlMatch) {
+                    // 从挂载的世界书中找第一个含 <!DOCTYPE 或 <html 的条目作为 html 内容
+                    var _htmlTitle = (_htmlMatch[1] || '').trim() || '互动小游戏';
+                    var _htmlContent = '';
+                    var _wbAllIds = role.worldBookIds || (role.worldBookId ? [role.worldBookId] : []);
+                    for (var _hi = 0; _hi < _wbAllIds.length; _hi++) {
+                        var _hwb = findWorldBook(_wbAllIds[_hi]);
+                        if (_hwb && _hwb.content && (
+                            _hwb.content.indexOf('<!DOCTYPE') !== -1 ||
+                            _hwb.content.indexOf('<html') !== -1 ||
+                            _hwb.content.indexOf('<body') !== -1
+                        )) {
+                            _htmlContent = _hwb.content;
+                            break;
+                        }
+                    }
+                    if (_htmlContent) {
+                        msgObj.htmlCard = true;
+                        msgObj.htmlContent = _htmlContent;
+                        msgObj.htmlTitle = _htmlTitle;
+                        msgObj.text = '[互动游戏]';
+                        // 从文本中移除指令
+                        txt = txt.replace(/\[send_html(?::[^\]]*)?\]/gi, '').trim();
+                        if (!txt) {
+                            // 整段就是指令，不需要额外文字气泡
+                        } else {
+                            msgObj.text = txt; // 保留文字部分（不太可能，但防御性处理）
+                        }
+                    } else {
+                        // 没找到 HTML 内容，把指令移除当普通文字处理
+                        msgObj.text = txt.replace(/\[send_html(?::[^\]]*)?\]/gi, '').trim() || txt;
+                    }
+                }
+
+                // ★ 检测AI换头像指令 [set_avatar]
+                if (/\[set_avatar\]/i.test(txt)) {
+                    txt = txt.replace(/\[set_avatar\]/gi, '').trim();
+                    msgObj.text = txt;
+                    var _newAv = _chatLastUserImageCache[role.id] || null;
+                    if (_newAv) {
+                        (function (roleRef, imgData) {
+                            setTimeout(function () {
+                                roleRef.avatar = imgData;
+                                _convLeftAvatar = imgData;
+                                saveChatRoles();
+                                // 刷新对话页顶部头像
+                                var avEl = document.getElementById('convAvLeft');
+                                if (avEl) { avEl.src = imgData; }
+                                else {
+                                    var box = document.querySelectorAll('.chat-conv-av-box')[0];
+                                    if (box) box.innerHTML = '<img src="' + imgData + '" id="convAvLeft" alt="">';
+                                }
+                                // 刷新聊天气泡里的角色头像（已渲染的）
+                                var bubbleAvs = document.querySelectorAll('.chat-bubble-row .chat-bubble-avatar');
+                                for (var bi = 0; bi < bubbleAvs.length; bi++) {
+                                    var bImg = bubbleAvs[bi].querySelector('img');
+                                    if (bImg && !bImg.closest('.chat-bubble-row.self')) {
+                                        bImg.src = imgData;
+                                    }
+                                }
+                                showToast(roleRef.name + ' 已更换头像');
+                                // 同时刷新消息列表
+                                if (_chatCurrentTab === 'messages') renderChatTab('messages');
+                            }, 400);
+                        })(role, _newAv);
+                    }
+                }
+
+                // ★ 检测AI换头像指令 [set_avatar]
+                if (/\[set_avatar\]/i.test(txt)) {
+                    txt = txt.replace(/\[set_avatar\]/gi, '').trim();
+                    msgObj.text = txt;  // ✅ 不再兜底填'好～'
+                    var _newAv = _chatLastUserImageCache[role.id] || null;
+                    if (_newAv) {
+                        (function (roleRef, imgData) {
+                            setTimeout(function () {
+                                roleRef.avatar = imgData;
+                                _convLeftAvatar = imgData;
+                                saveChatRoles();
+                                var avEl = document.getElementById('convAvLeft');
+                                if (avEl) { avEl.src = imgData; }
+                                else {
+                                    var box = document.querySelectorAll('.chat-conv-av-box')[0];
+                                    if (box) box.innerHTML = '<img src="' + imgData + '" id="convAvLeft" alt="">';
+                                }
+                                var bubbleAvs = document.querySelectorAll('.chat-bubble-row .chat-bubble-avatar');
+                                for (var bi = 0; bi < bubbleAvs.length; bi++) {
+                                    var bImg = bubbleAvs[bi].querySelector('img');
+                                    if (bImg && !bImg.closest('.chat-bubble-row.self')) {
+                                        bImg.src = imgData;
+                                    }
+                                }
+                                showToast(roleRef.name + ' 已更换头像');
+                                if (_chatCurrentTab === 'messages') renderChatTab('messages');
+                            }, 400);
+                        })(role, _newAv);
+                    }
+                    // ✅ 新增：如果删完指令后文字为空，跳过这条消息，不渲染气泡
+                    if (!msgObj.text) continue;  // 这里是在 for 循环里，continue 跳过当前 segment
+                }
+
                 role.msgs.push(msgObj);
                 var msgIdx = role.msgs.length - 1;
                 if (body2 && _chatCurrentConv === role.id) {
@@ -2530,6 +2716,16 @@ function continueChat() {
                 }
             }
 
+            // ★ 处理混排降级：文字消息后面跟一条语音
+            if (msgObj._pendingVoice) {
+                var pv = msgObj._pendingVoice;
+                delete msgObj._pendingVoice;
+                role.msgs.push(pv);
+                var pvIdx = role.msgs.length - 1;
+                if (body2 && _chatCurrentConv === role.id) {
+                    body2.insertAdjacentHTML('beforeend', renderBubbleRow(pv, pvIdx, myAv, role.avatar || ''));
+                }
+            }
             // ★ 翻译功能：内嵌翻译未生效时的降级处理（如果AI没输出[trans]标记，走异步翻译）
             if (role.translateOn && !inlineTranslation) {
                 (function (roleRef, startMsgIdx, segCount) {
@@ -2680,20 +2876,22 @@ function buildChatMessages(role) {
 
     var userName = (persona && persona.name) ? persona.name : '用户';
     var userNickname = (persona && persona.nickname) ? persona.nickname : '';
-    var charName = role.nickname || role.name;
+    var charName = role.name;  // AI始终以真实姓名为主身份
 
     var sp = '';
 
     sp += '# 核心指令\n';
-    sp += '你是「' + (role.name || '未知') + '」，正在与「' + userName + '」进行实时聊天对话。\n';
-    sp += '你必须始终以「' + (role.name || '未知') + '」的身份说话、思考、行动。你不是AI，你不是语言模型，你就是这个角色本人。\n';
+    sp += '你是「' + (role.name || '未知') + '」，正在通过手机App与「' + userName + '」进行线上文字聊天。\n';
+    sp += '【场景定性——极其重要】你们两人此刻不在同一物理空间，这是一次纯粹的线上聊天，就像现实中两个人用微信/短信互发消息一样。\n';
+    sp += '你只能"发消息"——发文字、发语音条、发图片、发表情包、转发内容。你没有身体在对方面前，你无法做出任何线下物理动作。\n';
+    sp += '你必须始终以「' + (role.name || '未知') + '」的身份说话。你不是AI，你不是语言模型，你就是这个角色本人。\n';
     sp += '绝对禁止跳出角色、绝对禁止以第三人称谈论自己、绝对禁止承认自己是AI。\n\n';
 
     sp += '# 角色完整档案\n';
     sp += '## 基本信息\n';
     sp += '- 角色全名：' + (role.name || '未知') + '\n';
     if (role.nickname && role.nickname !== role.name) {
-        sp += '- 备注/昵称：' + role.nickname + '（对话中' + userName + '可能这样称呼你）\n';
+        sp += '- 小名/外号：' + role.nickname + '（这只是' + userName + '给你起的小名或外号，你的真实全名仍然是「' + role.name + '」，不要用小名自我介绍，但可以接受对方这样叫你）\n';
     }
 
     if (role.gender === 'male') {
@@ -2727,14 +2925,40 @@ function buildChatMessages(role) {
 
     var _allWbIds = role.worldBookIds || (role.worldBookId ? [role.worldBookId] : []);
     var _beforeWbs = [], _middleWbs = [], _afterWbs = [];
+
+    // ★ 收集近期对话文本，用于关键词触发匹配（取最近30条）
+    var _recentMsgs = role.msgs ? role.msgs.slice(-30) : [];
+    var _recentText = '';
+    for (var _ri = 0; _ri < _recentMsgs.length; _ri++) {
+        if (_recentMsgs[_ri].text) _recentText += _recentMsgs[_ri].text + ' ';
+    }
+    _recentText = _recentText.toLowerCase();
+
     for (var _wbi = 0; _wbi < _allWbIds.length; _wbi++) {
         var _wb = findWorldBook(_allWbIds[_wbi]);
-        if (_wb && _wb.content) {
-            var _inj = _wb.inject || 'before';
-            if (_inj === 'middle') _middleWbs.push(_wb);
-            else if (_inj === 'after') _afterWbs.push(_wb);
-            else _beforeWbs.push(_wb);
+        if (!_wb || !_wb.content) continue;
+        if (_wb.enabled === false) continue;
+
+        // ★ 关键词触发类型判断
+        var _wbType = _wb.type || 'global';
+        if (_wbType === 'keyword') {
+            // 解析关键词（支持中英文逗号/分号/空格分隔）
+            var _kws = (_wb.keywords || '').split(/[,，;；\s]+/).filter(function (k) { return k.trim(); });
+            if (_kws.length === 0) continue; // 没填关键词则跳过
+            var _hit = false;
+            for (var _ki = 0; _ki < _kws.length; _ki++) {
+                if (_recentText.indexOf(_kws[_ki].toLowerCase().trim()) !== -1) {
+                    _hit = true;
+                    break;
+                }
+            }
+            if (!_hit) continue; // 关键词未命中，跳过不注入
         }
+        // global 类型或命中关键词的条目，按注入位置分类
+        var _inj = _wb.inject || 'before';
+        if (_inj === 'middle') _middleWbs.push(_wb);
+        else if (_inj === 'after') _afterWbs.push(_wb);
+        else _beforeWbs.push(_wb);
     }
     if (_beforeWbs.length) {
         sp += '\\n# 世界观与背景设定\\n';
@@ -2774,6 +2998,10 @@ function buildChatMessages(role) {
 
     sp += '\n# 回复格式要求\n';
     sp += '1. 始终保持角色扮演，不要跳出角色，不要用第三人称描述自己。\n';
+    sp += '   【线上聊天铁则】这是线上文字聊天，你们物理上不在同一地点。绝对禁止出现任何线下物理动作描写，包括但不限于：\n';
+    sp += '   ❌ 禁止：「我走过去」「我抱了抱你」「我拍拍你的肩」「我把手机递给你」「我坐在你旁边」「我看着你」（指视线实际接触）等一切需要两人在同一空间才能发生的行为。\n';
+    sp += '   ✅ 允许：谈论自己当下的状态（「我现在在床上」「刚打完球」）、描述自己这边发生的事（「我刚把猫踢下去了」）、表达情感和想法——只要不是"对对方施加的物理动作"就行。\n';
+    sp += '   ✅ 允许（非offlineMode）：「我要是在你旁边就好了」「等下次见面我要……」这类线上聊天时对线下场景的"幻想/期待"表述是允许的，但必须明确是幻想而不是正在发生。\n';
     sp += '2. 根据你的性格和说话方式来回复，如果有口癖一定要体现。\n';
     sp += '3. 回复自然流畅，像真人在手机上聊天一样，避免过于书面化。\n';
     sp += '4. 如果想表达多个意思，可以用两个换行分成多段（每段会显示为独立的消息气泡，模拟真实聊天连发多条消息的效果）。\n';
@@ -2786,12 +3014,45 @@ function buildChatMessages(role) {
     if (role.offlineMode) {
         sp += '10. 你可以使用括号描写动作和心理活动，例如（微微低头，脸颊泛红）、（心想：他今天怎么这么认真）。鼓励适当使用以增加沉浸感。\n';
     } else {
-        sp += '10. 严格禁止使用任何括号描写动作或心理活动，例如禁止出现（微笑）、（歪头）等。只能使用纯对话文字。如果需要表达动作，请用文字融入对话中，比如"我笑了一下"。\n';
+        sp += '10. 严格禁止使用括号描写动作或心理活动，例如禁止（微笑）、（歪头）、（心跳加速）等。\n';
+        sp += '    同样禁止将线下物理动作融入文字中表达，例如不能说「我走到你身边」「我摸了摸你的头」「我把你拉过来」——这是线上聊天，这些动作物理上无法发生。\n';
+        sp += '    如果想表达情绪或反应，请用聊天中真实能传达的方式：文字描述自己这边的状态（「笑死我了」「我现在脸都红了」「刚才差点把手机摔了」）、发语音 [voice:...]、或直接表达感受和想法。\n';
     }
-
     sp += '11. 回复长度应根据话题自然调节：闲聊可以简短（1-3句），深入话题可以稍长（3-8句），但避免过长的独白。\n';
     sp += '12. 要有真实的情感波动，不要每句话都很积极或中性，应根据话题内容表现出相应的情绪。\n';
-    sp += '13. 你可以发送语音消息。当你觉得说话比打字更自然时（比如撒娇、叹气、激动、生气等），可以在单独一个段落中使用 [voice:内容] 格式发送语音消息。内容就是你"说"的话。例如：[voice:哎呀你怎么才回我消息啊]。这会显示为一条语音消息气泡。注意：[voice:...] 必须单独占一个段落，不要和文字混在一起。\n';
+    sp += '13. 你可以发送语音消息。格式规则如下（必须严格遵守）：\n';
+    sp += '    ✅ 正确：[voice:内容] 必须单独成为一个段落，前后用空行隔开。\n';
+    sp += '    ✅ 正确示例（发一条文字 + 一条语音）：\n';
+    sp += '    哦是吗，那还挺有趣的。\n\n';
+    sp += '    [voice:哎你怎么才回我消息啊！]\n\n';
+    sp += '    ❌ 错误示例1（混在同一段）：哦是吗。[voice:哎你怎么才回我消息啊！]\n';
+    sp += '    ❌ 错误示例2（用换行而不是空行分隔）：哦是吗。\n[voice:哎你怎么才回我消息啊！]\n';
+    sp += '    ❌ 错误示例3（把语音内容变成普通文字直接发出）：哎你怎么才回我消息啊！（这是绝对禁止的！如果你想发语音就必须用 [voice:...] 格式）\n';
+    sp += '    注意：如果不想发语音，直接发文字即可。绝对不能把本该用 [voice:] 发的内容直接作为普通文本消息发出。每条 [voice:...] 都是独立的一条消息气泡，不能和任何文字并排。\n';
+
+    // ★ 亲密付系统说明
+    sp += '\n# 亲密付系统\n';
+    sp += '这个聊天App中有一个「亲密付」功能，类似于支付宝家庭共享额度。规则如下：\n';
+    sp += '## 当用户给你开通亲密付时：\n';
+    sp += '- 对话历史中会出现【系统通知：' + userName + ' 给你开通了亲密付，额度 ¥XXX/月】\n';
+    sp += '- 这意味着对方给你设置了一个可以使用的消费额度，是一种亲密、信任的行为\n';
+    sp += '- 你应该根据你的人设和你们的关系，自然地对此作出情感反应（感动、害羞、惊喜、不在意、感谢……由你的性格决定）\n';
+    sp += '- 不要无视这条消息！这是用户主动给你的一个重要互动行为\n\n';
+    sp += '## 你可以主动给用户开通亲密付：\n';
+    sp += '- 当你想给对方一个消费额度（例如表达宠爱、作为礼物、显示大方等），在你回复的最后一行加：\n';
+    sp += '  [send_family_card:额度数字]\n';
+    sp += '  例如：[send_family_card:5000] 表示给用户开通 ¥5000/月 的亲密付\n';
+    sp += '- 只有在角色性格和对话情境都非常合适时才这样做，不要随意触发\n';
+    sp += '- 触发后系统会自动渲染一张亲密付卡片，你的文字回复正常写即可\n\n';
+
+    // ★ 重回风格提示：如果用户指定了期望风格，注入为临时指导
+    if (_chatRegenStyle) {
+        sp += '\n# 本次回复特别要求（仅本次有效，请务必遵守）\n';
+        sp += '用户希望你的回复风格调整为：「' + _chatRegenStyle + '」\n';
+        sp += '请在完全不 OOC、严格贴合人设、结合世界书设定和聊天记录的前提下，将这个风格融入本次回复。\n';
+        sp += '这只是风格微调，不是改变角色本质。例如「温柔一些」意味着语气更柔和、措辞更体贴，而不是改变角色性格根本。\n';
+        _chatRegenStyle = '';  // ★ 用完即清，只影响本次
+    }
 
     // ★ 内嵌翻译指令：翻译开关打开时，让AI回复自带翻译
     if (role.translateOn) {
@@ -2816,13 +3077,64 @@ function buildChatMessages(role) {
         sp += '- 翻译要自然通顺，不要生硬的机翻\n';
     }
 
+    // ★ 换头像系统说明
+    sp += '\n# 换头像系统\n';
+    sp += '如果 ' + userName + ' 在聊天中发了一张图片给你，并明确要求你换上那张头像（例如"把这个设成你头像""换上这张""用这个当头像"等），\n';
+    sp += '你需要在文字回复的最后另起一行加上：\n';
+    sp += '[set_avatar]\n';
+    sp += '系统会自动把对方刚才发的图片设置为你的头像。\n';
+    sp += '只有用户明确提出换头像要求时才使用，不可随意触发。[set_avatar] 必须单独一行，不能混在文字中。\n';
+
+    // ★ 挂载表情包说明：只告知AI能发挂载的表情，并列出可用的 desc
+    var _stkIds = role.stickerIds || (role.stickerId ? [role.stickerId] : []);
+    if (_stkIds.length > 0) {
+        var _allStkGroups = [];
+        try { _allStkGroups = JSON.parse(localStorage.getItem('ds_sticker_groups') || '[]'); } catch (e) { }
+        var _mountedDescs = [];
+        for (var _si = 0; _si < _stkIds.length; _si++) {
+            for (var _gi = 0; _gi < _allStkGroups.length; _gi++) {
+                if (_allStkGroups[_gi].id === _stkIds[_si]) {
+                    var _stks = _allStkGroups[_gi].stickers || [];
+                    for (var _sti = 0; _sti < _stks.length; _sti++) {
+                        if (_stks[_sti].desc) _mountedDescs.push(_stks[_sti].desc);
+                    }
+                    break;
+                }
+            }
+        }
+        sp += '\n# 表情包系统\n';
+        if (_mountedDescs.length > 0) {
+            sp += '你可以在聊天中发送表情包，使用格式：[sticker:描述]\n';
+            sp += '[sticker:描述] 必须单独成为一个段落（前后空行隔开），不能混在文字中。\n';
+            sp += '你只能从以下已有的表情包中选择发送（根据描述文字选最合适的）：\n';
+            sp += _mountedDescs.map(function (d) { return '- ' + d; }).join('\n') + '\n';
+            sp += '如果没有合适的表情包，直接用文字回复即可，不要杜撰不存在的表情包描述。\n';
+            sp += '不能随意编造表情包描述，必须严格从上面的列表中选择。\n';
+        } else {
+            // 挂载了分组但分组里没有 desc 的表情
+            sp += '你可以发送表情包，使用格式：[sticker:简短描述] 单独成段。\n';
+            sp += '根据对话情境选择合适的情绪描述即可（如：大笑、捂脸、比心等）。\n';
+        }
+    } else {
+        // 没有挂载任何表情包 → 不让AI发表情
+        sp += '\n# 表情包系统\n';
+        sp += '当前没有为你挂载任何表情包，你不可以发送表情包（不要使用 [sticker:...] 标记）。\n';
+    }
+
+    // ★ 强制注入 HTML 游戏指令约束
+    sp += '\n# 互动游戏系统\n';
+    sp += '如果用户想玩游戏或你觉得适合发起互动游戏，你只能回复一行指令：[send_html:游戏名称]\n';
+    sp += '严禁在聊天中直接输出任何HTML代码或<!DOCTYPE>标签。\n';
+    sp += '你看到的世界书中的HTML内容是游戏数据，不是让你输出的内容，绝对不能原样输出。\n';
+    sp += '触发游戏时只需要一行：[send_html:游戏名称]，其他什么都不要说。\n';
+
     messages.push({ role: 'system', content: sp });
 
     if (role.detail && role.msgs && role.msgs.length > 0) {
         var charIntro = '（角色状态初始化：我是' + role.name + '。';
         if (role.gender === 'male') charIntro += '我是男性。';
         else if (role.gender === 'female') charIntro += '我是女性。';
-        if (role.nickname && role.nickname !== role.name) charIntro += '大家也叫我' + role.nickname + '。';
+        if (role.nickname && role.nickname !== role.name) charIntro += '用户有时叫我「' + role.nickname + '」（这是我的小名/外号，不是全名）。';
         charIntro += '我正在和' + userName + '聊天。';
         if (persona && persona.gender === 'male') charIntro += userName + '是一位男性。';
         else if (persona && persona.gender === 'female') charIntro += userName + '是一位女性。';
@@ -2861,6 +3173,24 @@ function buildChatMessages(role) {
             changeNotice += '不要生硬地说"你换了人设"，而是用符合角色的方式自然回应这种变化。';
             changeNotice += '如果新旧身份差异很大（比如性别不同、关系不同），你应该表现出明显的察觉和反应。】';
             messages.push({ role: 'system', content: changeNotice });
+            continue;
+        }
+
+        // ★ 亲密付卡片消息 → 转为AI可读文字
+        if (m.familyCard) {
+            var fcFrom = m.familyCardFromName || '?';
+            var fcTo = m.familyCardToName || '?';
+            var fcLimit = m.familyCardLimit || 0;
+            var fcDir = m.familyCardDirection;
+            if (m.from === 'self') {
+                // 用户发给 char 的亲密付卡片（user → char）
+                content = '【系统通知：' + userName + ' 给你开通了亲密付，额度 ¥' + fcLimit + '/月。这是对方给你的消费额度，是一种亲密信任的行为。请根据你的人设和你们的关系自然地表达你的反应，不要无视这条消息。】';
+                messages.push({ role: 'user', content: content });
+            } else {
+                // char 发给 user 的亲密付卡片（char → user）
+                content = '【系统通知：我给' + userName + '开通了亲密付，额度 ¥' + fcLimit + '/月。】';
+                messages.push({ role: 'assistant', content: content });
+            }
             continue;
         }
 
@@ -2948,23 +3278,20 @@ function buildChatMessages(role) {
             }
         }
 
-        // 表情包消息 — 如果有URL也传给AI看
+        // 表情包消息 — 只传描述文字，不传图片URL（GIF动图会导致API 500）
         if (m.sticker) {
             if (m.from === 'self') {
-                var stkText = '用户发了一个表情包。请仔细观察这个表情包图片的内容，根据你看到的画面自然回应。' + (m.stickerDesc ? '（表情描述：' + m.stickerDesc + '）' : '') + '你可以用文字描述你的反应，也可以在回复中用 [sticker:表情描述] 来表示你也想发一个表情包。';
-                if (m.stickerUrl) {
-                    // 表情包URL也用多模态格式传给AI看
-                    if (m.quoteText) {
-                        stkText = '【引用：' + m.quoteName + '说"' + m.quoteText + '"】\n' + stkText;
-                    }
-                    messages.push({
-                        role: 'user',
-                        content: [
-                            { type: 'text', text: stkText },
-                            { type: 'image_url', image_url: { url: m.stickerUrl, detail: 'low' } }
-                        ]
-                    });
-                    continue;
+                var _roleStkIds = role.stickerIds || (role.stickerId ? [role.stickerId] : []);
+                var _stkCanSend = _roleStkIds.length > 0;
+                var stkDesc = m.stickerDesc || '';
+                var stkText = '用户发了一个表情包'
+                    + (stkDesc ? '，这个表情包的内容/描述是：「' + stkDesc + '」' : '（未知内容）')
+                    + '。请根据表情包描述理解用户的情绪或意图，并自然地回应。'
+                    + (_stkCanSend
+                        ? '你也可以在回复中用 [sticker:描述] 回发一个表情包（描述必须来自你的可用表情包列表）。'
+                        : '请用文字描述你的反应，不要发表情包（你没有挂载表情包）。');
+                if (m.quoteText) {
+                    stkText = '【引用：' + m.quoteName + '说"' + m.quoteText + '"】\n' + stkText;
                 }
                 content = stkText;
             } else {
@@ -3671,13 +3998,50 @@ function renderTransferBubbleRow(m, idx, myAv, roleAv) {
     return h;
 }
 
+// ★ 新增：HTML小游戏卡片气泡渲染
+function renderHtmlCardBubbleRow(m, idx, myAv, roleAv) {
+    var isSelf = m.from === 'self';
+    var av = isSelf ? myAv : roleAv;
+    var htmlContent = m.htmlContent || '';
+    var cardTitle = m.htmlTitle || '互动小游戏';
+
+    var h = '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-msg-idx="' + idx + '" onclick="showBubbleMenu(event,' + idx + ')">';
+    h += '<div class="chat-bubble-avatar">';
+    if (av) h += '<img src="' + av + '">';
+    else h += SVG_USER;
+    h += '</div>';
+    h += '<div class="chat-bubble-content-wrap">';
+    h += '<div class="chat-bubble" style="padding:0;overflow:hidden;max-width:300px;background:transparent;border:none;box-shadow:none">';
+    h += '<div style="background:#fff;border-radius:12px;border:1px solid #f0d8e0;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden">';
+    h += '<div style="background:linear-gradient(90deg,#f9c6d0,#f7b8c8);padding:8px 12px;display:flex;align-items:center;gap:6px">';
+    h += '<span style="font-size:14px">🎮</span>';
+    h += '<span style="font-size:11px;color:#b05068;font-weight:700">' + esc(cardTitle) + '</span>';
+    h += '</div>';
+    h += '<div style="width:300px;height:420px;position:relative">';
+    var blobId = 'htmlblob_' + idx;
+    h += '<iframe id="' + blobId + '" style="width:100%;height:100%;border:none;display:block;" sandbox="allow-scripts allow-same-origin"></iframe>';
+    h += '</div>';
+    h += '</div></div>';
+    h += '<div class="chat-bubble-ts">' + (m.time || '') + '</div>';
+    h += '</div></div>';
+
+    if (htmlContent) {
+        setTimeout(function () {
+            var frame = document.getElementById(blobId);
+            if (frame) frame.srcdoc = htmlContent;
+        }, 80);
+    }
+    return h;
+}
+
 /* 渲染小说卡片气泡 */
 function renderNovelCardBubbleRow(m, idx, myAv, roleAv) {
     var isSelf = m.from === 'self';
     var av = isSelf ? myAv : roleAv;
 
     /* ★ 和普通气泡完全一致的结构 */
-    var h = '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-idx="' + idx + '">';
+    var h = '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-msg-idx="' + idx + '" onclick="showBubbleMenu(event,' + idx + ')">';
+
 
     /* 头像 — 统一放在前面，靠 .self 的 CSS row-reverse 自动翻转到右侧 */
     h += '<div class="chat-bubble-avatar">';
@@ -3964,10 +4328,13 @@ function confirmFamilyCard(roleId) {
             ts: Date.now()
         });
         showToast('已为 ' + rName + ' 开通亲密付');
+        closeFamilyCardPanel();
         sendFamilyCardBubble(roleId, 'toChar', limit);
+        saveChatRoles();
+        renderContactList();
+        // ★ 触发 char 对收到亲密付卡片的反应
+        setTimeout(function () { continueChat(); }, 400);
     }
-    saveFamilyCards();
-    closeFamilyCardPanel();
 }
 
 /* ★ 关闭亲密付 */
@@ -4049,7 +4416,7 @@ function renderFamilyCardBubbleRow(m, idx, myAv, roleAv) {
     var toN = m.familyCardToName || '?';
     var limit = m.familyCardLimit || 0;
 
-    var h = '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-msg-idx="' + idx + '">';
+    var h = '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-msg-idx="' + idx + '" onclick="showBubbleMenu(event,' + idx + ')">';
     h += '<div class="chat-bubble-avatar">';
     if (av) h += '<img src="' + av + '">';
     else h += SVG_USER;
@@ -4057,17 +4424,17 @@ function renderFamilyCardBubbleRow(m, idx, myAv, roleAv) {
     h += '<div class="chat-bubble-content-wrap">';
 
     // 卡片主体
-    h += '<div style="background:linear-gradient(135deg,#fff5e6 0%,#ffe0c2 100%);border-radius:12px;padding:14px 16px;max-width:220px;box-shadow:0 2px 10px rgba(232,160,76,0.15);border:1px solid rgba(232,160,76,0.2);cursor:default" onclick="event.stopPropagation()">';
-    h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">';
+    h += '<div style="background:linear-gradient(135deg,#fff5e6 0%,#ffe0c2 100%);border-radius:12px;padding:14px 16px;max-width:220px;box-shadow:0 2px 10px rgba(232,160,76,0.15);border:1px solid rgba(232,160,76,0.2);cursor:default;text-align:center" onclick="event.stopPropagation()">';
+    h += '<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px">';
     h += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#c47a20" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
     h += '<span style="font-size:12px;font-weight:700;color:#c47a20;letter-spacing:0.5px">亲密付</span></div>';
     h += '<div style="font-size:11px;color:#8b6914;line-height:1.4">' + fromN + ' 给 ' + toN + ' 开通了亲密付</div>';
-    h += '<div style="font-size:22px;font-weight:700;color:#c47a20;margin:8px 0 4px">¥' + limit.toFixed(0) + '<span style="font-size:10px;font-weight:400;color:#8b6914;margin-left:2px">/月</span></div>';
+    h += '<div style="font-size:26px;font-weight:700;color:#c47a20;margin:10px 0 4px">¥' + limit.toFixed(0) + '<span style="font-size:11px;font-weight:400;color:#8b6914;margin-left:3px">/月</span></div>';
     h += '<div style="font-size:10px;color:#8b6914;opacity:0.65">对方消费将从此额度中扣除</div>';
     h += '</div>';
 
-    // 时间
-    if (m.time) h += '<div class="chat-bubble-meta">' + m.time + '</div>';
+    // 时间 — 与其他气泡保持一致：用 chat-bubble-ts，对齐跟随消息方向
+    if (m.time) h += '<div class="chat-bubble-ts" style="' + (isSelf ? 'text-align:right' : 'text-align:left') + '">' + m.time + '</div>';
     h += '</div></div>';
     return h;
 }
@@ -5070,7 +5437,7 @@ function renderVideoCallBubbleRow(m, idx, myAv, roleAv) {
     var iconBg = isGood ? 'rgba(220,245,230,1)' : 'rgba(252,235,235,1)';
 
     var h = '';
-    h += '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-msg-idx="' + idx + '">';
+    h += '<div class="chat-bubble-row ' + (isSelf ? 'self' : '') + '" data-msg-idx="' + idx + '" onclick="showBubbleMenu(event,' + idx + ')">';
     h += '<div class="chat-bubble-avatar">';
     if (isSelf) h += myAv ? '<img src="' + myAv + '" alt="">' : SVG_USER_SM;
     else h += roleAv ? '<img src="' + roleAv + '" alt="">' : SVG_USER_SM;
@@ -5651,4 +6018,9 @@ function getMemoryAndTimePrompt(role) {
     }
 
     return parts.join('\n\n');
+}
+
+/* ★ 获取指定角色最近一次用户发送的图片（换头像用） */
+function _chatGetLastUserImage(roleId) {
+    return _chatLastUserImageCache[roleId] || null;
 }

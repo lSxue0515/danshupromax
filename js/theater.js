@@ -15,6 +15,11 @@ var _thPersona = null;
 var _thCustomCSS = '';
 var _thStyleEl = null;
 
+// ===== 记忆总结系统 =====
+var _thMemSummaries = [];   // 每个阶段的总结 [{phase:N, summary:'...', count:N}]
+var _thLastSumCount = 0;    // 上次触发总结时的对话条数
+
+
 /* ★ vivo等安卓机型键盘弹出适配 */
 var _thKbFixTimer = null;
 
@@ -140,6 +145,103 @@ function _thLoadMemory(roleId) {
 
 function _thClearMemory(roleId) {
     try { localStorage.removeItem(_thMemoryKey(roleId)); } catch (e) { }
+}
+
+/* ===== 记忆总结存储 ===== */
+function _thSumKey(roleId) { return '_thSum_' + (roleId || 'default'); }
+
+function _thLoadSummaries(roleId) {
+    try { var r = localStorage.getItem(_thSumKey(roleId)); return r ? JSON.parse(r) : []; } catch (e) { return []; }
+}
+
+function _thSaveSummaries(roleId, arr) {
+    try { localStorage.setItem(_thSumKey(roleId), JSON.stringify(arr)); } catch (e) { }
+}
+
+function _thClearSummaries(roleId) {
+    try { localStorage.removeItem(_thSumKey(roleId)); } catch (e) { }
+}
+
+/* 每10条对话自动触发一次总结 */
+function _thAutoSummaryCheck() {
+    if (!_thRole) return;
+    var total = _thHistory.length;
+    // 每隔10条触发一次（只统计user+assistant，也就是_thHistory全部）
+    if (total > 0 && total % 10 === 0 && total !== _thLastSumCount) {
+        _thLastSumCount = total;
+        _thRunSummary(false);
+    }
+}
+
+/* 执行总结（manual=true表示手动拉取） */
+function _thRunSummary(manual) {
+    var api = _thGetApi();
+    if (!api.url || !api.key) {
+        if (manual && typeof showToast === 'function') showToast('请先设置API');
+        return;
+    }
+    if (!_thRole) return;
+
+    var roleId = _thRole.id;
+    var existingSums = _thLoadSummaries(roleId);
+    var phaseNum = existingSums.length + 1;
+
+    // 取最近10条做本阶段总结（手动模式取全部未总结部分）
+    var startIdx = manual ? (_thLastSumCount) : (Math.max(0, _thHistory.length - 10));
+    var slice = _thHistory.slice(startIdx);
+    if (slice.length === 0) {
+        if (manual && typeof showToast === 'function') showToast('暂无新内容可总结');
+        return;
+    }
+
+    if (manual && typeof showToast === 'function') showToast('正在生成记忆总结...');
+
+    var r = _thRole;
+    var sys = '你是剧情总结助手。请对以下对话内容进行阶段总结，要求：\n';
+    sys += '1. 概括本阶段的核心事件、情感走向、关键转折\n';
+    sys += '2. 用第三人称叙述，简洁清晰，100-200字\n';
+    sys += '3. 标注情感基调（如：温馨/紧张/暧昧/伤感等）\n';
+    sys += '4. 不要罗列每句话，要提炼精华\n';
+    sys += '角色：' + (r.name || '未知') + '\n';
+
+    var msgs = [{ role: 'system', content: sys }];
+    var dialogText = '';
+    for (var i = 0; i < slice.length; i++) {
+        var m = slice[i];
+        var spk = m.role === 'user' ? (_thPersona ? _thPersona.name : 'YOU') : (r.name || 'AI');
+        dialogText += spk + '：' + m.content + '\n\n';
+    }
+    msgs.push({ role: 'user', content: '请总结以下第' + phaseNum + '阶段对话：\n\n' + dialogText });
+
+    var endpoint = _thBuildEndpoint(api.url);
+    fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api.key },
+        body: JSON.stringify({ model: api.model, messages: msgs, temperature: 0.7, max_tokens: 512 })
+    })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            var text = '';
+            if (data.choices && data.choices[0]) {
+                if (data.choices[0].message) text = data.choices[0].message.content || '';
+                else if (data.choices[0].text) text = data.choices[0].text;
+            }
+            if (!text) return;
+            var newSum = {
+                phase: phaseNum,
+                summary: text.trim(),
+                count: _thHistory.length,
+                time: new Date().toLocaleDateString('zh-CN')
+            };
+            existingSums.push(newSum);
+            _thSaveSummaries(roleId, existingSums);
+            if (manual && typeof showToast === 'function') showToast('第' + phaseNum + '阶段总结已生成');
+            // 如果记忆面板正开着，刷新它
+            if (document.getElementById('thtrMemPanel')) { _thCloseMemPanel(); _thOpenMemPanel(); }
+        })
+        .catch(function (err) {
+            if (manual && typeof showToast === 'function') showToast('总结失败: ' + (err.message || ''));
+        });
 }
 
 /* 初始化时注入自定义CSS */
@@ -270,6 +372,7 @@ function _thSelectRole(roleId) {
         _thSegments = mem.segments || [];
         _thSegIdx = mem.segIdx || 0;
         _thPhase = mem.phase || 'input';
+        _thLastSumCount = _thHistory.length;   // ← 新增，防止加载后立即触发
         _thPersona = null;
         if (mem.personaId) {
             var personas = (typeof _chatPersonas !== 'undefined' && _chatPersonas) ? _chatPersonas : [];
@@ -400,6 +503,8 @@ function _thResumeStage() {
 function _thNewStage() {
     if (!_thRole) return;
     _thClearMemory(_thRole.id);
+    _thClearSummaries(_thRole.id);   // ← 新增
+    _thLastSumCount = 0;              // ← 新增
     _thEnterStage();
 }
 
@@ -418,6 +523,8 @@ function _thRenderStage() {
     h += '<div class="thtr-stage-top" style="flex-shrink:0;">';
     h += '<div class="thtr-stage-name">' + _thEsc(r.name) + '</div>';
     h += '<div class="thtr-stage-btns">';
+    /* ★ 记忆总结按钮 */
+    h += '<div class="thtr-stage-btn thtr-mem-btn" onclick="_thOpenMemPanel()" title="Memory Summary 记忆总结"><svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5c0 2.1-1.2 3.9-3 4.7V13h2l-4 4-4-4h2v-1.3A5 5 0 0112 2z"/><path d="M9 17H6a2 2 0 00-2 2v1h16v-1a2 2 0 00-2-2h-3"/></svg></div>';
     /* ★ 文风按钮 */
     h += '<div class="thtr-stage-btn" onclick="_thOpenWF()" title="Writing Style 文风"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>';
     /* ★ 对话记录按钮 */
@@ -608,6 +715,7 @@ function _thSend() {
     _thHistory.push({ role: 'user', content: text });
     _thPhase = 'input';
     _thSaveMemory();
+    _thAutoSummaryCheck();
     _thRenderStage();
 }
 
@@ -688,6 +796,7 @@ function _thGenerate() {
                 return;
             }
             _thHistory.push({ role: 'assistant', content: text });
+            _thAutoSummaryCheck();   // ← 新增
             _thSegments = _thSplitSegs(text);
             _thSegIdx = 0;
             _thPhase = 'reading';
@@ -881,4 +990,120 @@ function _thDelWF(idx) {
 
 function _thClearActiveWF() {
     _thActiveStyle = null; _thSaveStyles(); _thCloseWF(); _thOpenWF();
+}
+
+
+/* ===== ★ 记忆总结面板 ===== */
+function _thOpenMemPanel() {
+    var el = document.getElementById('theaterOverlay'); if (!el) return;
+    if (document.getElementById('thtrMemPanel')) return;
+    var roleId = _thRole ? _thRole.id : null;
+    var sums = roleId ? _thLoadSummaries(roleId) : [];
+
+    var h = '<div class="thtr-log-overlay">';
+    h += '<div class="thtr-log-header">';
+    h += '<div class="thtr-log-title">MEMORY SUMMARY 记忆总结</div>';
+    h += '<div style="display:flex;align-items:center;gap:8px;">';
+    h += '<div class="thtr-mem-pull-btn" onclick="_thManualSummary()">手动拉取</div>';
+    h += '<div class="thtr-log-close" onclick="_thCloseMemPanel()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>';
+    h += '</div></div>';
+
+    h += '<div class="thtr-log-list">';
+
+    if (sums.length === 0) {
+        h += '<div class="thtr-mem-empty">';
+        h += '<div class="thtr-mem-empty-title">暂无记忆总结</div>';
+        h += '<div class="thtr-mem-empty-hint">每10条对话自动生成一次<br>也可点击右上角「手动拉取」</div>';
+        h += '</div>';
+    } else {
+        for (var i = 0; i < sums.length; i++) {
+            var s = sums[i];
+            var cardId = 'thtrMemCard' + i;
+            var bodyId = 'thtrMemBody' + i;
+            h += '<div class="thtr-mem-phase-card" id="' + cardId + '">';
+            /* 头部：点击折叠/展开 */
+            h += '<div class="thtr-mem-phase-header" onclick="_thToggleMemCard(' + i + ')">';
+            h += '<div class="thtr-mem-phase-badge">第 ' + s.phase + ' 阶段</div>';
+            h += '<div style="display:flex;align-items:center;gap:8px;">';
+            h += '<div class="thtr-mem-phase-meta">' + _thEsc(s.time || '') + ' · 第' + s.count + '条</div>';
+            h += '<div class="thtr-mem-chevron" id="thtrMemChev' + i + '">&#8964;</div>';
+            h += '</div></div>';
+            /* 内容区（默认折叠，点击展开） */
+            h += '<div class="thtr-mem-phase-body" id="' + bodyId + '" style="display:none;">';
+            h += '<div class="thtr-mem-phase-text">' + _thEsc(s.summary) + '</div>';
+            h += '<div class="thtr-mem-phase-actions">';
+            h += '<div class="thtr-mem-copy-btn" onclick="_thCopySum(' + i + ')">复制全文</div>';
+            h += '</div></div>';
+            h += '</div>';
+        }
+    }
+
+    h += '</div></div>';
+
+    var panel = document.createElement('div');
+    panel.id = 'thtrMemPanel';
+    panel.style.cssText = 'position:absolute;inset:0;z-index:110;';
+    panel.innerHTML = h;
+    el.appendChild(panel);
+}
+
+function _thCloseMemPanel() {
+    var p = document.getElementById('thtrMemPanel');
+    if (p) p.remove();
+}
+
+function _thManualSummary() {
+    // 手动拉取：强制用当前未被总结的内容生成
+    if (!_thRole) return;
+    var existingSums = _thLoadSummaries(_thRole.id);
+    // 找出上次总结到的位置
+    var lastCount = existingSums.length > 0 ? existingSums[existingSums.length - 1].count : 0;
+    _thLastSumCount = lastCount;
+    _thRunSummary(true);
+}
+
+
+/* 展开/折叠某个阶段卡片 */
+function _thToggleMemCard(idx) {
+    var body = document.getElementById('thtrMemBody' + idx);
+    var chev = document.getElementById('thtrMemChev' + idx);
+    if (!body) return;
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        if (chev) chev.style.transform = 'rotate(180deg)';
+    } else {
+        body.style.display = 'none';
+        if (chev) chev.style.transform = 'rotate(0deg)';
+    }
+}
+
+/* 复制某个阶段总结全文 */
+function _thCopySum(idx) {
+    var roleId = _thRole ? _thRole.id : null;
+    if (!roleId) return;
+    var sums = _thLoadSummaries(roleId);
+    if (!sums[idx]) return;
+    var text = '【第' + sums[idx].phase + '阶段总结】\n' + sums[idx].summary;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+            if (typeof showToast === 'function') showToast('已复制第' + sums[idx].phase + '阶段总结');
+        }).catch(function () { _thCopyFallback(text); });
+    } else {
+        _thCopyFallback(text);
+    }
+}
+
+function _thCopyFallback(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-999px;left:-999px;opacity:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+        document.execCommand('copy');
+        if (typeof showToast === 'function') showToast('已复制');
+    } catch (e) {
+        if (typeof showToast === 'function') showToast('复制失败，请手动长按');
+    }
+    document.body.removeChild(ta);
 }
