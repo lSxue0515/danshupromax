@@ -233,34 +233,21 @@ body {
     transform: translateX(-50%) translateY(0);
 }
 
-/* =====================================================
-   手机端全屏适配
-   核心原则：
-   ① phone-frame 用 position:fixed + inset:0，不写 height
-   ② dock 不写死高度，用 padding-bottom 撑出安全区空间
-      但 dock 内图标行本身高度不变，不会变形
-   ③ safe-area-inset-top 自动让出刘海/灵动岛/普通机
-   ④ is-standalone 区分 PWA 与浏览器模式
-   ===================================================== */
-
+/* ===== 手机端全屏铺满 ===== */
 @media screen and (max-width: 768px) {
 
-    /* ── 变量覆盖，全部归零，由 safe-area 动态撑开 ── */
     :root {
         --phone-radius: 0px;
         --phone-border: 0px;
-        --home-indicator-height: 0px;
         --status-bar-height: 0px;
-        --dock-height: auto;
+        --home-indicator-height: 0px;
     }
 
-    /* ── html / body 锁死视口 ── */
     html {
         position: fixed;
         width: 100%;
         height: 100%;
         overflow: hidden;
-        -webkit-text-size-adjust: 100%;
     }
 
     body {
@@ -269,22 +256,17 @@ body {
         background: #000;
         overflow: hidden;
         width: 100%;
-        height: 100%;
+        height: 100vh;
+        height: 100dvh;
         position: fixed;
         top: 0;
         left: 0;
-        touch-action: pan-x pan-y;
     }
 
-    /* ── phone-frame：inset:0 四边贴死，不写 height ── */
     .phone-frame {
-        position: fixed !important;
-        top: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        width: auto !important;
-        height: auto !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
         max-width: none !important;
         max-height: none !important;
         border-radius: 0 !important;
@@ -292,27 +274,22 @@ body {
         box-shadow: none !important;
         margin: 0 !important;
         padding: 0 !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
         transform: none !important;
         background: transparent !important;
-        display: flex !important;
-        flex-direction: column !important;
-        overflow: hidden !important;
     }
 
     .phone-frame::before {
         display: none !important;
     }
 
-    /* 壁纸四边贴死 */
     .wallpaper {
         border-radius: 0 !important;
-        top: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        left: 0 !important;
     }
 
-    /* ── 状态栏隐藏（系统自带，不需要画） ── */
+    /* ★ 隐藏状态栏 */
     .status-bar {
         display: none !important;
         height: 0 !important;
@@ -323,23 +300,23 @@ body {
         overflow: hidden !important;
     }
 
-    /* ── home-indicator 移除 ── */
+    /* ★ 隐藏底部横条 */
     .home-indicator {
         display: none !important;
         height: 0 !important;
         min-height: 0 !important;
+        max-height: 0 !important;
         padding: 0 !important;
         margin: 0 !important;
         overflow: hidden !important;
     }
 
-    /* ── pages-viewport 撑满剩余高度 ── */
+    /* ★ 内容区撑满 */
     .pages-viewport {
         flex: 1 1 0 !important;
         min-height: 0 !important;
         overflow: hidden !important;
         height: auto !important;
-        margin-top: 0 !important;
     }
 
     .page {
@@ -348,62 +325,76 @@ body {
         -webkit-overflow-scrolling: touch;
     }
 
-    /* ── 各页顶部避让系统状态栏安全区 ── */
+    /* ★ grid 内容往上顶 */
     .grid-container {
-        padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important;
+        padding-top: 10px !important;
     }
 
+    /* ★ page-dots 紧凑 */
+    .page-dots {
+        margin: 0 !important;
+        padding: 4px 0 !important;
+    }
+
+    /* ★★★ 第一页：缩小到 90% ★★★ */
+    .page-1>.grid-container {
+        transform: scale(0.90) !important;
+        transform-origin: top center !important;
+        padding-top: 5px !important;
+    }
+
+    /* ★★★ 第二页：内容稍微下移 ★★★ */
     .page-2>.p2-page-wrap {
-        padding-top: calc(env(safe-area-inset-top, 0px) + 15px) !important;
+        padding-top: 15px !important;
     }
 
+    /* ★★★ 第三页：整页内容统一缩放，避免间距问题 ★★★ */
     .page-3 {
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
         padding: 0 !important;
-        padding-top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
     }
 
     .page-3::before {
-        display: none !important;
-    }
-
-    /* ── page-dots ── */
-    .page-dots {
-        margin: 0 !important;
-        padding: 4px 0 !important;
-        flex-shrink: 0 !important;
-    }
-
-    /* ── Dock：
-         dock-container 本身不加 padding（避免撑高变形图标），
-         用一个伪元素在 dock 下方撑出安全区高度，
-         壁纸自然延伸过去，视觉上贴底且不挤压图标 ── */
-    .dock-container {
-        flex-shrink: 0 !important;
-        position: relative !important;
-        z-index: 10 !important;
-        background: transparent !important;
-        margin-bottom: 0 !important;
-        padding-bottom: 0 !important;
-        box-sizing: border-box !important;
-        /* ★ flex-wrap 让 ::after 换行到图标下方，不挤占图标横向空间 ★ */
-        flex-wrap: wrap !important;
-    }
-
-    /* ::after 作为换行后的占位块，撑出底部安全区，默认高度0 */
-    .dock-container::after {
         content: '' !important;
         display: block !important;
         width: 100% !important;
         height: 0 !important;
-        flex-shrink: 0 !important;
-        order: 999 !important;
-        pointer-events: none !important;
     }
 
-    /* ── 所有 overlay 去圆角 + 顶部避让 ── */
+    /* 用一个内层包裹的思路：直接缩整个 page-3 的子元素流 */
+    .page-3>* {
+        transform-origin: top center !important;
+    }
+
+    .page-3>.p3-profile-widget {
+        transform: scale(0.88) !important;
+        transform-origin: top center !important;
+        margin-top: 20px !important;
+        margin-bottom: -40px !important;
+        width: 100% !important;
+    }
+
+    .page-3>.p3-contact-widget {
+        transform: scale(0.88) !important;
+        transform-origin: top center !important;
+        margin-top: 0 !important;
+        margin-bottom: -30px !important;
+        width: 100% !important;
+    }
+
+    /* 第三页其他可能的子组件也缩 */
+    .page-3>.p3-status-widget,
+    .page-3>.p3-gallery-widget,
+    .page-3>.p3-links-widget {
+        transform: scale(0.88) !important;
+        transform-origin: top center !important;
+        margin-bottom: -25px !important;
+        width: 100% !important;
+    }
+
+    /* 所有APP覆盖层去圆角 */
     .chat-app-overlay,
     .novel-overlay,
     .forum-overlay,
@@ -418,57 +409,9 @@ body {
         border-radius: 0 !important;
     }
 
-    [class*="-overlay"] [class*="-header"]:first-child,
-    [class*="-overlay"]>*:first-child {
-        padding-top: max(12px, env(safe-area-inset-top, 12px)) !important;
-    }
-
-    /* ── 输入框修复（iOS 内阴影） ── */
     input[type="text"],
-    input[type="search"],
-    textarea,
     .chat-conv-input {
         -webkit-appearance: none;
         appearance: none;
-    }
-
-    /* ── Toast 底部避让 ── */
-    .toast {
-        bottom: calc(120px + env(safe-area-inset-bottom, 0px)) !important;
-    }
-}
-
-/* ── standalone 模式专属 ── */
-/* body 背景透明，壁纸直接铺满 */
-.is-standalone body {
-    background: transparent !important;
-}
-
-/* standalone 模式下 dock 底部才撑出系统手势条高度 */
-@media screen and (max-width: 768px) {
-    .is-standalone .dock-container::after {
-        height: env(safe-area-inset-bottom, 0px) !important;
-    }
-}
-
-/* ── iOS < 11.1 不支持 env() 时的固定值兜底 ── */
-@supports not (padding-top: env(safe-area-inset-top)) {
-    @media screen and (max-width: 768px) {
-        .grid-container {
-            padding-top: 28px !important;
-        }
-
-        .page-2>.p2-page-wrap {
-            padding-top: 28px !important;
-        }
-
-        .page-3 {
-            padding-top: 28px !important;
-        }
-
-        /* 老 iPhone 无手势条，伪元素高度 0 */
-        .dock-container::after {
-            height: 0 !important;
-        }
     }
 }

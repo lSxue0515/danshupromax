@@ -5,29 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-
-    <!-- ★ PWA：iOS + Android + Chrome 添加到桌面全屏运行 ★ -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <!-- black-translucent = 状态栏透明，壁纸延伸到顶部；文字用白色 -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="蛋薯机">
-    <meta name="mobile-web-app-capable" content="yes">
-    <!-- theme-color：控制 Chrome/Edge 地址栏颜色；transparent 让地址栏消失感 -->
-    <meta name="theme-color" content="#ffffff">
-
     <script>
         (function () {
             var u = navigator.userAgent || '';
             var h = document.documentElement;
             if (/Android/i.test(u)) h.classList.add('is-android');
-            if (/iPhone|iPad|iPod/i.test(u) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
-                h.classList.add('is-ios');
-            // standalone = 已添加到桌面（iOS PWA / Chrome PWA / Edge PWA）
-            if (window.matchMedia('(display-mode: standalone)').matches
-                || window.navigator.standalone === true) {
-                h.classList.add('is-standalone');
-            }
-            if (/wv\)|WebView/i.test(u)) h.classList.add('is-webview');
+            if (/iPhone|iPad|iPod/i.test(u) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) h.classList.add('is-ios');
         })();
     </script>
     <title>蛋薯机 DanShu Pro</title>
