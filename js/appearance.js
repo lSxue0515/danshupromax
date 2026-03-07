@@ -175,19 +175,35 @@ function handleIconCustomFile(event) {
                         localStorage.removeItem('ds_icon_' + ICON_LIST[i].id);
                     }
                 }
+                // 把壁纸转存 IDB 和写图标放进同一个回调序列里
                 var wp = localStorage.getItem('ds_appear_wallpaper');
                 if (wp && wp.indexOf('data:image') !== -1) {
-                    localStorage.removeItem('ds_appear_wallpaper');
+                    _wpSaveToDB(wp, function (ok) {
+                        if (ok) {
+                            localStorage.setItem('ds_appear_wallpaper', '__idb_wp__');
+                        }
+                        // ★ 等 IDB 完成后再写图标，时序正确
+                        try {
+                            localStorage.setItem(key, compressed);
+                            applyOneIconImage(iconId, compressed);
+                            renderIconGrid();
+                            showToast('图标已更换（已自动清理旧数据）');
+                        } catch (finalErr) {
+                            showToast('存储空间严重不足，建议清除浏览器数据');
+                        }
+                    });
+                } else {
+                    // 壁纸不是 base64，直接写图标
+                    try {
+                        localStorage.setItem(key, compressed);
+                        applyOneIconImage(iconId, compressed);
+                        renderIconGrid();
+                        showToast('图标已更换（已自动清理旧数据）');
+                    } catch (finalErr) {
+                        showToast('存储空间严重不足，建议清除浏览器数据');
+                    }
                 }
 
-                try {
-                    localStorage.setItem(key, compressed);
-                    applyOneIconImage(iconId, compressed);
-                    renderIconGrid();
-                    showToast('图标已更换（已自动清理旧数据）');
-                } catch (finalErr) {
-                    showToast('存储空间严重不足，建议清除浏览器数据');
-                }
             }
             _editingIconId = null;
         });
@@ -374,7 +390,7 @@ function saveAppearanceSettings() {
         // URL链接直接存
         safeSetItem('ds_appear_wallpaper', wpUrl);
     } else {
-        localStorage.removeItem('ds_appear_wallpaper');
+        // 什么都不做：用户没动壁纸输入框，不清除已有壁纸
     }
 
     doFinishAppearSave(wpUrl, fontUrl, bubbleColor, statusbar, labelColor);
